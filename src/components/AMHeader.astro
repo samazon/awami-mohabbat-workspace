@@ -29,6 +29,9 @@ const items = [
 
 const volume = masthead?.volume ?? config?.currentVolume;
 const issue = masthead?.issue ?? config?.currentIssue;
+
+/** Transparent 1×1 GIF: what phones fetch instead of the masthead emblems. */
+const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 ---
 
 <div class="strip">
@@ -96,19 +99,37 @@ const issue = masthead?.issue ?? config?.currentIssue;
     </div>
 
     <div class="masthead">
-      <span class="masthead__kicker t-label">{s.masthead.daily}</span>
-      <a class="masthead__logo" href={links.home} aria-label={s.meta.siteName}>
-        <Image
-          src={logo}
-          alt={s.meta.siteName}
-          widths={[250, 360, 460, 920]}
-          sizes="(max-width: 767px) 250px, 460px"
-          format="webp"
-          loading="eager"
-          fetchpriority="high"
-        />
-      </a>
-      <LtrRun class="masthead__latin">AWAMI MOHABBAT</LtrRun>
+      {/* Start side: the flag. Decorative — screen readers skip it; a still
+          frame is served when the reader prefers reduced motion. */}
+      <picture class="masthead__emblem masthead__emblem--flag">
+        {/* phones hide the emblems — serve a 1px pixel so nothing is downloaded */}
+        <source srcset={PIXEL} media="(max-width: 767px)" />
+        <source srcset="/img/flag-pk-static.webp" media="(prefers-reduced-motion: reduce)" type="image/webp" />
+        <img src="/img/flag-pk.webp" alt="" width="220" height="147" loading="eager" decoding="async" />
+      </picture>
+
+      <div class="masthead__center">
+        <span class="masthead__kicker t-label">{s.masthead.daily}</span>
+        <a class="masthead__logo" href={links.home} aria-label={s.meta.siteName}>
+          <Image
+            src={logo}
+            alt={s.meta.siteName}
+            widths={[250, 340, 500, 680]}
+            sizes="(max-width: 767px) 250px, 340px"
+            format="webp"
+            loading="eager"
+            fetchpriority="high"
+          />
+        </a>
+        <LtrRun class="masthead__latin">AWAMI MOHABBAT</LtrRun>
+      </div>
+
+      {/* End side: the globe, slowed to ~10s per turn. */}
+      <picture class="masthead__emblem masthead__emblem--globe">
+        <source srcset={PIXEL} media="(max-width: 767px)" />
+        <source srcset="/img/globe-static.webp" media="(prefers-reduced-motion: reduce)" type="image/webp" />
+        <img src="/img/globe.webp" alt="" width="200" height="200" loading="eager" decoding="async" />
+      </picture>
     </div>
 
     <div class="dateline">
@@ -256,9 +277,9 @@ const issue = masthead?.issue ?? config?.currentIssue;
   .nav__link {
     display: inline-flex;
     align-items: center;
-    min-height: var(--touch);
+    min-height: var(--control-h);
     padding-block-end: 2px;
-    font-size: var(--ui-nav);
+    font-size: var(--ui-control);
     color: var(--secondary);
     border-block-end: 2px solid transparent;
     text-decoration: none;
@@ -282,8 +303,8 @@ const issue = masthead?.issue ?? config?.currentIssue;
     display: flex;
     align-items: center;
     gap: 8px;
-    min-width: 190px;
-    min-height: var(--touch);
+    min-width: 160px;
+    min-height: var(--control-h);
     padding: 0 10px;
     border: 1px solid var(--rule-strong);
     color: var(--muted);
@@ -293,7 +314,7 @@ const issue = masthead?.issue ?? config?.currentIssue;
     border: 0;
     outline: 0;
     background: transparent;
-    font-size: var(--ui-search);
+    font-size: var(--ui-control);
     color: var(--ink);
   }
   .search__input::placeholder {
@@ -526,13 +547,6 @@ const issue = masthead?.issue ?? config?.currentIssue;
       letter-spacing: 0.1em;
     }
 
-    /* dateline: centred, one item per line as in the phone mockup */
-    .dateline,
-    .dateline__start,
-    .dateline__end {
-      justify-content: center;
-      text-align: center;
-    }
   }
 
   /* Narrow phones (≤379px): the three strip items no longer fit one row —
@@ -550,14 +564,35 @@ const issue = masthead?.issue ?? config?.currentIssue;
     .strip__abc { grid-area: badge; }
   }
 
-  /* ---- masthead: rule 01, the wordmark is the image ---- */
+  /* ---- masthead: rule 01, the wordmark is the image. Flag at start, globe at end. ---- */
   .masthead {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 24px;
+    padding: 6px 0 6px;
+  }
+  .masthead__center {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
-    padding: 10px 0 8px;
+    gap: 0;
     text-align: center;
+  }
+  .masthead__emblem {
+    display: block;
+  }
+  .masthead__emblem img {
+    height: 100%;
+    width: auto;
+  }
+  .masthead__emblem--flag {
+    justify-self: start;
+    height: var(--masthead-flag);
+  }
+  .masthead__emblem--globe {
+    justify-self: end;
+    height: var(--masthead-globe);
   }
   .masthead__kicker {
     font-size: var(--ui-search);
@@ -566,7 +601,7 @@ const issue = masthead?.issue ?? config?.currentIssue;
   .masthead__logo {
     display: block;
     width: 100%;
-    max-width: clamp(250px, 40vw, var(--wordmark-desktop));
+    max-width: clamp(250px, 30vw, var(--wordmark-desktop));
   }
   .masthead__logo img {
     width: 100%;
@@ -610,5 +645,24 @@ const issue = masthead?.issue ?? config?.currentIssue;
   }
   .dateline__dot {
     color: var(--rule-strong);
+  }
+
+  /* Phone overrides for the masthead and dateline. Kept LAST so they win the
+     cascade over the base rules above (same specificity, later source). */
+  @media (max-width: 767px) {
+    /* wordmark alone — no room to flank it; the emblems fetch a 1px pixel */
+    .masthead {
+      grid-template-columns: 1fr;
+    }
+    .masthead__emblem {
+      display: none;
+    }
+    /* centred, one item per line as in the phone mockup */
+    .dateline,
+    .dateline__start,
+    .dateline__end {
+      justify-content: center;
+      text-align: center;
+    }
   }
 </style>

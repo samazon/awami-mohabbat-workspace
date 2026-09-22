@@ -42,6 +42,7 @@
 
   /* ---- CHROME type — fixed ---- */
   --ui-nav: 14px;
+  --ui-control: 13px;       /* header controls: nav links, A−/A/A+, language, search */
   --ui-search: 13px;
   --ui-meta: 12px;
   --ui-caption: 11px;
@@ -92,10 +93,14 @@
   --measure-summary: 44ch;
   --touch: 44px;
   --touch-tel: 52px;
+  /* Header control height: compact with a mouse, full touch size on touch screens. */
+  --control-h: 36px;
 
   /* ---- wordmark widths (rule 01: the PNG, never type) ---- */
-  --wordmark-desktop: 460px;
+  --wordmark-desktop: 340px;
   --wordmark-footer: 190px;
+  --masthead-flag: 94px;    /* flag height beside the wordmark */
+  --masthead-globe: 130px;  /* the globe is a circle — needs more height for the same visual weight */
 
   /* ---- spacing ---- */
   --s-1: 4px;
@@ -106,6 +111,12 @@
   --s-6: 24px;
   --s-7: 32px;
   --s-8: 40px;
+}
+
+@media (pointer: coarse) {
+  :root {
+    --control-h: 44px;
+  }
 }
 
 /* Reader text-size steps. Applied to <html data-reader-scale> by a blocking
