@@ -103,8 +103,7 @@ export const ur = {
     tagline: 'عوام سے حقیقی محبت کا ترجمان',
     contact: 'رابطہ',
     sections: 'صفحات',
-    /** Latin in every locale, as designed. */
-    follow: 'FOLLOW',
+    follow: 'فالو کریں',
     office: 'لاہور آفس',
     bureau: 'قصور آفس',
     phone: 'فون',

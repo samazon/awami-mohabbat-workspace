@@ -98,7 +98,7 @@ export const en: Catalog = {
     tagline: 'The voice of genuine love for the people',
     contact: 'Contact',
     sections: 'Sections',
-    follow: 'FOLLOW',
+    follow: 'Follow',
     office: 'Lahore office',
     bureau: 'Kasur office',
     phone: 'Phone',

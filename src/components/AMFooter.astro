@@ -1,9 +1,9 @@
 ---
 /**
  * Footer, to the design: four columns on the tint — wordmark + tagline,
- * رابطہ (contact), صفحات (sections), FOLLOW — then a sub-bar with the
+ * رابطہ (contact), صفحات (sections), فالو کریں (follow) — then a sub-bar with the
  * copyright and the chief editor. Footer text is Naskh / the body serif,
- * not Nastaliq. Column labels are small and muted; FOLLOW stays Latin.
+ * not Nastaliq. Column labels are small and muted, in the reader's script.
  */
 import { Image } from 'astro:assets';
 import logo from '@/assets/logo-awami-mohabbat.png';
@@ -69,7 +69,7 @@ const year = new Date().getFullYear();
 
       {config && config.social.length > 0 && (
         <div class="col">
-          <LtrRun block class="label label--latin">{s.footer.follow}</LtrRun>
+          <h2 class="label">{s.footer.follow}</h2>
           <ul class="list links">
             {config.social.map((x) => (
               <li><LtrRun><a class="plain" href={x.url} target="_blank" rel="noopener">{x.label}</a></LtrRun></li>
@@ -133,19 +133,13 @@ const year = new Date().getFullYear();
     color: var(--secondary);
   }
 
-  /* column labels: small, muted; Urdu in Naskh, FOLLOW tracked Latin */
+  /* column labels: small, muted, in the reader's script */
   .label {
     margin-block-end: 8px;
     font-family: var(--font-body);
     font-size: var(--ui-meta);
     font-weight: 400;
     color: var(--muted);
-  }
-  .label--latin {
-    font-family: var(--font-ui);
-    font-size: var(--ui-eyebrow-sm);
-    letter-spacing: var(--track-eyebrow);
-    text-transform: uppercase;
   }
 
   .list {
