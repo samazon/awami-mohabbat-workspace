@@ -59,23 +59,39 @@ const issue = masthead?.issue ?? config?.currentIssue;
       </div>
 
       <am-mobile-nav class="mobile">
-        <button type="button" class="mobile__btn" aria-expanded="false" aria-controls="mobile-panel" aria-label={s.nav.menu}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+        <button type="button" class="iconbtn" data-menu aria-expanded="false" aria-controls="mobile-drawer" aria-label={s.nav.menu}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
         </button>
-        <a class="mobile__btn" href={links.search} aria-label={s.search.label}>
+        <button type="button" class="iconbtn" data-search-toggle aria-expanded="false" aria-controls="mobile-search" aria-label={s.search.label}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M16.5 16.5 21 21" /></svg>
-        </a>
-        <div id="mobile-panel" class="panel" hidden>
-          <nav class="panel__nav" aria-label={s.a11y.mainNav}>
+        </button>
+
+        <form id="mobile-search" class="msearch" role="search" action={links.search} method="get" data-search-row hidden>
+          <label class="visually-hidden" for="q-mobile">{s.search.label}</label>
+          <input id="q-mobile" class="msearch__input t-label" type="search" name="q" placeholder={s.search.placeholder} autocomplete="off" enterkeyhint="search" />
+          <button type="submit" class="msearch__submit t-label">{s.search.label}</button>
+        </form>
+
+        <dialog id="mobile-drawer" class="drawer" aria-label={s.nav.menu}>
+          <div class="drawer__head">
+            <a class="drawer__logo" href={links.home} aria-label={s.meta.siteName}>
+              <Image src={logo} alt="" widths={[150, 300]} sizes="150px" format="webp" loading="lazy" />
+            </a>
+            <button type="button" class="iconbtn" data-close aria-label={s.nav.close} autofocus>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" /></svg>
+            </button>
+          </div>
+          <nav class="drawer__nav" aria-label={s.a11y.mainNav}>
             {items.map((i) => (
-              <a class="panel__link t-label" href={i.href} aria-current={i.key === active ? 'page' : undefined}>{i.label}</a>
+              <a class="drawer__link t-label" href={i.href} aria-current={i.key === active ? 'page' : undefined}>{i.label}</a>
             ))}
           </nav>
-          <div class="panel__tools">
-            <ReaderControls locale={locale} />
-            <LanguageSwitcher locale={locale} pathname={pathname} />
+          <div class="drawer__tools">
+            <LanguageSwitcher locale={locale} pathname={pathname} class="drawer__wide" />
+            <ReaderControls locale={locale} class="drawer__wide" />
           </div>
-        </div>
+          <p class="drawer__foot">{s.strip.tagline}</p>
+        </dialog>
       </am-mobile-nav>
     </div>
 
@@ -119,21 +135,54 @@ const issue = masthead?.issue ?? config?.currentIssue;
 </header>
 
 <script>
+  /**
+   * Phone chrome: a <dialog> drawer (native focus trap, Escape, top layer) and
+   * an expandable search row. Both buttons reflect state via aria-expanded.
+   */
   class MobileNav extends HTMLElement {
     connectedCallback() {
-      const btn = this.querySelector<HTMLButtonElement>('button[aria-expanded]');
-      const panel = this.querySelector<HTMLElement>('.panel');
-      if (!btn || !panel) return;
-      btn.addEventListener('click', () => {
-        const open = btn.getAttribute('aria-expanded') === 'true';
-        btn.setAttribute('aria-expanded', String(!open));
-        panel.hidden = open;
+      const menuBtn = this.querySelector<HTMLButtonElement>('[data-menu]');
+      const drawer = this.querySelector<HTMLDialogElement>('dialog.drawer');
+      const closeBtn = drawer?.querySelector<HTMLButtonElement>('[data-close]');
+      const searchBtn = this.querySelector<HTMLButtonElement>('[data-search-toggle]');
+      const searchRow = this.querySelector<HTMLFormElement>('[data-search-row]');
+      const searchInput = searchRow?.querySelector<HTMLInputElement>('input');
+      if (!menuBtn || !drawer || !closeBtn || !searchBtn || !searchRow || !searchInput) return;
+
+      const root = document.documentElement;
+
+      const openDrawer = () => {
+        if (drawer.open) return;
+        drawer.showModal();
+        menuBtn.setAttribute('aria-expanded', 'true');
+        root.classList.add('drawer-open');
+      };
+      const closeDrawer = () => {
+        if (drawer.open) drawer.close();
+      };
+      menuBtn.addEventListener('click', openDrawer);
+      closeBtn.addEventListener('click', closeDrawer);
+      // Native `close` fires for Escape, close(), and form method=dialog alike.
+      drawer.addEventListener('close', () => {
+        menuBtn.setAttribute('aria-expanded', 'false');
+        root.classList.remove('drawer-open');
+        menuBtn.focus();
       });
-      this.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && btn.getAttribute('aria-expanded') === 'true') {
-          btn.setAttribute('aria-expanded', 'false');
-          panel.hidden = true;
-          btn.focus();
+      // A tap on the backdrop lands on the dialog element itself.
+      drawer.addEventListener('click', (e) => {
+        if (e.target === drawer) closeDrawer();
+      });
+
+      const setSearch = (open: boolean) => {
+        searchRow.hidden = !open;
+        searchBtn.setAttribute('aria-expanded', String(open));
+        if (open) searchInput.focus();
+      };
+      searchBtn.addEventListener('click', () => setSearch(searchRow.hasAttribute('hidden')));
+      searchRow.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          setSearch(false);
+          searchBtn.focus();
         }
       });
     }
@@ -251,44 +300,197 @@ const issue = masthead?.issue ?? config?.currentIssue;
     color: var(--muted);
   }
 
-  /* ---- phone chrome: hamburger at start, search at end ---- */
+  /* ---- phone chrome: hamburger at start, search at end, drawer from the start edge ---- */
   .mobile {
     display: none;
   }
-  .mobile__btn {
+
+  /* Icon buttons read as buttons: the same 1px bordered square as the reader
+     and language controls beside them; black fill while their panel is open. */
+  .iconbtn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: var(--touch);
     height: var(--touch);
+    border: 1px solid var(--rule-strong);
     color: var(--ink);
+    transition: background-color 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out;
   }
-  .panel {
+  @media (hover: hover) {
+    .iconbtn:hover {
+      border-color: var(--ink);
+    }
+  }
+  .iconbtn:active,
+  .iconbtn[aria-expanded='true'] {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--on-red);
+  }
+
+  /* expandable search row under the icon row */
+  .msearch {
     flex-basis: 100%;
-    padding: 8px 0 16px;
+    display: flex;
+    gap: 8px;
+    padding-block: 10px 12px;
     border-block-start: 1px solid var(--rule);
   }
-  .panel__nav {
-    display: flex;
-    flex-direction: column;
+  .msearch[hidden] {
+    display: none; /* author display beats the UA [hidden] rule — restate it */
   }
-  .panel__link {
+  .msearch__input {
+    flex: 1;
+    min-width: 0;
+    min-height: var(--touch);
+    padding: 0 12px;
+    border: 1px solid var(--rule-strong);
+    background: var(--surface);
+    font-size: var(--ui-input-touch); /* ≥16px: iOS does not zoom the page on focus */
+    color: var(--ink);
+  }
+  .msearch__input::placeholder {
+    color: var(--muted);
+  }
+  .msearch__input:focus {
+    outline: none;
+    border-color: var(--ink);
+  }
+  .msearch__submit {
+    min-height: var(--touch);
+    padding: 0 16px;
+    border: 1px solid var(--ink);
+    background: var(--ink);
+    color: var(--on-red);
+    font-size: var(--ui-nav);
+  }
+
+  /* ---- drawer ---- */
+  .drawer {
+    --drawer-hide: 100%; /* RTL: start edge is the right; slide out rightwards */
+    position: fixed;
+    inset: 0 auto 0 auto;
+    inset-inline-start: 0;
+    margin: 0;
+    width: min(320px, 86vw);
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    padding: 0;
+    border: 0;
+    border-inline-end: 1px solid var(--ink);
+    background: var(--surface);
+    color: var(--ink);
+    /* Closed = display:none, so nothing inside is reachable by Tab. The
+       allow-discrete transition keeps it rendered until the slide-out ends. */
+    display: none;
+    flex-direction: column;
+    overscroll-behavior: contain;
+    translate: var(--drawer-hide) 0;
+    opacity: 0;
+    transition:
+      translate 320ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 200ms ease-out,
+      display 320ms allow-discrete,
+      overlay 320ms allow-discrete;
+  }
+  :global(html[dir='ltr']) .drawer {
+    --drawer-hide: -100%;
+  }
+  .drawer[open] {
+    display: flex;
+    translate: 0 0;
+    opacity: 1;
+  }
+  @starting-style {
+    .drawer[open] {
+      translate: var(--drawer-hide) 0;
+      opacity: 0;
+    }
+  }
+  .drawer::backdrop {
+    background: rgba(17, 17, 17, 0);
+    transition:
+      background-color 320ms ease-out,
+      display 320ms allow-discrete,
+      overlay 320ms allow-discrete;
+  }
+  .drawer[open]::backdrop {
+    background: rgba(17, 17, 17, 0.55);
+  }
+  @starting-style {
+    .drawer[open]::backdrop {
+      background: rgba(17, 17, 17, 0);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .drawer,
+    .drawer::backdrop {
+      transition: none;
+    }
+  }
+  :global(html.drawer-open) {
+    overflow: hidden;
+  }
+
+  .drawer__head {
     display: flex;
     align-items: center;
-    min-height: var(--touch);
-    font-size: var(--ui-nav);
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px var(--gutter);
+    border-block-end: 1px solid var(--ink);
+  }
+  .drawer__logo {
+    display: block;
+    width: 150px;
+  }
+  .drawer__logo img {
+    width: 100%;
+    height: auto;
+  }
+  .drawer__nav {
+    display: flex;
+    flex-direction: column;
+    padding: 8px var(--gutter) 0;
+  }
+  .drawer__link {
+    display: flex;
+    align-items: center;
+    min-height: 56px;
+    font-size: var(--ui-drawer-link);
+    font-weight: 700;
     color: var(--ink);
     border-block-end: 1px solid var(--hairline);
     text-decoration: none;
   }
-  .panel__link[aria-current='page'] {
+  .drawer__link[aria-current='page'] {
     color: var(--red);
   }
-  .panel__tools {
+  .drawer__tools {
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    padding-block-start: 14px;
+    flex-direction: column;
+    gap: 12px;
+    padding: 22px var(--gutter) 0;
+  }
+  /* stretch the bordered control groups to the drawer's width */
+  .drawer__tools :global(.drawer__wide) {
+    display: flex;
+    width: 100%;
+  }
+  .drawer__tools :global(.drawer__wide > *) {
+    flex: 1;
+    justify-content: center;
+  }
+  .drawer__foot {
+    margin-block-start: auto;
+    padding: 18px var(--gutter) calc(18px + env(safe-area-inset-bottom));
+    font-family: var(--font-nastaliq);
+    line-height: 2;
+    font-size: var(--ui-meta);
+    color: var(--muted);
+    border-block-start: 1px solid var(--rule);
   }
 
   @media (max-width: 767px) {

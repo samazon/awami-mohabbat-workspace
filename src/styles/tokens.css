@@ -48,6 +48,8 @@
   --ui-eyebrow: 11px;
   --ui-eyebrow-sm: 10px;
   --ui-badge-sm: 9px;
+  --ui-input-touch: 16px;   /* text inputs on phones: iOS zooms below 16px */
+  --ui-drawer-link: 18px;
   --ui-button: 14px;
   --ui-wordmark-sub: 11px;
 
