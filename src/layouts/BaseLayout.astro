@@ -6,8 +6,6 @@ import { DEFAULT_LOCALE, alternates, dirFor, isLocale, t, type Locale } from '@/
 interface Props {
   title: string;
   description?: string;
-  /** Route-level cache policy. Pages that vary per user must pass 'private'. */
-  cache?: 'public' | 'private';
   noindex?: boolean;
   ogImage?: string;
 }
@@ -15,18 +13,13 @@ interface Props {
 const locale: Locale = isLocale(Astro.currentLocale) ? Astro.currentLocale : DEFAULT_LOCALE;
 const dir = dirFor(locale);
 const strings = t(locale);
-const { title, description = strings.meta.description, cache = 'public', noindex = false, ogImage } = Astro.props;
+const { title, description = strings.meta.description, noindex = false, ogImage } = Astro.props;
 
 const site = Astro.site ?? new URL('http://localhost:4321');
 const canonical = new URL(Astro.url.pathname, site);
 const alts = alternates(Astro.url.pathname, site);
 const xDefault = alts.find((a) => a.hreflang === DEFAULT_LOCALE)?.href;
 const og = ogImage ?? new URL('/og-image.png', site).toString();
-
-Astro.response.headers.set(
-  'cache-control',
-  cache === 'public' ? 'public, s-maxage=300, stale-while-revalidate=86400' : 'private, no-store',
-);
 
 const fonts =
   locale === 'ur'

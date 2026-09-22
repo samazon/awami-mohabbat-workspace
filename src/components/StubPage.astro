@@ -49,7 +49,7 @@ if (isNotFound) Astro.response.status = 404;
 const active = section === 'archive' || section === 'articles' ? section : undefined;
 ---
 
-<BaseLayout title={`${titles[section]} — ${s.meta.siteName}`} noindex cache={isNotFound ? 'private' : 'public'}>
+<BaseLayout title={`${titles[section]} — ${s.meta.siteName}`} noindex>
   <AMHeader slot="header" locale={locale} config={config} masthead={edition} active={active} />
 
   <section class="section">
