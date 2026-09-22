@@ -11,9 +11,7 @@
     {
       "binding": "DB",
       "database_name": "awami-mohabbat",
-      // Local dev works with this placeholder. Replace with the real id from
-      // `wrangler d1 create awami-mohabbat` before the first remote migration.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "b4dc1895-db94-40c7-8d7f-04c5a4324bb9",
       "migrations_dir": "drizzle"
     }
   ],
