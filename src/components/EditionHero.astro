@@ -1,0 +1,206 @@
+---
+/**
+ * "Today's edition": front page, headline + summary, read/PDF actions, and the
+ * four-page strip. Rule 02: translated pages describe the Urdu edition and
+ * announce machine translation or fallback.
+ */
+import { t, type Locale } from '@/i18n';
+import { formatEyebrow } from '@/lib/dates';
+import { viewerHref } from '@/lib/links';
+import type { EditionView } from '@/lib/services/editions';
+import LtrRun from './LtrRun.astro';
+import PageThumb from './PageThumb.astro';
+
+interface Props {
+  edition: EditionView;
+  locale: Locale;
+}
+const { edition, locale } = Astro.props;
+const s = t(locale);
+const { translation } = edition;
+const notice = translation.isFallback ? s.mt.fallback : translation.isMachineTranslated ? s.mt.notice : null;
+const front = edition.pages[0]!;
+---
+
+<section id="today" class="section">
+  <div class="container">
+    <header class="section-head">
+      <h2 class="section-title">{s.today.title}</h2>
+      <LtrRun class="eyebrow">{formatEyebrow(edition.date)} · {edition.pages.length} {s.today.pagesEyebrow}</LtrRun>
+    </header>
+
+    <div class="hero">
+      <div class="front">
+        <PageThumb
+          page={front}
+          alt={s.a11y.pageThumb(1, edition.date)}
+          href={viewerHref(locale, edition, 1)}
+          sizes="(max-width: 767px) calc(100vw - 40px), min(560px, 45vw)"
+          loading="eager"
+          large
+        />
+        <div class="front__caption">
+          <span class="t-label">{s.today.pageOf(1, edition.pages.length)}</span>
+          <a class="front__open" href={viewerHref(locale, edition, 1)}><LtrRun>{s.today.openViewer}</LtrRun></a>
+        </div>
+      </div>
+
+      <div class="text">
+        {notice && (
+          <p class="mt">
+            <LtrRun class="mt__badge">{s.mt.badge}</LtrRun>
+            <span class="t-body">{notice}</span>
+          </p>
+        )}
+        <h3 class="headline t-head" lang={translation.locale}>
+          <a class="headline__link" href={viewerHref(locale, edition, 1)}>{edition.headline}</a>
+        </h3>
+        <p class="summary t-body" lang={translation.locale}>{edition.summary}</p>
+
+        <div class="actions">
+          <a class="btn" href={viewerHref(locale, edition, 1)}>{s.today.readFull}</a>
+          {edition.pdfUrl && (
+            <a class="btn btn--outline" href={edition.pdfUrl} download={`awami-mohabbat-${edition.date}.pdf`} title={s.today.pdfNote}>
+              <LtrRun>{s.today.viewPdf}</LtrRun>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12" /><path d="M7 11l5 5 5-5" /><path d="M4 20h16" /></svg>
+            </a>
+          )}
+        </div>
+
+        <div class="pages">
+          <p class="pages__title t-label">{s.today.fourPages}</p>
+          <div class="pages__grid">
+            {edition.pages.map((p) => (
+              <PageThumb
+                page={p}
+                alt={s.a11y.pageThumb(p.n, edition.date)}
+                href={viewerHref(locale, edition, p.n)}
+                sizes="(max-width: 767px) 22vw, 130px"
+                active={p.n === 1}
+              >
+                <LtrRun block class="pages__num">{p.n}</LtrRun>
+              </PageThumb>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .t-label {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+  }
+  .hero {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: 28px 40px;
+    align-items: start;
+  }
+  .front__caption {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px 16px;
+    padding-block-start: 8px;
+    font-size: var(--ui-meta);
+    color: var(--secondary);
+  }
+  .front__open {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch);
+    font-family: var(--font-ui);
+    font-size: var(--ui-eyebrow);
+    letter-spacing: var(--track-eyebrow);
+  }
+
+  .mt {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    margin-block-end: 14px;
+    font-size: var(--fs-card);
+    color: var(--secondary);
+  }
+  .mt__badge {
+    padding: 2px 8px;
+    border: 1px solid var(--red);
+    font-family: var(--font-ui);
+    font-size: var(--ui-eyebrow-sm);
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    color: var(--red);
+  }
+
+  .headline {
+    font-size: var(--fs-hero);
+  }
+  .headline__link {
+    color: inherit;
+  }
+  .headline__link:hover {
+    color: var(--red);
+    text-decoration: none;
+  }
+  .summary {
+    max-width: var(--measure-summary);
+    margin-block-start: 10px;
+    font-size: var(--fs-summary);
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-block-start: 22px;
+  }
+
+  .pages {
+    margin-block-start: 30px;
+    padding-block-start: 18px;
+    border-block-start: 1px solid var(--rule);
+  }
+  .pages__title {
+    margin-block-end: 10px;
+    font-size: var(--ui-nav);
+    color: var(--ink);
+  }
+  .pages__grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .pages__num {
+    padding-block-start: 6px;
+    font-family: var(--font-ui);
+    font-size: var(--ui-caption);
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* Phone (mockup 07): front page → four-page strip → headline → summary.
+     The read/PDF actions live in the pinned bottom bar instead. */
+  @media (max-width: 767px) {
+    .text {
+      display: contents;
+    }
+    .front { order: 1; }
+    .pages { order: 2; margin-block-start: 0; padding-block-start: 0; border-block-start: 0; }
+    .mt { order: 3; }
+    .headline { order: 4; }
+    .summary { order: 5; margin-block-start: 0; }
+    .actions {
+      display: none;
+    }
+    .pages__title {
+      display: none;
+    }
+    .hero {
+      gap: 18px;
+    }
+  }
+</style>

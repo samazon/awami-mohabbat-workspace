@@ -1,0 +1,95 @@
+---
+/**
+ * The homepage, composed once and rendered for each locale by a two-line page.
+ * All data comes through src/lib/services — nothing here touches Drizzle.
+ */
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { t, type Locale } from '@/i18n';
+import { todayIso } from '@/lib/dates';
+import { getAdSlotsForPage } from '@/lib/services/ads';
+import { getSiteConfig } from '@/lib/services/config';
+import { getEmergencyContacts } from '@/lib/services/contacts';
+import { getLatestEdition, getRecentEditions } from '@/lib/services/editions';
+import { getUtilityContent } from '@/lib/services/utility';
+import AMHeader from './AMHeader.astro';
+import AMFooter from './AMFooter.astro';
+import AMAd from './AMAd.astro';
+import UtilityTicker from './UtilityTicker.astro';
+import EditionHero from './EditionHero.astro';
+import ArchiveGrid from './ArchiveGrid.astro';
+import EmergencyNumbers from './EmergencyNumbers.astro';
+import MobileEditionBar from './MobileEditionBar.astro';
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const s = t(locale);
+const today = todayIso();
+
+const [edition, config, contacts, ads] = await Promise.all([
+  getLatestEdition(locale),
+  getSiteConfig(locale),
+  getEmergencyContacts(locale),
+  getAdSlotsForPage('home', today),
+]);
+const [recent, utility] = await Promise.all([
+  getRecentEditions(locale, { limit: 8, beforeDate: edition?.date }),
+  getUtilityContent(edition?.date ?? today),
+]);
+
+const title = locale === 'ur' ? `${s.meta.siteName} — ${s.masthead.daily}` : `${s.meta.siteName} — Daily newspaper, Qasur & Islamabad`;
+const site = Astro.site?.toString() ?? '/';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'NewsMediaOrganization',
+  name: s.meta.siteNameLatin,
+  alternateName: 'عوامی محبت',
+  url: site,
+  logo: new URL('/og-image.png', site).toString(),
+  ...(config ? { address: { '@type': 'PostalAddress', streetAddress: config.office, addressCountry: 'PK' }, telephone: config.phoneTel, email: config.email } : {}),
+};
+---
+
+<BaseLayout title={title}>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  </Fragment>
+
+  <AMHeader slot="header" locale={locale} config={config} masthead={edition} active="home" />
+
+  {utility && <UtilityTicker utility={utility} locale={locale} />}
+
+  <AMAd ad={ads['home-leaderboard']} locale={locale} />
+
+  {edition ? (
+    <EditionHero edition={edition} locale={locale} />
+  ) : (
+    <section class="section">
+      <div class="container">
+        <p class="t-body empty">{s.today.noEdition}</p>
+      </div>
+    </section>
+  )}
+
+  <AMAd ad={ads['home-sponsor-strip']} locale={locale} />
+
+  <ArchiveGrid editions={recent} locale={locale} />
+
+  <AMAd ad={ads['home-mid']} locale={locale} />
+
+  <EmergencyNumbers contacts={contacts} locale={locale} />
+
+  <AMAd ad={ads['home-footer']} locale={locale} />
+
+  <AMFooter slot="footer" locale={locale} config={config} />
+
+  {edition && <MobileEditionBar slot="after" edition={edition} locale={locale} />}
+</BaseLayout>
+
+<style>
+  .empty {
+    font-size: var(--fs-body);
+  }
+</style>

@@ -1,0 +1,103 @@
+---
+/**
+ * A− / A / A+  — three real buttons, one group, 44px targets.
+ * Reads and writes <html data-reader-scale>; any number of instances stay in
+ * sync through a MutationObserver on that attribute. No framework.
+ */
+import { t, type Locale } from '@/i18n';
+
+interface Props {
+  locale: Locale;
+  class?: string;
+}
+const { locale, class: className } = Astro.props;
+const s = t(locale).reader;
+
+const steps = [
+  { value: 'sm', label: 'A−', title: s.smaller },
+  { value: 'md', label: 'A', title: s.normal },
+  { value: 'xl', label: 'A+', title: s.largest },
+] as const;
+---
+
+<am-reader-controls class:list={['reader', className]} role="group" aria-label={s.group} dir="ltr">
+  {steps.map((step) => (
+    <button
+      type="button"
+      class="reader__btn"
+      data-scale={step.value}
+      aria-pressed={step.value === 'md' ? 'true' : 'false'}
+      title={step.title}
+      aria-label={step.title}
+    >{step.label}</button>
+  ))}
+</am-reader-controls>
+
+<script>
+  const KEY = 'am-reader-scale';
+  const STEPS = new Set(['sm', 'md', 'lg', 'xl']);
+
+  class ReaderControls extends HTMLElement {
+    private observer?: MutationObserver;
+
+    connectedCallback() {
+      this.addEventListener('click', this.onClick);
+      this.observer = new MutationObserver(() => this.render());
+      this.observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-reader-scale'] });
+      this.render();
+    }
+
+    disconnectedCallback() {
+      this.removeEventListener('click', this.onClick);
+      this.observer?.disconnect();
+    }
+
+    private onClick = (e: Event) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-scale]');
+      const value = btn?.dataset.scale;
+      if (!value || !STEPS.has(value)) return;
+      if (value === 'md') delete document.documentElement.dataset.readerScale;
+      else document.documentElement.dataset.readerScale = value;
+      try {
+        if (value === 'md') localStorage.removeItem(KEY);
+        else localStorage.setItem(KEY, value);
+      } catch {}
+    };
+
+    private render() {
+      const current = document.documentElement.dataset.readerScale ?? 'md';
+      this.querySelectorAll<HTMLButtonElement>('button[data-scale]').forEach((b) => {
+        b.setAttribute('aria-pressed', b.dataset.scale === current ? 'true' : 'false');
+      });
+    }
+  }
+
+  if (!customElements.get('am-reader-controls')) customElements.define('am-reader-controls', ReaderControls);
+</script>
+
+<style>
+  .reader {
+    display: inline-flex;
+    border: 1px solid var(--rule-strong);
+  }
+  .reader__btn {
+    min-width: var(--touch);
+    min-height: var(--touch);
+    padding: 0 10px;
+    font-family: var(--font-ui);
+    font-size: var(--ui-nav);
+    font-weight: 600;
+    color: var(--secondary);
+    border-inline-end: 1px solid var(--rule-strong);
+  }
+  .reader__btn:last-child {
+    border-inline-end: 0;
+  }
+  .reader__btn:hover {
+    color: var(--red);
+  }
+  .reader__btn[aria-pressed='true'] {
+    background: var(--ink);
+    color: var(--on-red);
+  }
+</style>

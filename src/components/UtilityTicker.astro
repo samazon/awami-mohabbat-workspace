@@ -1,0 +1,119 @@
+---
+/**
+ * Prayer times and rates — static markup, not an animated ticker. Every value
+ * is an isolated LTR tabular run (rule 03) and every rate shows its own real
+ * timestamp (rule 05). Values scale with the reader control; labels don't.
+ */
+import { t, type Locale } from '@/i18n';
+import { formatMoney, formatPrayerTime, formatStamp } from '@/lib/dates';
+import type { UtilityView } from '@/lib/services/utility';
+import LtrRun from './LtrRun.astro';
+
+interface Props {
+  utility: UtilityView;
+  locale: Locale;
+}
+const { utility, locale } = Astro.props;
+const s = t(locale).ticker;
+---
+
+<div class="ticker" role="region" aria-label={`${s.prayers} · ${s.rates}`}>
+  <div class="container ticker__row">
+    <dl class="group">
+      <dt class="group__title t-label">{s.prayers}</dt>
+      {utility.prayers.map((p) => (
+        <dd class="item">
+          <span class="item__label t-label">{s[p.key]}</span>
+          <LtrRun tabular class="item__value">{formatPrayerTime(p.time)}</LtrRun>
+        </dd>
+      ))}
+    </dl>
+
+    <dl class="group">
+      <dt class="group__title t-label">{s.rates}</dt>
+      {utility.rates.map((r) => (
+        <dd class="item">
+          <span class="item__label t-label">{s[r.key]}</span>
+          <LtrRun tabular class="item__value" title={`${s.updated} ${formatStamp(r.updatedAt)}`}>{formatMoney(r.minor)}</LtrRun>
+          <LtrRun tabular class="item__stamp">{formatStamp(r.updatedAt)}</LtrRun>
+        </dd>
+      ))}
+    </dl>
+  </div>
+</div>
+
+<style>
+  .t-label {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+  }
+  .ticker {
+    background: var(--tint);
+    border-block-end: 1px solid var(--rule);
+  }
+  .ticker__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px 20px;
+    padding-block: 9px;
+  }
+  .group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 16px;
+    margin: 0;
+  }
+  .group__title {
+    font-size: var(--ui-meta);
+    color: var(--red);
+  }
+  .item {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    margin: 0;
+  }
+  .item__label {
+    font-size: var(--ui-meta);
+    color: var(--secondary);
+  }
+  .item__value {
+    font-family: var(--font-ui);
+    font-size: var(--fs-ticker);
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .item__stamp {
+    font-family: var(--font-ui);
+    font-size: var(--ui-eyebrow-sm);
+    color: var(--muted);
+  }
+
+  /* Phone (mockup 07): one tidy row per group; freshness stamps move into the
+     value's title attribute rather than crowding the line. */
+  @media (max-width: 767px) {
+    .ticker__row {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 4px;
+      padding-block: 7px;
+    }
+    .group {
+      justify-content: space-between;
+      gap: 4px 8px;
+    }
+    .group__title,
+    .item__label {
+      font-size: var(--ui-eyebrow);
+    }
+    .item {
+      gap: 4px;
+    }
+    .item__stamp {
+      display: none;
+    }
+  }
+</style>

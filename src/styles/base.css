@@ -1,0 +1,243 @@
+/* Self-hosted, subsetted variable fonts. One file per family.
+   unicode-range keeps Nastaliq/Naskh off the English critical path and vice versa. */
+@font-face {
+  font-family: "Noto Nastaliq Urdu";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/noto-nastaliq-urdu-arabic.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+}
+@font-face {
+  font-family: "Noto Naskh Arabic";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/noto-naskh-arabic-arabic.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08E1, U+08E3-08FF, U+200C-200E, U+2010-2011, U+204F, U+2E41, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+}
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/ibm-plex-sans-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/source-serif-4-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ---- reset (matches the design's global reset) ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  line-height: var(--lh-ui);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, p, figure, ul, ol {
+  margin: 0;
+}
+
+ul, ol {
+  padding: 0;
+  list-style: none;
+}
+
+img, svg {
+  display: block;
+  max-width: 100%;
+}
+
+img {
+  height: auto;
+}
+
+button, input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+a {
+  color: var(--red);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--red-hover);
+  text-decoration: underline;
+}
+
+/* No radius, no shadow anywhere — focus has to be visible by outline alone. */
+:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+/* ---- shared primitives ---- */
+.container {
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  inset-block-start: -100%;
+  inset-inline-start: var(--gutter);
+  z-index: 100;
+  padding: 10px 14px;
+  background: var(--ink);
+  color: var(--on-red);
+  font-size: var(--ui-nav);
+}
+
+.skip-link:focus {
+  inset-block-start: var(--s-2);
+  outline-color: var(--on-red);
+}
+
+/* Latin runs and numerals inside RTL text: see LtrRun.astro (rule 03). */
+.ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Eyebrow: Latin, tracked, uppercase. Used for section kickers and labels. */
+.eyebrow {
+  font-family: var(--font-ui);
+  font-size: var(--ui-eyebrow);
+  letter-spacing: var(--track-eyebrow);
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Content typography roles. Components apply these; they never set font-size directly. */
+.t-head {
+  font-family: var(--font-head);
+  line-height: var(--lh-head);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.t-body {
+  font-family: var(--font-body);
+  line-height: var(--lh-body);
+  color: var(--body);
+}
+
+/* Section frame: 1px rule + whitespace. No cards, no boxes. */
+.section {
+  padding: var(--section-pad);
+}
+
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-5);
+  padding-block-end: var(--s-3);
+  margin-block-end: var(--s-6);
+  border-block-end: 1px solid var(--rule);
+}
+
+.section-title {
+  font-family: var(--font-head);
+  line-height: var(--lh-head);
+  font-size: var(--fs-section);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Buttons: solid ink → red on hover; outlined variant. 44px minimum. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: var(--touch);
+  padding: 10px 18px;
+  font-family: var(--font-ui);
+  font-size: var(--ui-button);
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--on-red);
+}
+
+.btn:hover {
+  background: var(--red);
+  border-color: var(--red);
+  color: var(--on-red);
+  text-decoration: none;
+}
+
+.btn--outline {
+  background: transparent;
+  color: var(--ink);
+}
+
+.btn--outline:hover {
+  background: transparent;
+  color: var(--red);
+  border-color: var(--red);
+}
+
+/* Urdu labels inside buttons use Nastaliq at the UI size; line-height is tall
+   by nature so the button keeps its height via min-height, not padding. */
+html[lang="ur"] .btn {
+  font-family: var(--font-nastaliq);
+  line-height: 1.9;
+  padding-block: 4px;
+}

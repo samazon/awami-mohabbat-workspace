@@ -1,0 +1,31 @@
+---
+/**
+ * Rule 03: isolate every Latin or numeral run inside RTL text.
+ * Dates, prices, phone numbers, volume lines, the Latin lockup, the ABC badge.
+ *
+ * `block` — the run is its own line; also pin text-align to the page's start
+ * edge so the isolated LTR run doesn't drift against the RTL flow.
+ * `tabular` — numerals line up (ticker, rates, phone numbers).
+ *
+ * Parents style this element through `class`. Astro hands the parent's scope
+ * attribute over in `Astro.props`, so the rest props are spread onto the
+ * element — without that, parent-scoped rules never match.
+ */
+interface Props {
+  block?: boolean;
+  tabular?: boolean;
+  class?: string;
+  title?: string;
+  [key: `data-${string}`]: string | boolean | undefined;
+}
+const { block = false, tabular = false, class: className, title, ...rest } = Astro.props;
+const Tag = block ? 'div' : 'span';
+---
+<Tag {...rest} dir="ltr" class:list={['ltr', { tabular, 'ltr--block': block }, className]} title={title}><slot /></Tag>
+
+<style>
+  .ltr--block {
+    display: block;
+    text-align: start;
+  }
+</style>

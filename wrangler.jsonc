@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "awami-mohabbat",
+  "compatibility_date": "2026-09-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+
+  // `main` and `assets` are set by @astrojs/cloudflare at build time.
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "awami-mohabbat",
+      // Local dev works with this placeholder. Replace with the real id from
+      // `wrangler d1 create awami-mohabbat` before the first remote migration.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "drizzle"
+    }
+  ],
+
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "awami-mohabbat-media"
+    }
+  ],
+
+  "vars": {
+    // Dev + first deploy: serve R2 objects through the Worker's /media route.
+    // Once the R2 custom domain exists, set this to https://cdn.<domain>.
+    "CDN_BASE": "/media"
+  }
+}

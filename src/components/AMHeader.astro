@@ -1,0 +1,412 @@
+---
+import { Image } from 'astro:assets';
+import logo from '@/assets/logo-awami-mohabbat.png';
+import { t, type Locale } from '@/i18n';
+import { formatLong } from '@/lib/dates';
+import { nav as navFor } from '@/lib/links';
+import type { SiteConfigView } from '@/lib/services/config';
+import LtrRun from './LtrRun.astro';
+import ReaderControls from './ReaderControls.astro';
+import LanguageSwitcher from './LanguageSwitcher.astro';
+
+interface Props {
+  locale: Locale;
+  config: SiteConfigView | null;
+  masthead: { date: string; hijriDate: string; volume: number; issue: number } | null;
+  active?: 'home' | 'archive' | 'articles' | 'about';
+}
+const { locale, config, masthead, active = 'home' } = Astro.props;
+const s = t(locale);
+const links = navFor(locale);
+const pathname = Astro.url.pathname;
+
+const items = [
+  { key: 'home', href: links.home, label: s.nav.home },
+  { key: 'archive', href: links.archive, label: s.nav.archive },
+  { key: 'articles', href: links.articles, label: s.nav.articles },
+  { key: 'about', href: links.about, label: s.nav.about },
+] as const;
+
+const volume = masthead?.volume ?? config?.currentVolume;
+const issue = masthead?.issue ?? config?.currentIssue;
+---
+
+<div class="strip">
+  <div class="container strip__row">
+    <span class="strip__group">{s.strip.group}</span>
+    <LtrRun class="strip__abc">{s.strip.abc}</LtrRun>
+    <span class="strip__tagline">{s.strip.tagline}</span>
+  </div>
+</div>
+
+<header class="header">
+  <div class="container">
+    <div class="row1">
+      <nav class="nav" aria-label={s.a11y.mainNav}>
+        {items.map((i) => (
+          <a class="nav__link t-label" href={i.href} aria-current={i.key === active ? 'page' : undefined}>{i.label}</a>
+        ))}
+      </nav>
+
+      <div class="tools">
+        <ReaderControls locale={locale} class="tools__reader" />
+        <LanguageSwitcher locale={locale} pathname={pathname} class="tools__lang" />
+        <form class="search" role="search" action={links.search} method="get">
+          <label class="visually-hidden" for="q">{s.search.label}</label>
+          <svg class="search__icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M16.5 16.5 21 21" /></svg>
+          <input id="q" class="search__input t-label" type="search" name="q" placeholder={s.search.placeholder} autocomplete="off" />
+        </form>
+      </div>
+
+      <am-mobile-nav class="mobile">
+        <button type="button" class="mobile__btn" aria-expanded="false" aria-controls="mobile-panel" aria-label={s.nav.menu}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+        </button>
+        <a class="mobile__btn" href={links.search} aria-label={s.search.label}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M16.5 16.5 21 21" /></svg>
+        </a>
+        <div id="mobile-panel" class="panel" hidden>
+          <nav class="panel__nav" aria-label={s.a11y.mainNav}>
+            {items.map((i) => (
+              <a class="panel__link t-label" href={i.href} aria-current={i.key === active ? 'page' : undefined}>{i.label}</a>
+            ))}
+          </nav>
+          <div class="panel__tools">
+            <ReaderControls locale={locale} />
+            <LanguageSwitcher locale={locale} pathname={pathname} />
+          </div>
+        </div>
+      </am-mobile-nav>
+    </div>
+
+    <div class="masthead">
+      <span class="masthead__kicker t-label">{s.masthead.daily}</span>
+      <a class="masthead__logo" href={links.home} aria-label={s.meta.siteName}>
+        <Image
+          src={logo}
+          alt={s.meta.siteName}
+          widths={[250, 360, 460, 920]}
+          sizes="(max-width: 767px) 250px, 460px"
+          format="webp"
+          loading="eager"
+          fetchpriority="high"
+        />
+      </a>
+      <LtrRun class="masthead__latin">AWAMI MOHABBAT</LtrRun>
+    </div>
+
+    <div class="dateline">
+      <LtrRun class="dateline__start">
+        {volume != null && issue != null && (
+          <span class="dateline__vol">{s.masthead.vol} {volume} &nbsp;|&nbsp; {s.masthead.issue} {issue}</span>
+        )}
+        {masthead && (
+          <>
+            <span class="dateline__dot" aria-hidden="true">·</span>
+            <span>{formatLong(masthead.date)} &nbsp;|&nbsp; {masthead.hijriDate}</span>
+          </>
+        )}
+      </LtrRun>
+      {config && (
+        <span class="dateline__end t-label">
+          <span>{config.coverage}</span>
+          <span class="dateline__dot" aria-hidden="true">·</span>
+          <span>{s.masthead.chiefEditor}: {config.editor}</span>
+        </span>
+      )}
+    </div>
+  </div>
+</header>
+
+<script>
+  class MobileNav extends HTMLElement {
+    connectedCallback() {
+      const btn = this.querySelector<HTMLButtonElement>('button[aria-expanded]');
+      const panel = this.querySelector<HTMLElement>('.panel');
+      if (!btn || !panel) return;
+      btn.addEventListener('click', () => {
+        const open = btn.getAttribute('aria-expanded') === 'true';
+        btn.setAttribute('aria-expanded', String(!open));
+        panel.hidden = open;
+      });
+      this.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && btn.getAttribute('aria-expanded') === 'true') {
+          btn.setAttribute('aria-expanded', 'false');
+          panel.hidden = true;
+          btn.focus();
+        }
+      });
+    }
+  }
+  if (!customElements.get('am-mobile-nav')) customElements.define('am-mobile-nav', MobileNav);
+</script>
+
+<style>
+  /* Labels in the reader's script (Nastaliq for Urdu, Plex for English). */
+  .t-label {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+  }
+
+  /* ---- red utility strip: group at start · ABC badge dead-centre · tagline at end.
+          Urdu runs in Nastaliq (13px/2.1 and 12px/2.2), badge 10px/600. ---- */
+  .strip {
+    background: var(--red);
+    color: var(--on-red);
+  }
+  .strip__row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 24px;
+    padding-block: 7px;
+  }
+  .strip__group {
+    justify-self: start;
+    font-family: var(--font-nastaliq);
+    font-size: var(--ui-search);
+    line-height: 2.1;
+  }
+  .strip__tagline {
+    justify-self: end;
+    text-align: end;
+    font-family: var(--font-nastaliq);
+    font-size: var(--ui-meta);
+    line-height: 2.2;
+  }
+  .strip__abc {
+    justify-self: center;
+    display: inline-block;
+    padding: 3px 7px;
+    border: 1px solid var(--on-red-border);
+    font-family: var(--font-ui);
+    font-size: var(--ui-eyebrow-sm);
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: 0.14em;
+    white-space: nowrap;
+  }
+
+  /* ---- header ---- */
+  .header {
+    border-block-end: 1px solid var(--ink);
+  }
+  .row1 {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px 24px;
+    padding-block-start: 12px;
+  }
+  .nav {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+  }
+  .nav__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch);
+    padding-block-end: 2px;
+    font-size: var(--ui-nav);
+    color: var(--secondary);
+    border-block-end: 2px solid transparent;
+    text-decoration: none;
+  }
+  .nav__link:hover {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .nav__link[aria-current='page'] {
+    color: var(--ink);
+    border-block-end-color: var(--red);
+  }
+
+  .tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+  .search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 190px;
+    min-height: var(--touch);
+    padding: 0 10px;
+    border: 1px solid var(--rule-strong);
+    color: var(--muted);
+  }
+  .search__input {
+    width: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font-size: var(--ui-search);
+    color: var(--ink);
+  }
+  .search__input::placeholder {
+    color: var(--muted);
+  }
+
+  /* ---- phone chrome: hamburger at start, search at end ---- */
+  .mobile {
+    display: none;
+  }
+  .mobile__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--touch);
+    height: var(--touch);
+    color: var(--ink);
+  }
+  .panel {
+    flex-basis: 100%;
+    padding: 8px 0 16px;
+    border-block-start: 1px solid var(--rule);
+  }
+  .panel__nav {
+    display: flex;
+    flex-direction: column;
+  }
+  .panel__link {
+    display: flex;
+    align-items: center;
+    min-height: var(--touch);
+    font-size: var(--ui-nav);
+    color: var(--ink);
+    border-block-end: 1px solid var(--hairline);
+    text-decoration: none;
+  }
+  .panel__link[aria-current='page'] {
+    color: var(--red);
+  }
+  .panel__tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-block-start: 14px;
+  }
+
+  @media (max-width: 767px) {
+    .nav,
+    .tools {
+      display: none;
+    }
+    .mobile {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+    /* All three stay on phones, smaller: group 11px · badge 9px · tagline 10px. */
+    .strip__row {
+      gap: 10px;
+      padding-block: 5px;
+    }
+    .strip__group {
+      font-size: var(--ui-eyebrow);
+      line-height: 2;
+      white-space: nowrap;
+    }
+    .strip__tagline {
+      font-size: var(--ui-eyebrow-sm);
+      line-height: 2;
+      white-space: nowrap;
+    }
+    .strip__abc {
+      padding: 2px 5px;
+      font-size: var(--ui-badge-sm);
+      letter-spacing: 0.1em;
+    }
+
+    /* dateline: centred, one item per line as in the phone mockup */
+    .dateline,
+    .dateline__start,
+    .dateline__end {
+      justify-content: center;
+      text-align: center;
+    }
+  }
+
+  /* Narrow phones (≤379px): the three strip items no longer fit one row —
+     texts share the first row, badge takes the second, still centred. */
+  @media (max-width: 379px) {
+    .strip__row {
+      grid-template-columns: 1fr 1fr;
+      grid-template-areas:
+        'group tagline'
+        'badge badge';
+      row-gap: 2px;
+    }
+    .strip__group { grid-area: group; }
+    .strip__tagline { grid-area: tagline; }
+    .strip__abc { grid-area: badge; }
+  }
+
+  /* ---- masthead: rule 01, the wordmark is the image ---- */
+  .masthead {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 10px 0 8px;
+    text-align: center;
+  }
+  .masthead__kicker {
+    font-size: var(--ui-search);
+    color: var(--red);
+  }
+  .masthead__logo {
+    display: block;
+    width: 100%;
+    max-width: clamp(250px, 40vw, var(--wordmark-desktop));
+  }
+  .masthead__logo img {
+    width: 100%;
+    height: auto;
+  }
+  .masthead__latin {
+    padding-block-start: 6px;
+    font-family: var(--font-ui);
+    font-size: var(--ui-wordmark-sub);
+    letter-spacing: var(--track-wordmark);
+    color: var(--muted);
+  }
+
+  /* ---- dateline ---- */
+  .dateline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 22px;
+    padding: 9px 0 10px;
+    border-block-start: 1px solid var(--rule);
+    font-size: var(--ui-meta);
+    color: var(--secondary);
+  }
+  .dateline__start {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 14px;
+  }
+  .dateline__vol {
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .dateline__end {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 14px;
+  }
+  .dateline__dot {
+    color: var(--rule-strong);
+  }
+</style>

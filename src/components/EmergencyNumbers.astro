@@ -1,0 +1,79 @@
+---
+/** Rule 06: tel: links, never collapsed, never beside advertising. */
+import { t, type Locale } from '@/i18n';
+import type { ContactView } from '@/lib/services/contacts';
+import LtrRun from './LtrRun.astro';
+
+interface Props {
+  contacts: ContactView[];
+  locale: Locale;
+}
+const { contacts, locale } = Astro.props;
+const s = t(locale);
+---
+
+{contacts.length > 0 && (
+  <section id="emergency" class="section">
+    <div class="container">
+      <div class="box">
+        <h2 class="title t-label">{s.emergency.title}</h2>
+        <ul class="grid">
+          {contacts.map((c) => (
+            <li class="item">
+              <span class="item__label t-label">{c.label}</span>
+              <a class="item__tel" href={`tel:${c.tel}`} aria-label={s.emergency.call(c.label)}>
+                <LtrRun tabular>{c.number}</LtrRun>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </section>
+)}
+
+<style>
+  .t-label {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+  }
+  .box {
+    padding: 18px 22px 22px;
+    border: 1px solid var(--ink);
+  }
+  .title {
+    font-size: var(--ui-nav);
+    font-weight: 700;
+    color: var(--ink);
+    padding-block-end: 10px;
+    margin-block-end: 14px;
+    border-block-end: 1px solid var(--rule);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 14px 24px;
+  }
+  .item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .item__label {
+    font-size: var(--ui-meta);
+    color: var(--secondary);
+  }
+  .item__tel {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch-tel);
+    font-family: var(--font-ui);
+    font-size: var(--fs-tel);
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .item__tel:hover {
+    color: var(--red);
+    text-decoration: none;
+  }
+</style>

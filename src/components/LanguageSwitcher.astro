@@ -1,0 +1,59 @@
+---
+/** Plain links — switching language keeps the reader on the same page. */
+import { LOCALES, localePath, neutralPath, t, type Locale } from '@/i18n';
+
+interface Props {
+  locale: Locale;
+  pathname: string;
+  class?: string;
+}
+const { locale, pathname, class: className } = Astro.props;
+const s = t(locale);
+const route = neutralPath(pathname);
+---
+
+<nav class:list={['lang', className]} aria-label={s.lang.group}>
+  {LOCALES.map((l) => (
+    <a
+      class="lang__link"
+      href={localePath(l, route)}
+      lang={l}
+      dir={l === 'ur' ? 'rtl' : 'ltr'}
+      hreflang={l}
+      aria-current={l === locale ? 'page' : undefined}
+    >{s.lang[l]}</a>
+  ))}
+</nav>
+
+<style>
+  .lang {
+    display: inline-flex;
+    border: 1px solid var(--rule-strong);
+  }
+  .lang__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch);
+    padding: 0 12px;
+    font-family: var(--font-ui);
+    font-size: var(--ui-nav);
+    color: var(--secondary);
+    text-decoration: none;
+    border-inline-end: 1px solid var(--rule-strong);
+  }
+  .lang__link[lang='ur'] {
+    font-family: var(--font-nastaliq);
+    line-height: 1.9;
+  }
+  .lang__link:last-child {
+    border-inline-end: 0;
+  }
+  .lang__link:hover {
+    color: var(--red);
+    text-decoration: none;
+  }
+  .lang__link[aria-current='page'] {
+    background: var(--ink);
+    color: var(--on-red);
+  }
+</style>

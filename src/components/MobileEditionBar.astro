@@ -1,0 +1,70 @@
+---
+/** Rule 07: on phones, the one thing readers came for is pinned to the bottom. */
+import { t, type Locale } from '@/i18n';
+import { viewerHref } from '@/lib/links';
+import type { EditionView } from '@/lib/services/editions';
+
+interface Props {
+  edition: EditionView;
+  locale: Locale;
+}
+const { edition, locale } = Astro.props;
+const s = t(locale);
+---
+
+<div class="bar">
+  <a class="bar__read t-label" href={viewerHref(locale, edition, 1)}>{s.mobileBar.read}</a>
+  {edition.pdfUrl && (
+    <a class="bar__pdf" href={edition.pdfUrl} download={`awami-mohabbat-${edition.date}.pdf`} aria-label={s.today.viewPdf}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12" /><path d="M7 11l5 5 5-5" /><path d="M4 20h16" /></svg>
+    </a>
+  )}
+</div>
+
+<style>
+  .t-label {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+  }
+  .bar {
+    display: none;
+  }
+  @media (max-width: 767px) {
+    .bar {
+      position: fixed;
+      inset-inline: 0;
+      inset-block-end: 0;
+      z-index: 50;
+      display: flex;
+      gap: 1px;
+      padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+      background: var(--surface);
+      border-block-start: 1px solid var(--ink);
+    }
+    .bar__read {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: var(--touch);
+      background: var(--ink);
+      color: var(--on-red);
+      font-size: var(--ui-button);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .bar__pdf {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--touch);
+      min-height: var(--touch);
+      border: 1px solid var(--ink);
+      color: var(--ink);
+    }
+    /* keep the last section clear of the bar */
+    :global(body) {
+      padding-block-end: 72px;
+    }
+  }
+</style>

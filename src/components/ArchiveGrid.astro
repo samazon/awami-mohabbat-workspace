@@ -1,0 +1,71 @@
+---
+import { t, type Locale } from '@/i18n';
+import { localePath } from '@/i18n';
+import { formatShort } from '@/lib/dates';
+import type { EditionCard } from '@/lib/services/editions';
+import LtrRun from './LtrRun.astro';
+import PageThumb from './PageThumb.astro';
+
+interface Props {
+  editions: EditionCard[];
+  locale: Locale;
+}
+const { editions, locale } = Astro.props;
+const s = t(locale);
+const arrow = locale === 'ur' ? '←' : '→';
+---
+
+{editions.length > 0 && (
+  <section id="archive" class="section">
+    <div class="container">
+      <header class="section-head">
+        <h2 class="section-title">{s.archive.title}</h2>
+        <a class="all t-label" href={localePath(locale, '/archive')}>{s.archive.viewAll} {arrow}</a>
+      </header>
+
+      <div class="grid">
+        {editions.map((e) => (
+          <article class="card">
+            <PageThumb
+              page={{ thumb: e.thumb ?? '' }}
+              alt={s.a11y.edition(formatShort(e.date))}
+              href={localePath(locale, `/edition/${e.date}`)}
+              sizes="(max-width: 767px) 45vw, 170px"
+            >
+              <LtrRun block class="card__date">{formatShort(e.date)}</LtrRun>
+              <h3 class="card__title t-head" lang={e.translation.locale}>{e.headline}</h3>
+            </PageThumb>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+)}
+
+<style>
+  .t-label {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+  }
+  .all {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch);
+    font-size: var(--ui-nav);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 26px 18px;
+  }
+  .card__date {
+    padding-block-start: 8px;
+    font-family: var(--font-ui);
+    font-size: var(--ui-caption);
+    color: var(--muted);
+  }
+  .card__title {
+    font-size: var(--fs-card);
+    font-weight: 700;
+  }
+</style>

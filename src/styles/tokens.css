@@ -1,0 +1,124 @@
+/*
+ * Design tokens — the ONLY place a colour, type size, or layout constant is defined.
+ * Source: design-document (tokensPublic, scale, layout) + the approved screens.
+ *
+ * Two kinds of type token, and the distinction is load-bearing:
+ *   --fs-*  CONTENT  → multiplied by --reader-scale, driven by the A− / A / A+ control
+ *   --ui-*  CHROME   → fixed px, never scales, so header/ad-slot geometry cannot move
+ *
+ * stylelint enforces that `font-size` only ever takes one of these tokens.
+ */
+:root {
+  /* ---- reader scale (content only) ---- */
+  --reader-scale: 1;
+
+  /* ---- colour: public site ---- */
+  --ink: #111111;          /* headlines, primary text, rules */
+  --body: #333333;         /* body text */
+  --secondary: #555555;    /* secondary labels */
+  --muted: #6b6b6b;        /* muted meta — lightest text allowed */
+  --red: #a8161e;          /* brand red — accents and links only */
+  --red-hover: #6e0d13;
+  --surface: #ffffff;
+  --tint: #fafaf8;         /* utility bar and footer */
+  --thumb-ground: #f4f3f0; /* newspaper page thumbnail ground */
+  --rule: #e2e2e2;
+  --rule-strong: #d9d9d9;  /* thumbnail + search borders */
+  --hairline: #f0efec;     /* inside lists */
+  --placeholder: #a5a19a;  /* text in empty media */
+  --on-red: #ffffff;
+  --on-red-border: rgba(255, 255, 255, 0.7);
+
+  /* ---- CONTENT type — scales ---- */
+  --fs-hero:    clamp(calc(26px * var(--reader-scale)), calc(4vw * var(--reader-scale)), calc(38px * var(--reader-scale)));
+  --fs-title:   clamp(calc(28px * var(--reader-scale)), calc(4.6vw * var(--reader-scale)), calc(44px * var(--reader-scale)));
+  --fs-h1:      clamp(calc(26px * var(--reader-scale)), calc(4vw * var(--reader-scale)), calc(34px * var(--reader-scale)));
+  --fs-section: calc(18px * var(--reader-scale));
+  --fs-body:    calc(17px * var(--reader-scale));
+  --fs-summary: calc(16px * var(--reader-scale));
+  --fs-card:    calc(14px * var(--reader-scale));
+  --fs-ticker:  calc(12px * var(--reader-scale));
+  --fs-tel:     calc(19px * var(--reader-scale));
+
+  /* ---- CHROME type — fixed ---- */
+  --ui-nav: 14px;
+  --ui-search: 13px;
+  --ui-meta: 12px;
+  --ui-caption: 11px;
+  --ui-eyebrow: 11px;
+  --ui-eyebrow-sm: 10px;
+  --ui-badge-sm: 9px;
+  --ui-button: 14px;
+  --ui-wordmark-sub: 11px;
+
+  /* ---- letter-spacing for Latin eyebrows ---- */
+  --track-eyebrow: 0.16em;
+  --track-wordmark: 0.3em;
+
+  /* ---- line-height, per script (unitless: scales with the font) ---- */
+  --lh-nastaliq: 2.05;
+  --lh-naskh: 2.2;
+  --lh-serif-head: 1.2;
+  --lh-serif-body: 1.65;
+  --lh-ui: 1.5;
+
+  /* ---- font stacks ---- */
+  --font-nastaliq: "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", serif;
+  --font-naskh: "Noto Naskh Arabic", "Geeza Pro", "Noto Naskh Arabic UI", serif;
+  --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* ---- per-locale resolved roles (switched by html[lang] below) ---- */
+  --font-head: var(--font-nastaliq);
+  --font-body: var(--font-naskh);
+  --lh-head: var(--lh-nastaliq);
+  --lh-body: var(--lh-naskh);
+  /* UI labels in the reader's script: nav, section links, button text.
+     Nastaliq for Urdu (the brand voice), Plex Sans for Latin. */
+  --font-label: var(--font-nastaliq);
+  --lh-label: 1.9;
+
+  /* ---- the one sanctioned breakpoint (header collapse + pinned edition bar) ---- */
+  /* @media (max-width: 767px) — referenced by comment; CSS can't var() a media query. */
+
+  /* ---- layout ---- */
+  --container: 1180px;
+  --gutter: 20px;
+  --section-pad: 34px 0 40px;
+  --page-aspect: 1 / 1.414;   /* A-series portrait, every thumbnail, every size */
+  --measure-body: 62ch;
+  --measure-summary: 44ch;
+  --touch: 44px;
+  --touch-tel: 52px;
+
+  /* ---- wordmark widths (rule 01: the PNG, never type) ---- */
+  --wordmark-desktop: 460px;
+  --wordmark-footer: 190px;
+
+  /* ---- spacing ---- */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-7: 32px;
+  --s-8: 40px;
+}
+
+/* Reader text-size steps. Applied to <html data-reader-scale> by a blocking
+   head script (allow-listed) and by the ReaderControls island. */
+html[data-reader-scale="sm"] { --reader-scale: 0.9; }
+html[data-reader-scale="lg"] { --reader-scale: 1.15; }
+html[data-reader-scale="xl"] { --reader-scale: 1.32; }
+
+/* Latin-script locale: headlines and body switch to the serif, rhythm tightens.
+   Script determines typeface, not the language label. */
+html[lang="en"] {
+  --font-head: var(--font-serif);
+  --font-body: var(--font-serif);
+  --lh-head: var(--lh-serif-head);
+  --lh-body: var(--lh-serif-body);
+  --font-label: var(--font-ui);
+  --lh-label: var(--lh-ui);
+}

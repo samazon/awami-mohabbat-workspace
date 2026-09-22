@@ -1,0 +1,67 @@
+---
+/** A newspaper page at 1/1.414, on the thumbnail ground, with a caption. */
+import type { PageView } from '@/lib/services/editions';
+
+interface Props {
+  page: Pick<PageView, 'thumb' | 'view' | 'zoom' | 'width' | 'height'> | { thumb: string };
+  alt: string;
+  href: string;
+  /** Rendered width hint for srcset selection. */
+  sizes: string;
+  active?: boolean;
+  large?: boolean;
+  loading?: 'eager' | 'lazy';
+  class?: string;
+}
+const { page, alt, href, sizes, active = false, large = false, loading = 'lazy', class: className } = Astro.props;
+const full = 'view' in page ? page : null;
+const srcset = full ? `${full.thumb} 400w, ${full.view} 1200w, ${full.zoom} 2400w` : undefined;
+---
+
+<a class:list={['thumb', { 'thumb--active': active, 'thumb--large': large }, className]} href={href} aria-current={active ? 'true' : undefined}>
+  <span class="thumb__frame">
+    <img
+      src={full ? full.view : page.thumb}
+      srcset={srcset}
+      sizes={sizes}
+      alt={alt}
+      width={full?.width}
+      height={full?.height}
+      loading={loading}
+      decoding="async"
+      fetchpriority={loading === 'eager' ? 'high' : undefined}
+    />
+  </span>
+  <slot />
+</a>
+
+<style>
+  .thumb {
+    display: block;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .thumb:hover {
+    text-decoration: none;
+  }
+  .thumb__frame {
+    display: block;
+    aspect-ratio: var(--page-aspect);
+    background: var(--thumb-ground);
+    border: 1px solid var(--rule-strong);
+    overflow: hidden;
+  }
+  .thumb--active .thumb__frame {
+    outline: 2px solid var(--red);
+    outline-offset: -1px;
+  }
+  .thumb:hover .thumb__frame {
+    border-color: var(--ink);
+  }
+  .thumb__frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+  }
+</style>

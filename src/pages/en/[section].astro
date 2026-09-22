@@ -1,0 +1,12 @@
+---
+import StubPage from '@/components/StubPage.astro';
+
+const SECTIONS = ['archive', 'articles', 'about', 'search'] as const;
+type Section = (typeof SECTIONS)[number];
+const isSection = (v: unknown): v is Section => (SECTIONS as readonly string[]).includes(v as string);
+
+const { section } = Astro.params;
+if (!isSection(section)) return Astro.rewrite('/en/404');
+---
+
+<StubPage locale="en" section={section} />

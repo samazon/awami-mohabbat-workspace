@@ -1,0 +1,187 @@
+---
+/**
+ * One ad slot. The label sits ABOVE the creative, never inside it, and the
+ * source is tagged GOOGLE ADS vs CLIENT. Until the ad network is wired, Google
+ * fallback renders a labelled placeholder at the slot's exact size; a slot whose
+ * fallback is `hidden` and has no campaign renders nothing at all.
+ */
+import { t, type Locale } from '@/i18n';
+import type { AdSlotView } from '@/lib/services/ads';
+import LtrRun from './LtrRun.astro';
+
+interface Props {
+  /** Named `ad`, not `slot` — `slot` is a reserved Astro attribute. */
+  ad: AdSlotView | undefined;
+  locale: Locale;
+}
+const { ad: slot, locale } = Astro.props;
+const s = t(locale).ad;
+
+const SIZES = {
+  leaderboard: { w: 970, h: 90 },
+  banner: { w: 728, h: 90 },
+  rect: { w: 300, h: 250 },
+  halfpage: { w: 300, h: 600 },
+  square: { w: 300, h: 330 },
+  mobile: { w: 320, h: 100 },
+  strip: { w: 0, h: 0 },
+} as const;
+
+/**
+ * Google fallback placeholders are switched off until the ad account exists.
+ * Flip to `true` (or wire the real ad unit here) to show them again. Booked
+ * client campaigns are unaffected — they render whenever one is live.
+ */
+const SHOW_GOOGLE_PLACEHOLDERS = false;
+
+const size = slot ? SIZES[slot.kind] : SIZES.strip;
+const creative = slot?.creative ?? null;
+const wide = slot?.kind === 'leaderboard' || slot?.kind === 'banner';
+const render = !!slot && slot.source !== 'hidden' && (creative !== null || SHOW_GOOGLE_PLACEHOLDERS);
+---
+
+{render && slot && (
+  <aside class="ad" aria-label={s.label} data-slot={slot.slotId}>
+    <div class="container">
+      <div class="ad__head">
+        <span class="ad__label">{creative?.labelAs === 'sponsored' ? s.sponsored : s.label}</span>
+        <LtrRun class="eyebrow ad__source">{slot.source === 'direct' ? s.client : s.google}</LtrRun>
+      </div>
+
+      {slot.kind === 'strip' && creative && (
+        <a class="strip" href={creative.linkUrl} target={creative.newTab ? '_blank' : undefined} rel="noopener sponsored">
+          <span class="strip__client">{creative.client}</span>
+          <span class="strip__title">{creative.title}</span>
+          <span class="strip__body">{creative.body}</span>
+          {creative.cta && <span class="strip__cta">{creative.cta}</span>}
+        </a>
+      )}
+
+      {slot.kind !== 'strip' && creative?.imageUrl && (
+        <a class="creative" style={`max-width:${size.w}px`} href={creative.linkUrl} target={creative.newTab ? '_blank' : undefined} rel="noopener sponsored">
+          <img src={creative.imageUrl} alt={creative.altText} width={size.w} height={size.h} loading="lazy" decoding="async" />
+        </a>
+      )}
+
+      {slot.kind !== 'strip' && !creative && (
+        <>
+          <div class:list={['placeholder', { 'placeholder--desktop': wide }]} style={`max-width:${size.w}px; aspect-ratio:${size.w} / ${size.h}`} aria-hidden="true">
+            <span>Google ad unit</span>
+            <LtrRun class="placeholder__size">{size.w}×{size.h}</LtrRun>
+          </div>
+          {wide && (
+            <div class="placeholder placeholder--phone" style="max-width:320px; aspect-ratio:320 / 100" aria-hidden="true">
+              <span>Google ad unit</span>
+              <LtrRun class="placeholder__size">320×100</LtrRun>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  </aside>
+)}
+
+<style>
+  .ad {
+    padding-block: 18px;
+  }
+  .ad__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding-block-end: 8px;
+  }
+  .ad__label {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-eyebrow);
+    color: var(--muted);
+  }
+  .ad__source {
+    font-size: var(--ui-eyebrow-sm);
+  }
+
+  .creative,
+  .placeholder {
+    display: block;
+    margin-inline: auto;
+    width: 100%;
+  }
+  .creative img {
+    width: 100%;
+    height: auto;
+  }
+  .placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: var(--thumb-ground);
+    border: 1px solid var(--hairline);
+    color: var(--placeholder);
+    font-family: var(--font-serif);
+    font-size: var(--ui-nav);
+    font-weight: 600;
+  }
+  .placeholder__size {
+    font-family: var(--font-ui);
+    font-size: var(--ui-eyebrow-sm);
+    font-weight: 400;
+    letter-spacing: 0.14em;
+  }
+  .placeholder--phone {
+    display: none;
+  }
+  @media (max-width: 767px) {
+    .placeholder--desktop {
+      display: none;
+    }
+    .placeholder--phone {
+      display: flex;
+    }
+  }
+
+  /* sponsor strip: text creative on a rule, no box */
+  .strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 22px;
+    padding: 14px 0;
+    border-block: 1px solid var(--rule);
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .strip:hover {
+    text-decoration: none;
+  }
+  .strip__client {
+    font-family: var(--font-ui);
+    font-size: var(--ui-eyebrow-sm);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .strip__title {
+    font-family: var(--font-head);
+    line-height: var(--lh-head);
+    font-size: var(--fs-card);
+    font-weight: 700;
+  }
+  .strip__body {
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
+    font-size: var(--fs-card);
+    color: var(--body);
+  }
+  .strip__cta {
+    margin-inline-start: auto;
+    padding: 8px 14px;
+    border: 1px solid var(--ink);
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-nav);
+  }
+</style>

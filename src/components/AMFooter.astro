@@ -1,0 +1,136 @@
+---
+import { Image } from 'astro:assets';
+import logo from '@/assets/logo-awami-mohabbat.png';
+import { t, type Locale } from '@/i18n';
+import { nav as navFor } from '@/lib/links';
+import type { SiteConfigView } from '@/lib/services/config';
+import LtrRun from './LtrRun.astro';
+
+interface Props {
+  locale: Locale;
+  config: SiteConfigView | null;
+}
+const { locale, config } = Astro.props;
+const s = t(locale);
+const links = navFor(locale);
+const year = new Date().getFullYear();
+---
+
+<footer class="footer">
+  <div class="container">
+    <div class="cols">
+      <div class="col">
+        <a class="logo" href={links.home} aria-label={s.meta.siteName}>
+          <Image src={logo} alt="" widths={[190, 380]} sizes="190px" format="webp" loading="lazy" />
+        </a>
+        <p class="tagline t-body">{s.footer.tagline}</p>
+      </div>
+
+      {config && (
+        <div class="col">
+          <LtrRun block class="eyebrow col__label">{s.footer.contact}</LtrRun>
+          <ul class="list t-body">
+            <li>{s.footer.office}: {config.office}</li>
+            <li>{s.footer.bureau}: {config.bureau}</li>
+            <li><LtrRun><a class="plain" href={`tel:${config.phoneTel}`}>{config.phone}</a></LtrRun></li>
+            <li><LtrRun><a href={`mailto:${config.email}`}>{config.email}</a></LtrRun></li>
+          </ul>
+        </div>
+      )}
+
+      <nav class="col" aria-label={s.a11y.footerNav}>
+        <LtrRun block class="eyebrow col__label">{s.footer.sections}</LtrRun>
+        <ul class="list links">
+          <li><a class="plain t-label" href={links.home}>{s.footer.todaysPaper}</a></li>
+          <li><a class="plain t-label" href={links.archive}>{s.footer.archive}</a></li>
+          <li><a class="plain t-label" href={links.about}>{s.footer.aboutContact}</a></li>
+        </ul>
+      </nav>
+
+      {config && config.social.length > 0 && (
+        <div class="col">
+          <LtrRun block class="eyebrow col__label">{s.footer.follow}</LtrRun>
+          <ul class="list links">
+            {config.social.map((x) => (
+              <li><LtrRun><a class="plain" href={x.url} rel="noopener">{x.label}</a></LtrRun></li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+
+    <div class="sub">
+      <LtrRun>{s.footer.copyright(year)}</LtrRun>
+      {config && <span class="t-label">{s.footer.chiefEditor}: {config.editor}</span>}
+    </div>
+  </div>
+</footer>
+
+<style>
+  .t-label {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+  }
+  .footer {
+    margin-block-start: 8px;
+    border-block-start: 1px solid var(--ink);
+    background: var(--tint);
+    color: var(--body);
+  }
+  .cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 28px 40px;
+    padding: 34px 0 26px;
+  }
+  .col {
+    min-width: 0;
+  }
+  .logo {
+    display: block;
+    max-width: var(--wordmark-footer);
+  }
+  .logo img {
+    width: 100%;
+    height: auto;
+  }
+  .tagline {
+    padding-block-start: 10px;
+    font-size: var(--fs-card);
+    color: var(--secondary);
+  }
+  .col__label {
+    margin-block-end: 10px;
+    font-size: var(--ui-eyebrow-sm);
+    color: var(--muted);
+  }
+  .list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: var(--fs-card);
+  }
+  .links li a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch);
+    font-size: var(--ui-nav);
+  }
+  .plain {
+    color: var(--ink);
+  }
+  .plain:hover {
+    color: var(--red);
+  }
+  .sub {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 20px;
+    padding: 14px 0 18px;
+    border-block-start: 1px solid var(--rule);
+    font-size: var(--ui-caption);
+    color: var(--muted);
+  }
+</style>

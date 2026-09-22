@@ -1,0 +1,76 @@
+---
+/**
+ * Placeholder for sections that exist in the nav but ship in phase 2
+ * (/archive, /articles, /about, /search) — and the 404. Full header/footer so
+ * the site never dead-ends; noindex so search engines don't record soft-404s.
+ */
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { t, type Locale } from '@/i18n';
+import { localePath } from '@/i18n';
+import { getSiteConfig } from '@/lib/services/config';
+import { getLatestEdition } from '@/lib/services/editions';
+import AMHeader from './AMHeader.astro';
+import AMFooter from './AMFooter.astro';
+
+interface Props {
+  locale: Locale;
+  section: 'archive' | 'articles' | 'about' | 'search' | 'notfound';
+}
+const { locale, section } = Astro.props;
+const s = t(locale);
+
+const [config, edition] = await Promise.all([getSiteConfig(locale), getLatestEdition(locale)]);
+
+const copy = {
+  ur: {
+    soon: 'یہ حصہ تعمیر کے مراحل میں ہے۔',
+    soonBody: 'مکمل آرکائیو، مضامین اور تعارف کے صفحات جلد شائع کیے جائیں گے۔ اس وقت آج کا اخبار صفحۂ اول پر دستیاب ہے۔',
+    notfound: 'یہ صفحہ موجود نہیں۔',
+    notfoundBody: 'ممکن ہے لنک پرانا ہو یا غلط ٹائپ ہوا ہو۔',
+    back: 'صفحۂ اول پر واپس جائیں',
+  },
+  en: {
+    soon: 'This section is under construction.',
+    soonBody: 'The full archive, articles and about pages are coming soon. Today\'s edition is available on the front page.',
+    notfound: 'This page does not exist.',
+    notfoundBody: 'The link may be out of date or mistyped.',
+    back: 'Back to the front page',
+  },
+}[locale];
+
+const titles: Record<Props['section'], string> = {
+  archive: s.nav.archive,
+  articles: s.nav.articles,
+  about: s.nav.about,
+  search: s.search.label,
+  notfound: '404',
+};
+const isNotFound = section === 'notfound';
+if (isNotFound) Astro.response.status = 404;
+const active = section === 'archive' || section === 'articles' || section === 'about' ? section : undefined;
+---
+
+<BaseLayout title={`${titles[section]} — ${s.meta.siteName}`} noindex cache={isNotFound ? 'private' : 'public'}>
+  <AMHeader slot="header" locale={locale} config={config} masthead={edition} active={active} />
+
+  <section class="section">
+    <div class="container">
+      <h1 class="t-head title">{isNotFound ? copy.notfound : copy.soon}</h1>
+      <p class="t-body body">{isNotFound ? copy.notfoundBody : copy.soonBody}</p>
+      <a class="btn" href={localePath(locale, '/')}>{copy.back}</a>
+    </div>
+  </section>
+
+  <AMFooter slot="footer" locale={locale} config={config} />
+</BaseLayout>
+
+<style>
+  .title {
+    font-size: var(--fs-h1);
+  }
+  .body {
+    max-width: var(--measure-body);
+    margin-block: 12px 26px;
+    font-size: var(--fs-body);
+  }
+</style>
