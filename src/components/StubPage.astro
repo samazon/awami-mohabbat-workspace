@@ -14,7 +14,7 @@ import AMFooter from './AMFooter.astro';
 
 interface Props {
   locale: Locale;
-  section: 'archive' | 'articles' | 'about' | 'search' | 'notfound';
+  section: 'archive' | 'articles' | 'search' | 'notfound';
 }
 const { locale, section } = Astro.props;
 const s = t(locale);
@@ -41,13 +41,12 @@ const copy = {
 const titles: Record<Props['section'], string> = {
   archive: s.nav.archive,
   articles: s.nav.articles,
-  about: s.nav.about,
   search: s.search.label,
   notfound: '404',
 };
 const isNotFound = section === 'notfound';
 if (isNotFound) Astro.response.status = 404;
-const active = section === 'archive' || section === 'articles' || section === 'about' ? section : undefined;
+const active = section === 'archive' || section === 'articles' ? section : undefined;
 ---
 
 <BaseLayout title={`${titles[section]} — ${s.meta.siteName}`} noindex cache={isNotFound ? 'private' : 'public'}>

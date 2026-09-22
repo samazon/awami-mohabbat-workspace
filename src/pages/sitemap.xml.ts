@@ -4,7 +4,7 @@ import { LOCALES, localePath } from '@/i18n';
 /** Homepage in each locale with hreflang alternates. Editions/articles join in phase 2. */
 export const GET: APIRoute = ({ site }) => {
   const base = site ?? new URL('http://localhost:4321');
-  const routes = ['/'];
+  const routes = ['/', '/about'];
   const urls = routes
     .flatMap((route) =>
       LOCALES.map((l) => {

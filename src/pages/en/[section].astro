@@ -1,7 +1,7 @@
 ---
 import StubPage from '@/components/StubPage.astro';
 
-const SECTIONS = ['archive', 'articles', 'about', 'search'] as const;
+const SECTIONS = ['archive', 'articles', 'search'] as const;
 type Section = (typeof SECTIONS)[number];
 const isSection = (v: unknown): v is Section => (SECTIONS as readonly string[]).includes(v as string);
 

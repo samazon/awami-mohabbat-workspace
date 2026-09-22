@@ -1,0 +1,236 @@
+---
+/**
+ * /about — to design screen 06: title, then mission beside the editor card,
+ * then three columns: editorial team, publication details, contact. No ads.
+ */
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { t, type Locale } from '@/i18n';
+import { about } from '@/content/about';
+import { getSiteConfig } from '@/lib/services/config';
+import { getLatestEdition } from '@/lib/services/editions';
+import AMHeader from './AMHeader.astro';
+import AMFooter from './AMFooter.astro';
+import LtrRun from './LtrRun.astro';
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const s = t(locale);
+const c = about[locale];
+const [config, edition] = await Promise.all([getSiteConfig(locale), getLatestEdition(locale)]);
+---
+
+<BaseLayout title={`${s.about.title} — ${s.meta.siteName}`} description={s.about.description}>
+  <AMHeader slot="header" locale={locale} config={config} masthead={edition} active="about" />
+
+  <div class="container">
+    <h1 class="title t-head">{s.about.title}</h1>
+
+    <div class="intro">
+      <section class="mission" aria-labelledby="mission-h">
+        <h2 id="mission-h" class="h2">{s.about.mission}</h2>
+        {c.mission.map((p) => <p class="t-body prose">{p}</p>)}
+      </section>
+
+      <section class="editor" aria-label={c.editor.role}>
+        <div class="editor__photo" role="img" aria-label={`${c.editor.name} — ${s.about.photo}`}>
+          <span>{s.about.photo}</span>
+        </div>
+        <div class="editor__text">
+          <h2 class="editor__name t-head">{c.editor.name}</h2>
+          <p class="editor__role">{c.editor.role}</p>
+          <p class="t-body editor__bio">{c.editor.bio}</p>
+        </div>
+      </section>
+    </div>
+
+    <div class="details">
+      <section aria-labelledby="staff-h">
+        <h2 id="staff-h" class="h2">{s.about.staff}</h2>
+        <dl class="rows">
+          {c.staff.map((m) => (
+            <div class="row">
+              <dt>{m.role}</dt>
+              <dd>{m.name}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <section aria-labelledby="pub-h">
+        <h2 id="pub-h" class="h2">{s.about.publication}</h2>
+        <dl class="rows">
+          <div class="row"><dt>{s.about.frequency}</dt><dd>{c.publication.frequency}</dd></div>
+          {config && <div class="row"><dt>{s.about.area}</dt><dd>{config.coverage}</dd></div>}
+          <div class="row"><dt>{s.about.language}</dt><dd>{c.publication.language}</dd></div>
+          <div class="row"><dt>{s.about.printedAt}</dt><dd>{c.publication.printedAt}</dd></div>
+          <div class="row"><dt>{s.about.certification}</dt><dd><LtrRun class="abc">{s.strip.abc}</LtrRun></dd></div>
+        </dl>
+      </section>
+
+      {config && (
+        <section aria-labelledby="contact-h">
+          <h2 id="contact-h" class="h2">{s.about.contact}</h2>
+          <ul class="contact t-body">
+            <li><span class="k">{s.footer.office}:</span> {config.office}</li>
+            {config.bureau && <li><span class="k">{s.footer.bureau}:</span> {config.bureau}</li>}
+            {config.phones.map((p) => (
+              <li><LtrRun tabular><a class="plain" href={`tel:${p.tel}`}>{p.display}</a></LtrRun></li>
+            ))}
+            <li><LtrRun><a href={`mailto:${config.email}`}>{config.email}</a></LtrRun></li>
+          </ul>
+        </section>
+      )}
+    </div>
+  </div>
+
+  <AMFooter slot="footer" locale={locale} config={config} />
+</BaseLayout>
+
+<style>
+  .title {
+    padding: 34px 0 14px;
+    font-size: var(--fs-h1);
+    border-block-end: 1px solid var(--ink);
+  }
+  .h2 {
+    margin-block-end: 14px;
+    font-family: var(--font-head);
+    line-height: var(--lh-head);
+    font-size: var(--fs-section);
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  /* mission (wide) beside the editor card */
+  .intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 32px 60px;
+    padding: 30px 0 40px;
+    border-block-end: 1px solid var(--rule);
+  }
+  .prose {
+    max-width: var(--measure-body);
+    font-size: var(--fs-body);
+  }
+  .prose + .prose {
+    margin-block-start: 14px;
+  }
+
+  .editor {
+    display: flex;
+    gap: 22px;
+    align-items: flex-start;
+  }
+  .editor__photo {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 176px;
+    aspect-ratio: 1 / 1.2;
+    background: var(--thumb-ground);
+    border: 1px solid var(--rule-strong);
+    color: var(--placeholder);
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-meta);
+  }
+  .editor__text {
+    min-width: 0;
+    padding-block-start: 4px;
+  }
+  .editor__name {
+    font-size: var(--fs-section);
+  }
+  .editor__role {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-meta);
+    color: var(--red);
+  }
+  .editor__bio {
+    margin-block-start: 10px;
+    font-size: var(--fs-card);
+  }
+
+  /* three detail columns */
+  .details {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 32px 60px;
+    padding: 34px 0 48px;
+  }
+  .rows {
+    margin: 0;
+  }
+  .row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 44px;
+    padding: 10px 0;
+    border-block-end: 1px solid var(--hairline);
+  }
+  .row dt {
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
+    font-size: var(--fs-card);
+    color: var(--muted);
+  }
+  .row dd {
+    margin: 0;
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
+    font-size: var(--fs-card);
+    color: var(--ink);
+    text-align: end;
+  }
+  .abc {
+    display: inline-block;
+    padding: 3px 8px;
+    border: 1px solid var(--red);
+    font-family: var(--font-ui);
+    font-size: var(--ui-eyebrow-sm);
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    color: var(--red);
+  }
+
+  .contact {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: var(--fs-card);
+  }
+  .contact .k {
+    color: var(--secondary);
+  }
+  .contact :global(.ltr) {
+    font-family: var(--font-ui);
+  }
+  .plain {
+    color: var(--ink);
+  }
+  .plain:hover {
+    color: var(--red);
+  }
+
+  @media (max-width: 1023px) {
+    .details {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (max-width: 767px) {
+    .intro,
+    .details {
+      grid-template-columns: 1fr;
+      gap: 30px;
+    }
+    .editor__photo {
+      width: 120px;
+    }
+  }
+</style>
