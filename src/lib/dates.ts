@@ -1,5 +1,5 @@
 /**
- * Date, time and money formatting. Pure — shared by the Worker and the seed
+ * Date, time, money and file-size formatting. Pure — shared by the Worker and the seed
  * scripts. The design keeps datelines, timestamps and figures in Latin digits
  * in both locales (always inside an LtrRun), so formatting is locale-stable.
  */
@@ -66,6 +66,13 @@ export const formatMoney = (minor: number): string => {
     minimumFractionDigits: whole ? 0 : 2,
     maximumFractionDigits: whole ? 0 : 2,
   }).format(rupees);
+};
+
+/** 6940815 → "6.6 MB". Readers on metered data deserve to know before they tap. */
+export const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  const mb = bytes / (1024 * 1024);
+  return `${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB`;
 };
 
 const HIJRI_MONTHS = [

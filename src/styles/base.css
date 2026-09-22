@@ -198,15 +198,17 @@ a:hover {
   color: var(--ink);
 }
 
-/* Buttons: solid ink → red on hover; outlined variant. 44px minimum. */
+/* Buttons: a fixed 48px row so a pair always lines up regardless of script;
+   solid ink → red on hover; outlined variant; `--lg` for the page's one
+   primary action. Icons are 18px strokes, muted in the outline variant. */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--s-2);
-  min-height: var(--touch);
-  padding: 10px 18px;
-  font-family: var(--font-ui);
+  gap: 10px;
+  height: 48px;
+  padding: 0 20px;
+  font-family: var(--font-label);
   font-size: var(--ui-button);
   font-weight: 600;
   line-height: 1;
@@ -214,6 +216,13 @@ a:hover {
   border: 1px solid var(--ink);
   background: var(--ink);
   color: var(--on-red);
+  transition: background-color 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out;
+}
+
+.btn svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
 }
 
 .btn:hover {
@@ -223,9 +232,18 @@ a:hover {
   text-decoration: none;
 }
 
+.btn--lg {
+  padding: 0 26px;
+  font-size: var(--ui-button-lg);
+}
+
 .btn--outline {
   background: transparent;
   color: var(--ink);
+}
+
+.btn--outline svg {
+  color: var(--secondary);
 }
 
 .btn--outline:hover {
@@ -234,10 +252,23 @@ a:hover {
   border-color: var(--red);
 }
 
-/* Urdu labels inside buttons use Nastaliq at the UI size; line-height is tall
-   by nature so the button keeps its height via min-height, not padding. */
+.btn--outline:hover svg {
+  color: var(--red);
+}
+
+/* A secondary detail inside a button (file size, page count): quieter, never bold. */
+.btn__meta {
+  font-family: var(--font-ui);
+  font-size: var(--ui-meta);
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.btn:hover .btn__meta {
+  color: inherit;
+}
+
+/* Nastaliq has tall ascenders; nudge the label so it sits optically centred. */
 html[lang="ur"] .btn {
-  font-family: var(--font-nastaliq);
   line-height: 1.9;
-  padding-block: 4px;
 }

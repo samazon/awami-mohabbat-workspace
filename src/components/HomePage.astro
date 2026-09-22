@@ -19,6 +19,7 @@ import EditionHero from './EditionHero.astro';
 import ArchiveGrid from './ArchiveGrid.astro';
 import EmergencyNumbers from './EmergencyNumbers.astro';
 import MobileEditionBar from './MobileEditionBar.astro';
+import EditionViewer from './EditionViewer.astro';
 
 interface Props {
   locale: Locale;
@@ -91,7 +92,12 @@ const jsonLd = {
 
   <AMFooter slot="footer" locale={locale} config={config} />
 
-  {edition && <MobileEditionBar slot="after" edition={edition} locale={locale} />}
+  {edition && (
+    <Fragment slot="after">
+      <MobileEditionBar edition={edition} locale={locale} />
+      <EditionViewer edition={edition} locale={locale} />
+    </Fragment>
+  )}
 </BaseLayout>
 
 <style>

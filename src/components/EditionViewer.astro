@@ -1,0 +1,344 @@
+---
+/**
+ * In-page viewer for the four pages of an edition, built on PhotoSwipe 5.
+ *
+ * Why a library: a broadsheet scan is illegible without real pinch-zoom and
+ * pan, and gesture physics (momentum, double-tap, pinch, wheel) are hard to get
+ * right by hand. PhotoSwipe's core (~54KB) loads on the FIRST open only; the
+ * page carries just the 14KB lightbox shell.
+ *
+ * Progressive enhancement: every trigger is a real link to the zoom image, so
+ * without JS a click still shows the page. With JS the click opens the viewer.
+ *
+ *   [data-viewer-page="n"]  an anchor for page n (thumbnails)
+ *   [data-viewer-open]      any element that should open page 1 (CTAs, headline)
+ */
+import 'photoswipe/style.css';
+import { t, type Locale } from '@/i18n';
+import type { EditionView } from '@/lib/services/editions';
+
+interface Props {
+  edition: EditionView;
+  locale: Locale;
+}
+const { edition, locale } = Astro.props;
+const s = t(locale);
+
+// The zoom derivative is the viewer source; thumb/view feed srcset so a phone
+// that never zooms past "fit" never downloads the 2400px file.
+const items = edition.pages.map((p) => {
+  const scale = p.width > 2400 ? 2400 / p.width : 1;
+  return {
+    src: p.zoom,
+    srcset: `${p.thumb} 400w, ${p.view} 1200w, ${p.zoom} 2400w`,
+    width: Math.round(p.width * scale),
+    height: Math.round(p.height * scale),
+    msrc: p.view,
+    alt: s.a11y.pageThumb(p.n, edition.date),
+    caption: s.today.pageOf(p.n, edition.pages.length),
+  };
+});
+
+const labels = {
+  close: s.nav.close,
+  zoom: s.viewer.zoom,
+  prev: s.viewer.prev,
+  next: s.viewer.next,
+  error: s.viewer.error,
+  download: s.today.viewPdf,
+};
+---
+
+<am-edition-viewer
+  data-items={JSON.stringify(items)}
+  data-labels={JSON.stringify(labels)}
+  data-pdf={edition.pdfUrl ?? undefined}
+  data-pdf-name={`awami-mohabbat-${edition.date}.pdf`}
+  data-rtl={locale === 'ur' ? '1' : undefined}
+  data-headline={edition.headline}
+></am-edition-viewer>
+
+<script>
+  import PhotoSwipeLightbox from 'photoswipe/lightbox';
+  import type PhotoSwipe from 'photoswipe';
+
+  interface Item {
+    src: string;
+    srcset: string;
+    width: number;
+    height: number;
+    msrc: string;
+    alt: string;
+    caption: string;
+  }
+  interface Labels {
+    close: string;
+    zoom: string;
+    prev: string;
+    next: string;
+    error: string;
+    download: string;
+  }
+
+  const ICON = (d: string) =>
+    `<svg aria-hidden="true" class="pswp__icn" viewBox="0 0 32 32" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="${d}"/></svg>`;
+
+  class EditionViewer extends HTMLElement {
+    connectedCallback() {
+      const items = JSON.parse(this.dataset.items ?? '[]') as Item[];
+      const labels = JSON.parse(this.dataset.labels ?? '{}') as Labels;
+      const rtl = this.dataset.rtl === '1';
+      const pdf = this.dataset.pdf;
+      const pdfName = this.dataset.pdfName ?? 'edition.pdf';
+      const headline = this.dataset.headline ?? '';
+      if (items.length === 0) return;
+
+      const lightbox = new PhotoSwipeLightbox({
+        dataSource: items,
+        pswpModule: () => import('photoswipe'),
+        mainClass: `am-viewer${rtl ? ' am-viewer--rtl' : ''}`,
+        bgOpacity: 1,
+        showHideAnimationType: 'fade',
+        loop: false, // a document has a first and a last page
+        counter: false, // replaced by the caption ("Page 1 of 4")
+        wheelToZoom: true,
+        preloaderDelay: 400,
+        // Fit the page first; the second zoom step is legible print: native
+        // size, or at least 3× the fitted size on big screens.
+        initialZoomLevel: 'fit',
+        secondaryZoomLevel: (z) => Math.min(1, Math.max(z.fit * 3, z.fill)),
+        maxZoomLevel: 2,
+        // RTL: we handle arrow keys ourselves so ← means "next" in Urdu.
+        arrowKeys: !rtl,
+        closeTitle: labels.close,
+        zoomTitle: labels.zoom,
+        arrowPrevTitle: labels.prev,
+        arrowNextTitle: labels.next,
+        errorMsg: labels.error,
+        closeSVG: ICON('M8 8l16 16M24 8L8 24'),
+        zoomSVG: ICON('M14 6a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM20 20l6 6M14 10v8M10 14h8'),
+        arrowPrevSVG: ICON('M20 6L10 16l10 10'),
+        arrowNextSVG: ICON('M12 6l10 10-10 10'),
+      });
+
+      lightbox.on('uiRegister', () => {
+        const ui = lightbox.pswp?.ui;
+        if (!ui) return;
+
+        // Caption: "Page n of 4" + the edition headline, bottom-start.
+        ui.registerElement({
+          name: 'caption',
+          appendTo: 'root',
+          onInit: (el, pswp) => {
+            el.setAttribute('aria-live', 'polite');
+            const render = () => {
+              const i = pswp.currSlide?.data as Item | undefined;
+              el.innerHTML = '';
+              const page = document.createElement('span');
+              page.className = 'am-viewer__page';
+              page.textContent = i?.caption ?? '';
+              el.appendChild(page);
+              if (headline) {
+                const h = document.createElement('span');
+                h.className = 'am-viewer__headline';
+                h.textContent = headline;
+                el.appendChild(h);
+              }
+            };
+            pswp.on('change', render);
+            render();
+          },
+        });
+
+        // Download the PDF from the toolbar (rule 02: the PDF is always Urdu).
+        if (pdf) {
+          ui.registerElement({
+            name: 'download',
+            order: 8,
+            isButton: true,
+            tagName: 'a',
+            html: ICON('M16 6v14M10 14l6 6 6-6M7 26h18'),
+            onInit: (el) => {
+              const a = el as HTMLAnchorElement;
+              a.href = pdf;
+              a.download = pdfName;
+              a.title = labels.download;
+              a.setAttribute('aria-label', labels.download);
+              a.rel = 'noopener';
+            },
+          });
+        }
+      });
+
+      if (rtl) {
+        lightbox.on('bindEvents', () => {
+          const pswp = lightbox.pswp as PhotoSwipe;
+          pswp.events.add(document, 'keydown', (e) => {
+            const ev = e as KeyboardEvent;
+            if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+            const slide = pswp.currSlide;
+            if (slide && slide.currZoomLevel > slide.zoomLevels.fit) return; // zoomed: PhotoSwipe pans
+            ev.preventDefault();
+            if (ev.key === 'ArrowLeft') pswp.next();
+            else pswp.prev();
+          });
+        });
+      }
+
+      lightbox.init();
+
+      const open = (index: number, e: Event) => {
+        e.preventDefault();
+        lightbox.loadAndOpen(index);
+      };
+      document.querySelectorAll<HTMLElement>('[data-viewer-page]').forEach((el) => {
+        const n = Number(el.dataset.viewerPage);
+        if (Number.isInteger(n) && n >= 1 && n <= items.length) el.addEventListener('click', (e) => open(n - 1, e));
+      });
+      document.querySelectorAll<HTMLElement>('[data-viewer-open]').forEach((el) => {
+        el.addEventListener('click', (e) => open(0, e));
+      });
+    }
+  }
+  if (!customElements.get('am-edition-viewer')) customElements.define('am-edition-viewer', EditionViewer);
+</script>
+
+<style is:global>
+  /* PhotoSwipe, in the site's world: ink background, white 1px-bordered
+     square controls, no radius, no shadow. All selectors are PhotoSwipe's. */
+  .am-viewer {
+    --pswp-bg: #111111;
+    --pswp-placeholder-bg: #1c1c1c;
+    --pswp-icon-color: #ffffff;
+    --pswp-icon-color-secondary: #ffffff;
+    --pswp-icon-stroke-color: transparent;
+    --pswp-icon-stroke-width: 0;
+    --pswp-preloader-color: rgba(255, 255, 255, 0.35);
+    --pswp-preloader-color-secondary: #ffffff;
+    --pswp-error-text-color: #ffffff;
+    font-family: var(--font-ui);
+  }
+  .am-viewer .pswp__button {
+    width: var(--touch);
+    height: var(--touch);
+    margin: 8px 0 0 8px;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    color: #ffffff;
+    opacity: 1;
+    transition: background-color 120ms ease-out, border-color 120ms ease-out;
+  }
+  .am-viewer .pswp__button:hover,
+  .am-viewer .pswp__button:focus-visible {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: #ffffff;
+    outline: none;
+  }
+  .am-viewer .pswp__button .pswp__icn {
+    position: static;
+    width: 22px;
+    height: 22px;
+    margin: 10px auto;
+    display: block;
+  }
+  .am-viewer .pswp__top-bar {
+    height: auto;
+    padding: 0 8px 8px 0;
+    background: linear-gradient(rgba(17, 17, 17, 0.75), rgba(17, 17, 17, 0));
+  }
+  .am-viewer .pswp__button--arrow {
+    width: var(--touch);
+    height: var(--touch);
+    margin: -22px 0 0;
+    top: 50%;
+    background: rgba(17, 17, 17, 0.6);
+  }
+  .am-viewer .pswp__button--arrow .pswp__icn {
+    margin: 10px auto;
+    transform: none;
+  }
+  .am-viewer .pswp__button--arrow--prev {
+    left: 12px;
+  }
+  .am-viewer .pswp__button--arrow--next {
+    right: 12px;
+  }
+  /* RTL: the previous page is on the right, and the chevrons flip */
+  .am-viewer--rtl .pswp__button--arrow--prev {
+    left: auto;
+    right: 12px;
+  }
+  .am-viewer--rtl .pswp__button--arrow--next {
+    right: auto;
+    left: 12px;
+  }
+  .am-viewer--rtl .pswp__button--arrow .pswp__icn {
+    transform: scale(-1, 1);
+  }
+  /* touch devices hide the arrows by default; keep them — swiping is not discoverable for a document */
+  .am-viewer.pswp--touch .pswp__button--arrow {
+    visibility: visible;
+  }
+  /* Phones: side arrows would sit on top of the page text. Move them into the
+     caption bar so the bottom reads as a pager: [‹] Page 1 of 4 [›] */
+  @media (max-width: 767px) {
+    .am-viewer .pswp__button--arrow {
+      top: auto;
+      bottom: calc(8px + env(safe-area-inset-bottom));
+      margin: 0;
+      background: transparent;
+    }
+    .am-viewer .pswp__caption {
+      padding-inline: calc(var(--touch) + 24px);
+      padding-block-end: calc(14px + env(safe-area-inset-bottom));
+      justify-content: center;
+      text-align: center;
+    }
+    .am-viewer__headline {
+      display: none; /* the page counter is what matters on a small screen */
+    }
+  }
+
+  .am-viewer .pswp__caption {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 16px;
+    padding: 28px 16px calc(12px + env(safe-area-inset-bottom));
+    background: linear-gradient(rgba(17, 17, 17, 0), rgba(17, 17, 17, 0.8));
+    color: #ffffff;
+    pointer-events: none;
+  }
+  .am-viewer--rtl .pswp__caption {
+    direction: rtl;
+  }
+  .am-viewer__page {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-nav);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .am-viewer__headline {
+    font-family: var(--font-head);
+    line-height: var(--lh-head);
+    font-size: var(--ui-nav);
+    color: rgba(255, 255, 255, 0.75);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+  .am-viewer.pswp--ui-visible .pswp__hide-on-close {
+    opacity: 1;
+  }
+  .am-viewer .pswp__img {
+    background: #ffffff; /* newsprint edge against the ink, while decoding */
+  }
+  .am-viewer .pswp__error-msg {
+    font-family: var(--font-ui);
+    font-size: var(--ui-nav);
+  }
+</style>

@@ -77,6 +77,12 @@ export const en: Catalog = {
     page: 'Page',
     noEdition: 'Today\'s edition has not been published yet.',
   },
+  viewer: {
+    zoom: 'Zoom',
+    prev: 'Previous page',
+    next: 'Next page',
+    error: 'The page could not be loaded.',
+  },
   mt: {
     badge: 'AI TRANSLATION',
     notice: 'This page is translated from the Urdu print edition by machine. The PDF edition remains in Urdu.',

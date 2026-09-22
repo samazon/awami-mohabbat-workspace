@@ -12,13 +12,20 @@ interface Props {
   large?: boolean;
   loading?: 'eager' | 'lazy';
   class?: string;
+  /** Page number: makes this thumb open the in-page viewer at that page. */
+  viewerPage?: number;
 }
-const { page, alt, href, sizes, active = false, large = false, loading = 'lazy', class: className } = Astro.props;
+const { page, alt, href, sizes, active = false, large = false, loading = 'lazy', class: className, viewerPage } = Astro.props;
 const full = 'view' in page ? page : null;
 const srcset = full ? `${full.thumb} 400w, ${full.view} 1200w, ${full.zoom} 2400w` : undefined;
 ---
 
-<a class:list={['thumb', { 'thumb--active': active, 'thumb--large': large }, className]} href={href} aria-current={active ? 'true' : undefined}>
+<a
+  class:list={['thumb', { 'thumb--active': active, 'thumb--large': large }, className]}
+  href={href}
+  aria-current={active ? 'true' : undefined}
+  data-viewer-page={viewerPage}
+>
   <span class="thumb__frame">
     <img
       src={full ? full.view : page.thumb}

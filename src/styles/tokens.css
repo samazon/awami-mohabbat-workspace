@@ -52,6 +52,7 @@
   --ui-input-touch: 16px;   /* text inputs on phones: iOS zooms below 16px */
   --ui-drawer-link: 18px;
   --ui-button: 14px;
+  --ui-button-lg: 16px;     /* the one primary action on a page */
   --ui-wordmark-sub: 11px;
 
   /* ---- letter-spacing for Latin eyebrows ---- */

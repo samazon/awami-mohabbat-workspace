@@ -32,6 +32,7 @@ export interface EditionView {
   translation: TranslationMeta;
   pages: PageView[]; // always length 4, ordered
   pdfUrl: string | null;
+  pdfBytes: number | null;
 }
 
 /** Archive card: no pages beyond the front-page thumbnail. */
@@ -87,6 +88,7 @@ async function assemble(rows: Edition[], locale: Locale): Promise<EditionView[]>
       translation: t.meta,
       pages: pageViews,
       pdfUrl: e.pdfHash ? mediaUrl(CDN_BASE, editionPdfKey(e.date, e.pdfHash)) : null,
+      pdfBytes: e.pdfHash ? e.pdfBytes : null,
     });
   }
   return views;
