@@ -72,6 +72,8 @@ const Args = z.object({
   mtEn: z.boolean().default(false),
   utility: z.string().min(1).optional(),
   static: z.boolean().default(false),
+  /** Upload the media objects only; leave D1 alone (rows already mirrored another way). */
+  r2Only: z.boolean().default(false),
   dryRun: z.boolean().default(false),
 });
 
@@ -92,6 +94,7 @@ function readArgs() {
       'mt-en': { type: 'boolean' },
       utility: { type: 'string' },
       static: { type: 'boolean' },
+      'r2-only': { type: 'boolean' },
       'dry-run': { type: 'boolean' },
     },
     strict: true,
@@ -111,6 +114,7 @@ function readArgs() {
     mtEn: values['mt-en'],
     utility: values.utility,
     static: values.static,
+    r2Only: values['r2-only'],
     dryRun: values['dry-run'],
   });
   if (!parsed.success) {
@@ -256,6 +260,11 @@ async function main() {
     process.stdout.write('\n');
   } finally {
     await r2.close();
+  }
+
+  if (args.r2Only) {
+    console.log(`\n✓ ${uploads.length} objects uploaded for ${date}; D1 left untouched (--r2-only).\n`);
+    return;
   }
 
   // ---- then D1 ----
