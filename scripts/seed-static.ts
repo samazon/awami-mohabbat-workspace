@@ -32,23 +32,25 @@ export const EMERGENCY_CONTACTS: NewContact[] = [
   { labelUr: 'ایدھی', labelEn: 'Edhi', number: '115', area: 'both', displayOrder: 5 },
 ];
 
+/** Contact details as printed in the 21 Sep 2026 edition (page 1 box, page 2 masthead). */
 export const SITE_CONFIG = (now: number): NewConfig => ({
   id: 1,
   currentVolume: 20,
-  currentIssue: 89,
-  coverageUr: 'قصور / اسلام آباد',
-  coverageEn: 'Qasur / Islamabad',
+  currentIssue: 93,
+  coverageUr: 'قصور / لاہور',
+  coverageEn: 'Kasur / Lahore',
   editorUr: 'اقبال کھوکھر',
   editorEn: 'Iqbal Khokhar',
-  officeUr: 'کچہری روڈ، قصور، پنجاب',
-  officeEn: 'Kutchery Road, Qasur, Punjab',
-  bureauUr: 'بلیو ایریا، اسلام آباد',
-  bureauEn: 'Blue Area, Islamabad',
-  phone: '+92 49 272 4000',
-  email: 'editor@awamimohabbat.com',
-  // Real profile URLs go here; the footer FOLLOW column renders only what exists.
-  facebookUrl: null,
-  youtubeUrl: null,
+  officeUr: 'مون مارکیٹ، حمزہ ٹاؤن، فیروزپور روڈ، لاہور',
+  officeEn: 'Moon Market, Hamza Town, Ferozepur Road, Lahore',
+  bureauUr: 'کوٹ رادھا کشن، پی او بکس 08، قصور',
+  bureauEn: 'Kot Radha Kishan, P.O. Box 08, Kasur',
+  // Mobile numbers only — the printed landline is deliberately left out.
+  phones: ['0304-2198241', '0322-8077033', '0321-6462430'],
+  email: 'awami_mohabbat@yahoo.com',
+  // The footer FOLLOW column renders only what exists here.
+  facebookUrl: 'https://www.facebook.com/iqbal.d.khokhar', // the chief editor's profile, for now
+  youtubeUrl: 'https://www.youtube.com/@awamimohabbat',
   linkedinUrl: null,
   updatedAt: now,
 });

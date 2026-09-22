@@ -48,7 +48,13 @@ const jsonLd = {
   alternateName: 'عوامی محبت',
   url: site,
   logo: new URL('/og-image.png', site).toString(),
-  ...(config ? { address: { '@type': 'PostalAddress', streetAddress: config.office, addressCountry: 'PK' }, telephone: config.phoneTel, email: config.email } : {}),
+  ...(config
+    ? {
+        address: { '@type': 'PostalAddress', streetAddress: config.office, addressCountry: 'PK' },
+        telephone: config.phones.map((p) => p.tel),
+        email: config.email,
+      }
+    : {}),
 };
 ---
 

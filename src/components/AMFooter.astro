@@ -1,4 +1,10 @@
 ---
+/**
+ * Footer, to the design: four columns on the tint — wordmark + tagline,
+ * رابطہ (contact), صفحات (sections), FOLLOW — then a sub-bar with the
+ * copyright and the chief editor. Footer text is Naskh / the body serif,
+ * not Nastaliq. Column labels are small and muted; FOLLOW stays Latin.
+ */
 import { Image } from 'astro:assets';
 import logo from '@/assets/logo-awami-mohabbat.png';
 import { t, type Locale } from '@/i18n';
@@ -19,40 +25,54 @@ const year = new Date().getFullYear();
 <footer class="footer">
   <div class="container">
     <div class="cols">
-      <div class="col">
+      <div class="col col--brand">
         <a class="logo" href={links.home} aria-label={s.meta.siteName}>
           <Image src={logo} alt="" widths={[190, 380]} sizes="190px" format="webp" loading="lazy" />
         </a>
-        <p class="tagline t-body">{s.footer.tagline}</p>
+        <p class="tagline">{s.footer.tagline}</p>
       </div>
 
       {config && (
         <div class="col">
-          <LtrRun block class="eyebrow col__label">{s.footer.contact}</LtrRun>
-          <ul class="list t-body">
-            <li>{s.footer.office}: {config.office}</li>
-            <li>{s.footer.bureau}: {config.bureau}</li>
-            <li><LtrRun><a class="plain" href={`tel:${config.phoneTel}`}>{config.phone}</a></LtrRun></li>
-            <li><LtrRun><a href={`mailto:${config.email}`}>{config.email}</a></LtrRun></li>
+          <h2 class="label">{s.footer.contact}</h2>
+          <ul class="list">
+            <li class="row">
+              <span class="row__text"><span class="row__k">{s.footer.office}:</span> {config.office}</span>
+            </li>
+            {config.bureau && (
+              <li class="row">
+                <span class="row__text"><span class="row__k">{s.footer.bureau}:</span> {config.bureau}</span>
+              </li>
+            )}
+            {config.phones.map((p) => (
+              <li class="row row--icon">
+                <svg class="row__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1L8 9.7a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.8.3 1.7.6 2.6.7a2 2 0 0 1 1.7 2z" /></svg>
+                <LtrRun tabular><a class="plain" href={`tel:${p.tel}`} aria-label={`${s.footer.phone}: ${p.display}`}>{p.display}</a></LtrRun>
+              </li>
+            ))}
+            <li class="row row--icon">
+              <svg class="row__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" /><path d="m2.5 7 9.5 6.5L21.5 7" /></svg>
+              <LtrRun><a href={`mailto:${config.email}`} aria-label={`${s.footer.email}: ${config.email}`}>{config.email}</a></LtrRun>
+            </li>
           </ul>
         </div>
       )}
 
       <nav class="col" aria-label={s.a11y.footerNav}>
-        <LtrRun block class="eyebrow col__label">{s.footer.sections}</LtrRun>
+        <h2 class="label">{s.footer.sections}</h2>
         <ul class="list links">
-          <li><a class="plain t-label" href={links.home}>{s.footer.todaysPaper}</a></li>
-          <li><a class="plain t-label" href={links.archive}>{s.footer.archive}</a></li>
-          <li><a class="plain t-label" href={links.about}>{s.footer.aboutContact}</a></li>
+          <li><a class="plain" href={links.archive}>{s.footer.archive}</a></li>
+          <li><a class="plain" href={links.articles}>{s.footer.articles}</a></li>
+          <li><a class="plain" href={links.about}>{s.footer.aboutContact}</a></li>
         </ul>
       </nav>
 
       {config && config.social.length > 0 && (
         <div class="col">
-          <LtrRun block class="eyebrow col__label">{s.footer.follow}</LtrRun>
+          <LtrRun block class="label label--latin">{s.footer.follow}</LtrRun>
           <ul class="list links">
             {config.social.map((x) => (
-              <li><LtrRun><a class="plain" href={x.url} rel="noopener">{x.label}</a></LtrRun></li>
+              <li><LtrRun><a class="plain" href={x.url} target="_blank" rel="noopener">{x.label}</a></LtrRun></li>
             ))}
           </ul>
         </div>
@@ -61,31 +81,44 @@ const year = new Date().getFullYear();
 
     <div class="sub">
       <LtrRun>{s.footer.copyright(year)}</LtrRun>
-      {config && <span class="t-label">{s.footer.chiefEditor}: {config.editor}</span>}
+      {config && <span>{s.footer.chiefEditor}: {config.editor}</span>}
     </div>
   </div>
 </footer>
 
 <style>
-  .t-label {
-    font-family: var(--font-label);
-    line-height: var(--lh-label);
-  }
   .footer {
     margin-block-start: 8px;
     border-block-start: 1px solid var(--ink);
     background: var(--tint);
     color: var(--body);
+    font-family: var(--font-body);
+    line-height: 1.9;
   }
   .cols {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 28px 40px;
-    padding: 34px 0 26px;
+    padding: 34px 0 28px;
+  }
+  /* Tablet: a balanced 2×2 — brand + contact, then sections + follow. */
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .cols {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  /* Desktop: as designed — brand and contact wide, sections and follow narrow,
+     so the two office addresses stay on one line each. */
+  @media (min-width: 1024px) {
+    .cols {
+      grid-template-columns: 1.1fr 1.5fr 0.9fr 0.6fr;
+    }
   }
   .col {
     min-width: 0;
   }
+
+  /* brand */
   .logo {
     display: block;
     max-width: var(--wordmark-footer);
@@ -95,26 +128,56 @@ const year = new Date().getFullYear();
     height: auto;
   }
   .tagline {
-    padding-block-start: 10px;
+    padding-block-start: 12px;
     font-size: var(--fs-card);
     color: var(--secondary);
   }
-  .col__label {
-    margin-block-end: 10px;
-    font-size: var(--ui-eyebrow-sm);
+
+  /* column labels: small, muted; Urdu in Naskh, FOLLOW tracked Latin */
+  .label {
+    margin-block-end: 8px;
+    font-family: var(--font-body);
+    font-size: var(--ui-meta);
+    font-weight: 400;
     color: var(--muted);
   }
+  .label--latin {
+    font-family: var(--font-ui);
+    font-size: var(--ui-eyebrow-sm);
+    letter-spacing: var(--track-eyebrow);
+    text-transform: uppercase;
+  }
+
   .list {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
     font-size: var(--fs-card);
   }
+  .row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .row--icon {
+    align-items: center;
+  }
+  .row__icon {
+    flex: none;
+    color: var(--muted);
+  }
+  .row__k {
+    color: var(--secondary);
+  }
+  /* numbers and the address are UI chrome, not prose — Plex, not the body serif */
+  .list :global(.ltr) {
+    font-family: var(--font-ui);
+  }
+
   .links li a {
     display: inline-flex;
     align-items: center;
-    min-height: var(--touch);
-    font-size: var(--ui-nav);
+    min-height: var(--control-h);
   }
   .plain {
     color: var(--ink);
@@ -122,6 +185,7 @@ const year = new Date().getFullYear();
   .plain:hover {
     color: var(--red);
   }
+
   .sub {
     display: flex;
     flex-wrap: wrap;
@@ -132,5 +196,8 @@ const year = new Date().getFullYear();
     border-block-start: 1px solid var(--rule);
     font-size: var(--ui-caption);
     color: var(--muted);
+  }
+  .sub :global(.ltr) {
+    font-family: var(--font-ui); /* the copyright line is chrome, set in Plex as designed */
   }
 </style>

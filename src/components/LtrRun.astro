@@ -24,8 +24,13 @@ const Tag = block ? 'div' : 'span';
 <Tag {...rest} dir="ltr" class:list={['ltr', { tabular, 'ltr--block': block }, className]} title={title}><slot /></Tag>
 
 <style>
+  /* `text-align: start` on a dir="ltr" box resolves to LEFT — the opposite of
+     the page's start edge in Urdu. Pin it to the page direction explicitly. */
   .ltr--block {
     display: block;
-    text-align: start;
+    text-align: left;
+  }
+  :global(html[dir='rtl']) .ltr--block {
+    text-align: right;
   }
 </style>

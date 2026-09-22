@@ -212,9 +212,10 @@ export const siteConfig = sqliteTable(
     editorEn: text('editor_en').notNull(),
     officeUr: text('office_ur').notNull(),
     officeEn: text('office_en').notNull(),
-    bureauUr: text('bureau_ur').notNull(),
-    bureauEn: text('bureau_en').notNull(),
-    phone: text('phone').notNull(),
+    bureauUr: text('bureau_ur'),
+    bureauEn: text('bureau_en'),
+    /** Contact numbers as printed, e.g. ["0304-2198241", …]. Mobile only — no landline. */
+    phones: text('phones', { mode: 'json' }).$type<string[]>().notNull(),
     email: text('email').notNull(),
     facebookUrl: text('facebook_url'),
     youtubeUrl: text('youtube_url'),

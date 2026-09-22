@@ -161,7 +161,34 @@ async function loadUtility(date: string, file: string | undefined, now: number):
   };
 }
 
+/** `pnpm seed --static-only [--target remote]` — refresh slots, contacts and site config; touch nothing else. */
+async function seedStaticOnly() {
+  const { values } = parseArgs({
+    options: { 'static-only': { type: 'boolean' }, target: { type: 'string' }, 'dry-run': { type: 'boolean' } },
+    strict: true,
+  });
+  const target = z.enum(['local', 'remote']).default('local').parse(values.target);
+  const now = Date.now();
+  const { databaseId } = await readWranglerConfig();
+  console.log(`\nStatic seed  ·  target: ${target}${values['dry-run'] ? '  ·  DRY RUN' : ''}`);
+  console.log(`  ${AD_SLOTS.length} ad slots · ${EMERGENCY_CONTACTS.length} contacts · site config (${SITE_CONFIG(now).phones.length} phones)`);
+  if (values['dry-run']) return console.log('\nDry run — nothing written.\n');
+
+  const { db, label } = openDb(target, databaseId);
+  console.log(`  writing ${label}`);
+  for (const s of AD_SLOTS) await db.insert(adSlots).values(s).onConflictDoUpdate({ target: adSlots.slotId, set: s });
+  await db.delete(emergencyContacts);
+  for (const c of EMERGENCY_CONTACTS) await db.insert(emergencyContacts).values(c);
+  const cfg = SITE_CONFIG(now);
+  // Keep the live Vol/Issue if an edition has already set them.
+  const { currentVolume: _v, currentIssue: _i, ...cfgWithoutIssue } = cfg;
+  void _v; void _i;
+  await db.insert(siteConfig).values(cfg).onConflictDoUpdate({ target: siteConfig.id, set: cfgWithoutIssue });
+  console.log('\n✓ Static tables refreshed.\n');
+}
+
 async function main() {
+  if (process.argv.includes('--static-only')) return seedStaticOnly();
   const args = readArgs();
   const date = assertIsoDate(args.date);
   const now = Date.now();
