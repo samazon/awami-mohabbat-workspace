@@ -46,7 +46,7 @@ export const SITE_CONFIG = (now: number): NewConfig => ({
   bureauUr: 'کوٹ رادھا کشن، پی او بکس 08، قصور',
   bureauEn: 'Kot Radha Kishan, P.O. Box 08, Kasur',
   // Mobile numbers only — the printed landline is deliberately left out.
-  phones: ['0304-2198241', '0322-8077033', '0321-6462430'],
+  phones: ['0304-2198241', '0322-8077033'],
   email: 'awami_mohabbat@yahoo.com',
   // The footer FOLLOW column renders only what exists here.
   facebookUrl: 'https://www.facebook.com/iqbal.d.khokhar', // the chief editor's profile, for now
