@@ -38,8 +38,6 @@ export const en: Catalog = {
   },
   masthead: {
     daily: 'Daily',
-    vol: 'Vol',
-    issue: 'Issue',
     chiefEditor: 'Chief Editor',
   },
   ticker: {

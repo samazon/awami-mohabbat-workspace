@@ -42,8 +42,6 @@ export const ur = {
   },
   masthead: {
     daily: 'روزنامہ',
-    vol: 'Vol',
-    issue: 'Issue',
     chiefEditor: 'چیف ایڈیٹر',
   },
   ticker: {

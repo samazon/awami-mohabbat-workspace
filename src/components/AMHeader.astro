@@ -12,7 +12,7 @@ import LanguageSwitcher from './LanguageSwitcher.astro';
 interface Props {
   locale: Locale;
   config: SiteConfigView | null;
-  masthead: { date: string; hijriDate: string; volume: number; issue: number } | null;
+  masthead: { date: string; hijriDate: string } | null;
   active?: 'home' | 'archive' | 'articles' | 'about';
 }
 const { locale, config, masthead, active = 'home' } = Astro.props;
@@ -26,9 +26,6 @@ const items = [
   { key: 'articles', href: links.articles, label: s.nav.articles },
   { key: 'about', href: links.about, label: s.nav.about },
 ] as const;
-
-const volume = masthead?.volume ?? config?.currentVolume;
-const issue = masthead?.issue ?? config?.currentIssue;
 
 /** Transparent 1×1 GIF: what phones fetch instead of the masthead emblems. */
 const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
@@ -133,16 +130,9 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     </div>
 
     <div class="dateline">
+      {/* Vol/Issue numbering is a print artefact — only the date belongs online. */}
       <LtrRun class="dateline__start">
-        {volume != null && issue != null && (
-          <span class="dateline__vol">{s.masthead.vol} {volume} &nbsp;|&nbsp; {s.masthead.issue} {issue}</span>
-        )}
-        {masthead && (
-          <>
-            <span class="dateline__dot" aria-hidden="true">·</span>
-            <span>{formatLong(masthead.date)} &nbsp;|&nbsp; {masthead.hijriDate}</span>
-          </>
-        )}
+        {masthead && <span class="dateline__date">{formatLong(masthead.date)} &nbsp;|&nbsp; {masthead.hijriDate}</span>}
       </LtrRun>
       {config && (
         <span class="dateline__end t-label">
@@ -633,7 +623,7 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     align-items: center;
     gap: 4px 14px;
   }
-  .dateline__vol {
+  .dateline__date {
     font-weight: 600;
     color: var(--ink);
   }
