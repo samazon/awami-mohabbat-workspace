@@ -15,9 +15,16 @@ interface Props {
 }
 const { utility, locale } = Astro.props;
 const s = t(locale).ticker;
+
+/**
+ * Rates (gold, silver, fuel) are switched off until they come from a live
+ * feed — the seeded figures are the design's demo values. Prayer times stay:
+ * they are the paper's own. Flip to `true` once the rates service exists.
+ */
+const SHOW_RATES = false;
 ---
 
-<div class="ticker" role="region" aria-label={`${s.prayers} · ${s.rates}`}>
+<div class="ticker" role="region" aria-label={SHOW_RATES ? `${s.prayers} · ${s.rates}` : s.prayers}>
   <div class="container ticker__row">
     <dl class="group">
       <dt class="group__title t-label">{s.prayers}</dt>
@@ -29,16 +36,18 @@ const s = t(locale).ticker;
       ))}
     </dl>
 
-    <dl class="group">
-      <dt class="group__title t-label">{s.rates}</dt>
-      {utility.rates.map((r) => (
-        <dd class="item">
-          <span class="item__label t-label">{s[r.key]}</span>
-          <LtrRun tabular class="item__value" title={`${s.updated} ${formatStamp(r.updatedAt)}`}>{formatMoney(r.minor)}</LtrRun>
-          <LtrRun tabular class="item__stamp">{formatStamp(r.updatedAt)}</LtrRun>
-        </dd>
-      ))}
-    </dl>
+    {SHOW_RATES && (
+      <dl class="group">
+        <dt class="group__title t-label">{s.rates}</dt>
+        {utility.rates.map((r) => (
+          <dd class="item">
+            <span class="item__label t-label">{s[r.key]}</span>
+            <LtrRun tabular class="item__value" title={`${s.updated} ${formatStamp(r.updatedAt)}`}>{formatMoney(r.minor)}</LtrRun>
+            <LtrRun tabular class="item__stamp">{formatStamp(r.updatedAt)}</LtrRun>
+          </dd>
+        ))}
+      </dl>
+    )}
   </div>
 </div>
 
