@@ -4,9 +4,10 @@ import cloudflare from '@astrojs/cloudflare';
 import react from '@astrojs/react';
 
 export default defineConfig({
-  // Used for canonical URLs, hreflang alternates and OG tags. Swap for the real
-  // domain when DNS is pointed; until then the workers.dev preview is fine.
-  site: process.env.SITE_URL ?? 'https://awami-mohabbat.workers.dev',
+  // Fallback origin only (build-time). At runtime every absolute URL — canonical,
+  // hreflang, OG, sitemap — is derived from the request, so the same build
+  // serves awamimohabbat.com and the workers.dev preview correctly.
+  site: process.env.SITE_URL ?? 'https://awamimohabbat.com',
 
   output: 'server',
   adapter: cloudflare({

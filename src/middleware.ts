@@ -20,6 +20,13 @@ const edgeCache = (): Cache => (caches as unknown as { default: Cache }).default
 export const onRequest = defineMiddleware(async (context, next) => {
   const { request } = context;
   const url = new URL(request.url);
+
+  // One canonical host: www → apex, permanently.
+  if (url.hostname.startsWith('www.')) {
+    url.hostname = url.hostname.slice(4);
+    return Response.redirect(url.toString(), 301);
+  }
+
   const isMedia = url.pathname.startsWith('/media/');
   const cacheable = request.method === 'GET' && !isMedia && import.meta.env.PROD;
 

@@ -40,7 +40,7 @@ const [recent, utility] = await Promise.all([
 ]);
 
 const title = locale === 'ur' ? `${s.meta.siteName} — ${s.masthead.daily}` : `${s.meta.siteName} — Daily newspaper, Qasur & Islamabad`;
-const site = Astro.site?.toString() ?? '/';
+const site = Astro.url.origin;
 
 const jsonLd = {
   '@context': 'https://schema.org',

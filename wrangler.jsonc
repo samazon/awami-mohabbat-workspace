@@ -7,6 +7,14 @@
 
   // `main` and `assets` are set by @astrojs/cloudflare at build time.
 
+  // Custom domains (Cloudflare manages DNS + TLS). www redirects to the apex
+  // in src/middleware.ts. The workers.dev URL stays on as a preview.
+  "routes": [
+    { "pattern": "awamimohabbat.com", "custom_domain": true },
+    { "pattern": "www.awamimohabbat.com", "custom_domain": true }
+  ],
+  "workers_dev": true,
+
   "d1_databases": [
     {
       "binding": "DB",

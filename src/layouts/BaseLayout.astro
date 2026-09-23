@@ -15,11 +15,14 @@ const dir = dirFor(locale);
 const strings = t(locale);
 const { title, description = strings.meta.description, noindex = false, ogImage } = Astro.props;
 
-const site = Astro.site ?? new URL('http://localhost:4321');
+// Absolute URLs come from the REQUEST origin, so one build serves the real
+// domain and the workers.dev preview with correct canonicals and share cards.
+const site = new URL(Astro.url.origin);
 const canonical = new URL(Astro.url.pathname, site);
 const alts = alternates(Astro.url.pathname, site);
 const xDefault = alts.find((a) => a.hreflang === DEFAULT_LOCALE)?.href;
-const og = ogImage ?? new URL('/og-image.png', site).toString();
+const og = ogImage ?? new URL(locale === 'en' ? '/og-image-en.png' : '/og-image.png', site).toString();
+const ogAlt = locale === 'ur' ? `${strings.meta.siteName} — ${strings.strip.tagline}` : `${strings.meta.siteNameLatin} — ${strings.strip.tagline}`;
 
 const fonts =
   locale === 'ur'
@@ -48,8 +51,17 @@ const fonts =
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical.toString()} />
     <meta property="og:image" content={og} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={ogAlt} />
     <meta property="og:locale" content={locale === 'ur' ? 'ur_PK' : 'en_PK'} />
+    <meta property="og:locale:alternate" content={locale === 'ur' ? 'en_PK' : 'ur_PK'} />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={og} />
+    <meta name="twitter:image:alt" content={ogAlt} />
 
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     {fonts.map((href) => <link rel="preload" as="font" type="font/woff2" href={href} crossorigin />)}

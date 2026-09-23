@@ -5,7 +5,7 @@ export const en: Catalog = {
   meta: {
     siteName: 'Awami Mohabbat',
     siteNameLatin: 'Awami Mohabbat',
-    description: 'Awami Mohabbat — the daily newspaper from Qasur and Islamabad. Today\'s edition, the archive and articles.',
+    description: 'Awami Mohabbat — the Urdu daily from Kasur and Lahore. Today\'s edition, the archive and articles.',
   },
   strip: {
     group: 'Awami Mohabbat Group of Publications',
