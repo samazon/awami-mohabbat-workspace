@@ -22,7 +22,7 @@ const [config, edition] = await Promise.all([getSiteConfig(locale), getLatestEdi
 ---
 
 <BaseLayout title={`${s.about.title} — ${s.meta.siteName}`} description={s.about.description}>
-  <AMHeader slot="header" locale={locale} config={config} masthead={edition} active="about" />
+  <AMHeader slot="header" locale={locale} masthead={edition} active="about" />
 
   <div class="container">
     <h1 class="title t-head">{s.about.title}</h1>

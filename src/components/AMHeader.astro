@@ -4,18 +4,19 @@ import logo from '@/assets/logo-awami-mohabbat.png';
 import { t, type Locale } from '@/i18n';
 import { formatLong } from '@/lib/dates';
 import { nav as navFor } from '@/lib/links';
-import type { SiteConfigView } from '@/lib/services/config';
 import LtrRun from './LtrRun.astro';
 import ReaderControls from './ReaderControls.astro';
 import LanguageSwitcher from './LanguageSwitcher.astro';
 
 interface Props {
   locale: Locale;
-  config: SiteConfigView | null;
   masthead: { date: string; hijriDate: string } | null;
   active?: 'home' | 'archive' | 'articles' | 'about';
 }
-const { locale, config, masthead, active = 'home' } = Astro.props;
+const { locale, masthead, active = 'home' } = Astro.props;
+
+/** Search has no results page yet; the markup stays, switched off. */
+const SHOW_SEARCH = false;
 const s = t(locale);
 const links = navFor(locale);
 const pathname = Astro.url.pathname;
@@ -41,60 +42,6 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
 
 <header class="header">
   <div class="container">
-    <div class="row1">
-      <nav class="nav" aria-label={s.a11y.mainNav}>
-        {items.map((i) => (
-          <a class="nav__link t-label" href={i.href} aria-current={i.key === active ? 'page' : undefined}>{i.label}</a>
-        ))}
-      </nav>
-
-      <div class="tools">
-        <ReaderControls locale={locale} class="tools__reader" />
-        <LanguageSwitcher locale={locale} pathname={pathname} class="tools__lang" />
-        <form class="search" role="search" action={links.search} method="get">
-          <label class="visually-hidden" for="q">{s.search.label}</label>
-          <svg class="search__icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M16.5 16.5 21 21" /></svg>
-          <input id="q" class="search__input t-label" type="search" name="q" placeholder={s.search.placeholder} autocomplete="off" />
-        </form>
-      </div>
-
-      <am-mobile-nav class="mobile">
-        <button type="button" class="iconbtn" data-menu aria-expanded="false" aria-controls="mobile-drawer" aria-label={s.nav.menu}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
-        </button>
-        <button type="button" class="iconbtn" data-search-toggle aria-expanded="false" aria-controls="mobile-search" aria-label={s.search.label}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M16.5 16.5 21 21" /></svg>
-        </button>
-
-        <form id="mobile-search" class="msearch" role="search" action={links.search} method="get" data-search-row hidden>
-          <label class="visually-hidden" for="q-mobile">{s.search.label}</label>
-          <input id="q-mobile" class="msearch__input t-label" type="search" name="q" placeholder={s.search.placeholder} autocomplete="off" enterkeyhint="search" />
-          <button type="submit" class="msearch__submit t-label">{s.search.label}</button>
-        </form>
-
-        <dialog id="mobile-drawer" class="drawer" aria-label={s.nav.menu}>
-          <div class="drawer__head">
-            <a class="drawer__logo" href={links.home} aria-label={s.meta.siteName}>
-              <Image src={logo} alt="" widths={[150, 300]} sizes="150px" format="webp" loading="lazy" />
-            </a>
-            <button type="button" class="iconbtn" data-close aria-label={s.nav.close} autofocus>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" /></svg>
-            </button>
-          </div>
-          <nav class="drawer__nav" aria-label={s.a11y.mainNav}>
-            {items.map((i) => (
-              <a class="drawer__link t-label" href={i.href} aria-current={i.key === active ? 'page' : undefined}>{i.label}</a>
-            ))}
-          </nav>
-          <div class="drawer__tools">
-            <LanguageSwitcher locale={locale} pathname={pathname} class="drawer__wide" />
-            <ReaderControls locale={locale} class="drawer__wide" />
-          </div>
-          <p class="drawer__foot">{s.strip.tagline}</p>
-        </dialog>
-      </am-mobile-nav>
-    </div>
-
     <div class="masthead">
       {/* Start side: the flag. Decorative — screen readers skip it; a still
           frame is served when the reader prefers reduced motion. */}
@@ -119,6 +66,8 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
           />
         </a>
         <LtrRun class="masthead__latin">AWAMI MOHABBAT</LtrRun>
+        {/* The date sits under the nameplate, as it does in print. */}
+        {masthead && <LtrRun class="masthead__date">{formatLong(masthead.date)} &nbsp;|&nbsp; {masthead.hijriDate}</LtrRun>}
       </div>
 
       {/* End side: the globe, slowed to ~10s per turn. */}
@@ -128,19 +77,68 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
         <img src="/img/globe.webp" alt="" width="200" height="200" loading="eager" decoding="async" />
       </picture>
     </div>
+  </div>
 
-    <div class="dateline">
-      {/* Vol/Issue numbering is a print artefact — only the date belongs online. */}
-      <LtrRun class="dateline__start">
-        {masthead && <span class="dateline__date">{formatLong(masthead.date)} &nbsp;|&nbsp; {masthead.hijriDate}</span>}
-      </LtrRun>
-      {config && (
-        <span class="dateline__end t-label">
-          <span>{config.coverage}</span>
-          <span class="dateline__dot" aria-hidden="true">·</span>
-          <span>{s.masthead.chiefEditor}: {config.editor}</span>
-        </span>
-      )}
+  {/* Navigation band: links at the start, reader controls at the end. The
+      link row scrolls sideways rather than wrapping as sections are added. */}
+  <div class="navbar">
+    <div class="container navbar__row">
+      <nav class="nav" aria-label={s.a11y.mainNav}>
+        {items.map((i) => (
+          <a class="nav__link t-label" href={i.href} aria-current={i.key === active ? 'page' : undefined}>{i.label}</a>
+        ))}
+      </nav>
+
+      <div class="tools">
+        <LanguageSwitcher locale={locale} pathname={pathname} class="tools__lang" />
+        <ReaderControls locale={locale} class="tools__reader" />
+        {SHOW_SEARCH && (
+          <form class="search" role="search" action={links.search} method="get">
+            <label class="visually-hidden" for="q">{s.search.label}</label>
+            <svg class="search__icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M16.5 16.5 21 21" /></svg>
+            <input id="q" class="search__input t-label" type="search" name="q" placeholder={s.search.placeholder} autocomplete="off" />
+          </form>
+        )}
+      </div>
+
+      <am-mobile-nav class="mobile">
+        <button type="button" class="iconbtn" data-menu aria-expanded="false" aria-controls="mobile-drawer" aria-label={s.nav.menu}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+        </button>
+        {SHOW_SEARCH && (
+          <>
+            <button type="button" class="iconbtn" data-search-toggle aria-expanded="false" aria-controls="mobile-search" aria-label={s.search.label}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M16.5 16.5 21 21" /></svg>
+            </button>
+            <form id="mobile-search" class="msearch" role="search" action={links.search} method="get" data-search-row hidden>
+              <label class="visually-hidden" for="q-mobile">{s.search.label}</label>
+              <input id="q-mobile" class="msearch__input t-label" type="search" name="q" placeholder={s.search.placeholder} autocomplete="off" enterkeyhint="search" />
+              <button type="submit" class="msearch__submit t-label">{s.search.label}</button>
+            </form>
+          </>
+        )}
+
+        <dialog id="mobile-drawer" class="drawer" aria-label={s.nav.menu}>
+          <div class="drawer__head">
+            <a class="drawer__logo" href={links.home} aria-label={s.meta.siteName}>
+              <Image src={logo} alt="" widths={[150, 300]} sizes="150px" format="webp" loading="lazy" />
+            </a>
+            <button type="button" class="iconbtn" data-close aria-label={s.nav.close} autofocus>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" /></svg>
+            </button>
+          </div>
+          <nav class="drawer__nav" aria-label={s.a11y.mainNav}>
+            {items.map((i) => (
+              <a class="drawer__link t-label" href={i.href} aria-current={i.key === active ? 'page' : undefined}>{i.label}</a>
+            ))}
+          </nav>
+          <div class="drawer__tools">
+            <LanguageSwitcher locale={locale} pathname={pathname} class="drawer__wide" />
+            <ReaderControls locale={locale} class="drawer__wide" />
+          </div>
+          <p class="drawer__foot">{s.strip.tagline}</p>
+        </dialog>
+      </am-mobile-nav>
     </div>
   </div>
 </header>
@@ -158,7 +156,7 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
       const searchBtn = this.querySelector<HTMLButtonElement>('[data-search-toggle]');
       const searchRow = this.querySelector<HTMLFormElement>('[data-search-row]');
       const searchInput = searchRow?.querySelector<HTMLInputElement>('input');
-      if (!menuBtn || !drawer || !closeBtn || !searchBtn || !searchRow || !searchInput) return;
+      if (!menuBtn || !drawer || !closeBtn) return;
 
       const root = document.documentElement;
 
@@ -184,18 +182,20 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
         if (e.target === drawer) closeDrawer();
       });
 
-      const setSearch = (open: boolean) => {
-        searchRow.hidden = !open;
-        searchBtn.setAttribute('aria-expanded', String(open));
-        if (open) searchInput.focus();
-      };
-      searchBtn.addEventListener('click', () => setSearch(searchRow.hasAttribute('hidden')));
-      searchRow.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          setSearch(false);
-          searchBtn.focus();
-        }
-      });
+      if (searchBtn && searchRow && searchInput) {
+        const setSearch = (open: boolean) => {
+          searchRow.hidden = !open;
+          searchBtn.setAttribute('aria-expanded', String(open));
+          if (open) searchInput.focus();
+        };
+        searchBtn.addEventListener('click', () => setSearch(searchRow.hasAttribute('hidden')));
+        searchRow.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') {
+            setSearch(false);
+            searchBtn.focus();
+          }
+        });
+      }
     }
   }
   if (!customElements.get('am-mobile-nav')) customElements.define('am-mobile-nav', MobileNav);
@@ -247,45 +247,55 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     white-space: nowrap;
   }
 
-  /* ---- header ---- */
-  .header {
+  /* ---- header: masthead, then the navigation band ---- */
+  .navbar {
+    border-block-start: 1px solid var(--rule);
     border-block-end: 1px solid var(--ink);
+    background: var(--surface);
   }
-  .row1 {
+  .navbar__row {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
+    align-items: stretch;
     justify-content: space-between;
-    gap: 14px 24px;
-    padding-block-start: 12px;
+    gap: 24px;
+    min-height: 52px;
   }
   .nav {
     display: flex;
-    align-items: center;
-    gap: 22px;
+    align-items: stretch;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nav::-webkit-scrollbar {
+    display: none;
   }
   .nav__link {
     display: inline-flex;
     align-items: center;
-    min-height: var(--control-h);
-    padding-block-end: 2px;
-    font-size: var(--ui-control);
-    color: var(--secondary);
-    border-block-end: 2px solid transparent;
+    padding: 0 18px;
+    font-size: var(--ui-nav);
+    color: var(--ink);
+    white-space: nowrap;
     text-decoration: none;
+    border-block-end: 3px solid transparent;
+    border-inline-start: 1px solid var(--rule);
+  }
+  .nav__link:first-child {
+    padding-inline-start: 0;
+    border-inline-start: 0;
   }
   .nav__link:hover {
-    color: var(--ink);
+    color: var(--red);
     text-decoration: none;
   }
   .nav__link[aria-current='page'] {
-    color: var(--ink);
     border-block-end-color: var(--red);
   }
 
   .tools {
     display: flex;
-    flex-wrap: wrap;
+    flex: none;
     align-items: center;
     gap: 10px;
   }
@@ -513,8 +523,9 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-end;
       width: 100%;
+      padding-block: 4px;
     }
     /* All three stay on phones, smaller: group 11px · badge 9px · tagline 10px. */
     .strip__row {
@@ -560,7 +571,7 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
     gap: 24px;
-    padding: 6px 0 6px;
+    padding: 8px 0 12px;
   }
   .masthead__center {
     display: flex;
@@ -604,40 +615,15 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     letter-spacing: var(--track-wordmark);
     color: var(--muted);
   }
-
-  /* ---- dateline ---- */
-  .dateline {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 6px 22px;
-    padding: 9px 0 10px;
-    border-block-start: 1px solid var(--rule);
+  .masthead__date {
+    padding-block-start: 8px;
+    font-family: var(--font-ui);
     font-size: var(--ui-meta);
-    color: var(--secondary);
-  }
-  .dateline__start {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 14px;
-  }
-  .dateline__date {
     font-weight: 600;
     color: var(--ink);
   }
-  .dateline__end {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 14px;
-  }
-  .dateline__dot {
-    color: var(--rule-strong);
-  }
 
-  /* Phone overrides for the masthead and dateline. Kept LAST so they win the
+  /* Phone overrides for the masthead. Kept LAST so they win the
      cascade over the base rules above (same specificity, later source). */
   @media (max-width: 767px) {
     /* wordmark alone — no room to flank it; the emblems fetch a 1px pixel */
@@ -646,13 +632,6 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     }
     .masthead__emblem {
       display: none;
-    }
-    /* centred, one item per line as in the phone mockup */
-    .dateline,
-    .dateline__start,
-    .dateline__end {
-      justify-content: center;
-      text-align: center;
     }
   }
 </style>

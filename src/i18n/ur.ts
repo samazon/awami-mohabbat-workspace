@@ -42,7 +42,6 @@ export const ur = {
   },
   masthead: {
     daily: 'روزنامہ',
-    chiefEditor: 'چیف ایڈیٹر',
   },
   ticker: {
     prayers: 'اوقاتِ نماز',

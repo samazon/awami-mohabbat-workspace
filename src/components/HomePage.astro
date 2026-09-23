@@ -65,7 +65,7 @@ const jsonLd = {
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   </Fragment>
 
-  <AMHeader slot="header" locale={locale} config={config} masthead={edition} active="home" />
+  <AMHeader slot="header" locale={locale} masthead={edition} active="home" />
 
   {/* Utility strip (prayer times + rates) is off until it is fed by live data.
       Flip SHOW_UTILITY_TICKER to bring it back; the component and its data path stay. */}

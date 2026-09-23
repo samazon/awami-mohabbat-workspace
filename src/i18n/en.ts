@@ -38,7 +38,6 @@ export const en: Catalog = {
   },
   masthead: {
     daily: 'Daily',
-    chiefEditor: 'Chief Editor',
   },
   ticker: {
     prayers: 'Prayer times',

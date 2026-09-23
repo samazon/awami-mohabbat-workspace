@@ -50,7 +50,7 @@ const active = section === 'archive' || section === 'articles' ? section : undef
 ---
 
 <BaseLayout title={`${titles[section]} — ${s.meta.siteName}`} noindex>
-  <AMHeader slot="header" locale={locale} config={config} masthead={edition} active={active} />
+  <AMHeader slot="header" locale={locale} masthead={edition} active={active} />
 
   <section class="section">
     <div class="container">
