@@ -2,7 +2,7 @@
 import { Image } from 'astro:assets';
 import logo from '@/assets/logo-awami-mohabbat.png';
 import { t, type Locale } from '@/i18n';
-import { formatLong } from '@/lib/dates';
+import { formatLong, todayIso } from '@/lib/dates';
 import { nav as navFor } from '@/lib/links';
 import LtrRun from './LtrRun.astro';
 import ReaderControls from './ReaderControls.astro';
@@ -10,10 +10,14 @@ import LanguageSwitcher from './LanguageSwitcher.astro';
 
 interface Props {
   locale: Locale;
-  masthead: { date: string; hijriDate: string } | null;
   active?: 'home' | 'archive' | 'articles' | 'about';
 }
-const { locale, masthead, active = 'home' } = Astro.props;
+const { locale, active = 'home' } = Astro.props;
+
+// The masthead shows TODAY. The server renders Pakistan's today (the paper's
+// home); the inline script below swaps in the visitor's own local date, since
+// the page is edge-cached and shared across time zones.
+const todayText = formatLong(todayIso());
 
 /** Search has no results page yet; the markup stays, switched off. */
 const SHOW_SEARCH = false;
@@ -66,8 +70,17 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
           />
         </a>
         <LtrRun class="masthead__latin">AWAMI MOHABBAT</LtrRun>
-        {/* The date sits under the nameplate, as it does in print. */}
-        {masthead && <LtrRun class="masthead__date">{formatLong(masthead.date)} &nbsp;|&nbsp; {masthead.hijriDate}</LtrRun>}
+        {/* Today's date under the nameplate, as in print — in the reader's own time zone. */}
+        <LtrRun class="masthead__date" id="masthead-date">{todayText}</LtrRun>
+        <script is:inline>
+          (function () {
+            var el = document.getElementById('masthead-date');
+            if (!el || !window.Intl || !Intl.DateTimeFormat) return;
+            try {
+              el.textContent = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+            } catch (e) {}
+          })();
+        </script>
       </div>
 
       {/* End side: the globe, slowed to ~10s per turn. */}

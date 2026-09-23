@@ -16,12 +16,13 @@ interface Props {
   tabular?: boolean;
   class?: string;
   title?: string;
+  id?: string;
   [key: `data-${string}`]: string | boolean | undefined;
 }
-const { block = false, tabular = false, class: className, title, ...rest } = Astro.props;
+const { block = false, tabular = false, class: className, title, id, ...rest } = Astro.props;
 const Tag = block ? 'div' : 'span';
 ---
-<Tag {...rest} dir="ltr" class:list={['ltr', { tabular, 'ltr--block': block }, className]} title={title}><slot /></Tag>
+<Tag {...rest} id={id} dir="ltr" class:list={['ltr', { tabular, 'ltr--block': block }, className]} title={title}><slot /></Tag>
 
 <style>
   /* `text-align: start` on a dir="ltr" box resolves to LEFT — the opposite of
