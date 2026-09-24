@@ -6,6 +6,7 @@
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { t, type Locale } from '@/i18n';
 import { todayIso } from '@/lib/dates';
+import { viewerHref } from '@/lib/links';
 import { getAdSlotsForPage } from '@/lib/services/ads';
 import { getSiteConfig } from '@/lib/services/config';
 import { getEmergencyContacts } from '@/lib/services/contacts';
@@ -65,7 +66,12 @@ const jsonLd = {
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   </Fragment>
 
-  <AMHeader slot="header" locale={locale} active="home" />
+  <AMHeader
+    slot="header"
+    locale={locale}
+    active="home"
+    epaper={edition ? { href: viewerHref(locale, edition, 1), pages: edition.pages.length, pdfUrl: edition.pdfUrl, pdfBytes: edition.pdfBytes } : null}
+  />
 
   {/* Utility strip (prayer times + rates) is off until it is fed by live data.
       Flip SHOW_UTILITY_TICKER to bring it back; the component and its data path stay. */}

@@ -9,8 +9,10 @@ import { t, type Locale } from '@/i18n';
 interface Props {
   locale: Locale;
   class?: string;
+  /** `dark`: translucent pill for the red strip. */
+  variant?: 'light' | 'dark';
 }
-const { locale, class: className } = Astro.props;
+const { locale, class: className, variant = 'light' } = Astro.props;
 const s = t(locale).reader;
 
 const steps = [
@@ -20,7 +22,7 @@ const steps = [
 ] as const;
 ---
 
-<am-reader-controls class:list={['reader', className]} role="group" aria-label={s.group} dir="ltr">
+<am-reader-controls class:list={['reader', `reader--${variant}`, className]} role="group" aria-label={s.group} dir="ltr">
   {steps.map((step) => (
     <button
       type="button"
@@ -98,6 +100,32 @@ const steps = [
   }
   .reader__btn[aria-pressed='true'] {
     background: var(--ink);
+    color: var(--on-red);
+  }
+
+  .reader.reader--dark {
+    border: 1px solid var(--strip-pill-border);
+    border-radius: var(--radius-pill);
+    padding: 2px;
+    gap: 2px;
+    background: var(--strip-pill);
+  }
+  .reader.reader--dark .reader__btn,
+  .reader.reader--dark .reader__btn:last-child {
+    min-width: 30px;
+    min-height: 26px;
+    padding: 0 7px;
+    border: 0;
+    font-size: var(--ui-control);
+    border-radius: var(--radius-pill);
+    color: var(--on-red);
+  }
+  .reader.reader--dark .reader__btn:hover {
+    color: var(--on-red);
+    background: rgba(255, 255, 255, 0.12);
+  }
+  .reader.reader--dark .reader__btn[aria-pressed='true'] {
+    background: rgba(255, 255, 255, 0.22);
     color: var(--on-red);
   }
 </style>

@@ -29,6 +29,22 @@
   --on-red: #ffffff;
   --on-red-border: rgba(255, 255, 255, 0.7);
 
+  /* ---- header/footer chrome (reimagined masthead) ---- */
+  --strip-bg: #8a1a1a;        /* deep red utility strip */
+  --strip-pill: rgba(0, 0, 0, 0.22);
+  --strip-pill-border: rgba(255, 255, 255, 0.28);
+  --nav-bg: #17171f;          /* near-black navigation band */
+  --nav-bg-elev: rgba(255, 255, 255, 0.07);
+  --footer-bg: #111114;
+  --on-dark: #f4f3f0;
+  --on-dark-muted: #a5a19a;
+  --on-dark-rule: rgba(255, 255, 255, 0.12);
+  --gold: #d9b34a;
+  --gold-deep: #b8860b;
+  --red-deep: #7a1116;        /* "DAILY AWAMI MOHABBAT" lockup */
+  --radius-pill: 999px;
+  --radius-sm: 6px;
+
   /* ---- CONTENT type — scales ---- */
   --fs-hero:    clamp(calc(26px * var(--reader-scale)), calc(4vw * var(--reader-scale)), calc(38px * var(--reader-scale)));
   --fs-title:   clamp(calc(28px * var(--reader-scale)), calc(4.6vw * var(--reader-scale)), calc(44px * var(--reader-scale)));

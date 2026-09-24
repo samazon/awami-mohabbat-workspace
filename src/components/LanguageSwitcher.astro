@@ -6,13 +6,15 @@ interface Props {
   locale: Locale;
   pathname: string;
   class?: string;
+  /** `dark`: white-outlined pill for the red strip; active segment is white. */
+  variant?: 'light' | 'dark';
 }
-const { locale, pathname, class: className } = Astro.props;
+const { locale, pathname, class: className, variant = 'light' } = Astro.props;
 const s = t(locale);
 const route = neutralPath(pathname);
 ---
 
-<nav class:list={['lang', className]} aria-label={s.lang.group}>
+<nav class:list={['lang', `lang--${variant}`, className]} aria-label={s.lang.group}>
   {LOCALES.map((l) => (
     <a
       class="lang__link"
@@ -55,5 +57,31 @@ const route = neutralPath(pathname);
   .lang__link[aria-current='page'] {
     background: var(--ink);
     color: var(--on-red);
+  }
+
+  /* dark pill (strip) */
+  .lang.lang--dark {
+    border: 1px solid var(--strip-pill-border);
+    border-radius: var(--radius-pill);
+    padding: 2px;
+    gap: 2px;
+    background: var(--strip-pill);
+  }
+  .lang.lang--dark .lang__link,
+  .lang.lang--dark .lang__link:last-child {
+    min-height: 26px;
+    padding: 0 10px;
+    border: 0;
+    font-size: var(--ui-control);
+    border-radius: var(--radius-pill);
+    color: var(--on-red);
+  }
+  .lang.lang--dark .lang__link:hover {
+    color: var(--on-red);
+    background: rgba(255, 255, 255, 0.12);
+  }
+  .lang.lang--dark .lang__link[aria-current='page'] {
+    background: var(--on-red);
+    color: var(--strip-bg);
   }
 </style>

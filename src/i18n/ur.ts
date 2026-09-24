@@ -42,6 +42,13 @@ export const ur = {
   },
   masthead: {
     daily: 'روزنامہ',
+    groupEyebrow: 'GROUP OF PUBLICATIONS',
+    lockup: 'DAILY AWAMI MOHABBAT',
+    subline: 'Daily Urdu newspaper • Kasur | Lahore',
+    epaper: 'ای پیپر',
+    epaperTitle: 'آج کا مکمل ای پیپر',
+    epaperPages: (n: number) => `${n} صفحات`,
+    epaperHint: 'پی ڈی ایف آرکائیو',
   },
   ticker: {
     prayers: 'اوقاتِ نماز',
@@ -114,7 +121,12 @@ export const ur = {
     archive: 'آرکائیو',
     articles: 'مضامین و کالم',
     aboutContact: 'تعارف و رابطہ',
-    copyright: (year: number) => `© ${year} Awami Mohabbat Group of Publications`,
+    legal: 'قانونی معلومات',
+    rights: 'تمام حقوق بحق "عوامی محبت گروپ آف پبلیکیشنز" محفوظ ہیں۔ روزنامہ عوامی محبت کی کسی بھی خبر یا مواد کی بلا اجازت نقل منع ہے۔',
+    brandTitle: 'روزنامہ عوامی محبت',
+    brandBlurb: 'تعمیری، مثبت اور غیر جانبدارانہ صحافت کا پرچم دار۔ قصور اور لاہور سے شائع ہونے والا روزنامہ۔',
+    abcLine: 'ABC Certified • Daily Awami Mohabbat',
+    copyright: (year: number) => `© ${year} Daily Awami Mohabbat. All rights reserved.`,
     chiefEditor: 'چیف ایڈیٹر',
   },
   about: {

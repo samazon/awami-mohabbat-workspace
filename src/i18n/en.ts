@@ -38,6 +38,13 @@ export const en: Catalog = {
   },
   masthead: {
     daily: 'Daily',
+    groupEyebrow: 'GROUP OF PUBLICATIONS',
+    lockup: 'DAILY AWAMI MOHABBAT',
+    subline: 'Daily Urdu newspaper • Kasur | Lahore',
+    epaper: 'e-Paper',
+    epaperTitle: 'Today\'s full e-paper',
+    epaperPages: (n: number) => `${n} pages`,
+    epaperHint: 'PDF archive',
   },
   ticker: {
     prayers: 'Prayer times',
@@ -109,7 +116,12 @@ export const en: Catalog = {
     archive: 'Archive',
     articles: 'Articles & columns',
     aboutContact: 'About & contact',
-    copyright: (year: number) => `© ${year} Awami Mohabbat Group of Publications`,
+    legal: 'Legal',
+    rights: 'All rights reserved by Awami Mohabbat Group of Publications. Reproduction of any report or material without permission is prohibited.',
+    brandTitle: 'Daily Awami Mohabbat',
+    brandBlurb: 'Standard-bearer of constructive, positive and impartial journalism, published from Kasur and Lahore.',
+    abcLine: 'ABC Certified • Daily Awami Mohabbat',
+    copyright: (year: number) => `© ${year} Daily Awami Mohabbat. All rights reserved.`,
     chiefEditor: 'Chief Editor',
   },
   about: {
