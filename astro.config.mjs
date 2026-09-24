@@ -2,6 +2,7 @@
 import { defineConfig, envField } from 'astro/config';
 import cloudflare from '@astrojs/cloudflare';
 import react from '@astrojs/react';
+import icon from 'astro-icon';
 
 export default defineConfig({
   // Fallback origin only (build-time). At runtime every absolute URL — canonical,
@@ -15,7 +16,9 @@ export default defineConfig({
     // At runtime nothing is transformed — page scans come pre-derived from R2.
     imageService: 'compile',
   }),
-  integrations: [react()],
+  // Lucide, inlined at build time: only the icons actually used reach the HTML,
+  // so there is no icon font, no extra request and no runtime JS.
+  integrations: [react(), icon({ include: { lucide: ['*'] } })],
 
   i18n: {
     defaultLocale: 'ur',

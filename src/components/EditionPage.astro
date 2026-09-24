@@ -14,6 +14,7 @@ import { getSiteConfig } from '@/lib/services/config';
 import AMHeader from './AMHeader.astro';
 import AMFooter from './AMFooter.astro';
 import EditionViewer from './EditionViewer.astro';
+import Icon from './Icon.astro';
 import LtrRun from './LtrRun.astro';
 
 interface Props {
@@ -26,8 +27,6 @@ const [config, adjacent] = await Promise.all([getSiteConfig(locale), getAdjacent
 const notice = edition.translation.isFallback ? s.mt.fallback : edition.translation.isMachineTranslated ? s.mt.notice : null;
 const title = `${edition.headline} — ${formatLong(edition.date)} — ${s.meta.siteName}`;
 const archiveHref = localePath(locale, '/archive');
-const arrowBack = locale === 'ur' ? '→' : '←';
-const arrowFwd = locale === 'ur' ? '←' : '→';
 const front = edition.pages[0]!;
 ---
 
@@ -57,7 +56,7 @@ const front = edition.pages[0]!;
   <div class="container">
     {/* crumb + dateline */}
     <div class="crumbs">
-      <a class="crumb t-label" href={archiveHref}>{arrowBack} {s.edition.backToArchive}</a>
+      <a class="crumb t-label" href={archiveHref}><Icon name="arrow-left" size="sm" /> {s.edition.backToArchive}</a>
       <LtrRun class="dateline">{formatLong(edition.date)} &nbsp;|&nbsp; {edition.hijriDate}</LtrRun>
     </div>
 
@@ -76,13 +75,13 @@ const front = edition.pages[0]!;
       <div class="lead__actions">
         {edition.pdfUrl && (
           <a class="btn" href={edition.pdfUrl} download={`awami-mohabbat-${edition.date}.pdf`} title={s.today.pdfNote}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M12 4v11" /><path d="M7 11l5 5 5-5" /><path d="M4 20h16" /></svg>
+            <Icon name="download" />
             <span>{s.edition.downloadPdf}</span>
             {edition.pdfBytes && <LtrRun class="btn__meta">{formatFileSize(edition.pdfBytes)}</LtrRun>}
           </a>
         )}
         <button type="button" class="btn btn--outline" data-share data-copied={s.edition.copied}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.5" /><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="19" r="2.5" /><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4" /></svg>
+          <Icon name="share-2" />
           <span data-share-label>{s.edition.share}</span>
         </button>
       </div>
@@ -97,8 +96,8 @@ const front = edition.pages[0]!;
           ))}
         </div>
         <div class="steps">
-          <button type="button" class="step t-label" data-step="-1" disabled>{arrowBack} {s.edition.prevPage}</button>
-          <button type="button" class="step t-label" data-step="1">{s.edition.nextPage} {arrowFwd}</button>
+          <button type="button" class="step t-label" data-step="-1" disabled><Icon name="chevron-left" size="sm" /> {s.edition.prevPage}</button>
+          <button type="button" class="step t-label" data-step="1">{s.edition.nextPage} <Icon name="chevron-right" size="sm" /></button>
         </div>
       </div>
 
@@ -130,7 +129,7 @@ const front = edition.pages[0]!;
       <div class="adj adj--prev">
         {adjacent.prev && (
           <a class="adj__link" href={localePath(locale, `/edition/${adjacent.prev}`)}>
-            <span class="adj__label t-label">{arrowBack} {s.edition.prevEdition}</span>
+            <span class="adj__label t-label"><Icon name="arrow-left" size="sm" /> {s.edition.prevEdition}</span>
             <LtrRun class="adj__date">{formatLong(adjacent.prev)}</LtrRun>
           </a>
         )}
@@ -138,7 +137,7 @@ const front = edition.pages[0]!;
       <div class="adj adj--next">
         {adjacent.next && (
           <a class="adj__link" href={localePath(locale, `/edition/${adjacent.next}`)}>
-            <span class="adj__label t-label">{s.edition.nextEdition} {arrowFwd}</span>
+            <span class="adj__label t-label">{s.edition.nextEdition} <Icon name="arrow-right" size="sm" /></span>
             <LtrRun class="adj__date">{formatLong(adjacent.next)}</LtrRun>
           </a>
         )}

@@ -78,7 +78,7 @@ export const ur = {
     pagesEyebrow: 'PAGES',
     frontPage: 'آج کا صفحۂ اول',
     pageOf: (n: number, total: number) => `صفحہ ${n} از ${total}`,
-    openViewer: 'OPEN VIEWER →',
+    openViewer: 'OPEN VIEWER',
     fourPages: 'آج کے چار صفحات',
     readFull: 'مکمل اخبار پڑھیں',
     viewPdf: 'View PDF',

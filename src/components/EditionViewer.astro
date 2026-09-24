@@ -80,8 +80,19 @@ const labels = {
     download: string;
   }
 
-  const ICON = (d: string) =>
-    `<svg aria-hidden="true" class="pswp__icn" viewBox="0 0 32 32" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="${d}"/></svg>`;
+  // Lucide bodies, inlined: PhotoSwipe takes its icons as HTML strings, so they
+  // cannot use <Icon>. Kept byte-identical to the set so the viewer matches the
+  // rest of the chrome.
+  const ICON = (body: string) =>
+    `<svg aria-hidden="true" class="pswp__icn" viewBox="0 0 24 24" width="24" height="24">${body}</svg>`;
+  const S = 'fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"';
+  const LUCIDE = {
+    x: `<path ${S} d="M18 6L6 18M6 6l12 12"/>`,
+    zoomIn: `<g ${S}><circle cx="11" cy="11" r="8"/><path d="m21 21l-4.35-4.35M11 8v6m-3-3h6"/></g>`,
+    chevronLeft: `<path ${S} d="m15 18l-6-6l6-6"/>`,
+    chevronRight: `<path ${S} d="m9 18l6-6l-6-6"/>`,
+    download: `<g ${S}><path d="M12 15V3m9 12v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10l5 5l5-5"/></g>`,
+  };
 
   class EditionViewer extends HTMLElement {
     connectedCallback() {
@@ -115,10 +126,10 @@ const labels = {
         arrowPrevTitle: labels.prev,
         arrowNextTitle: labels.next,
         errorMsg: labels.error,
-        closeSVG: ICON('M8 8l16 16M24 8L8 24'),
-        zoomSVG: ICON('M14 6a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM20 20l6 6M14 10v8M10 14h8'),
-        arrowPrevSVG: ICON('M20 6L10 16l10 10'),
-        arrowNextSVG: ICON('M12 6l10 10-10 10'),
+        closeSVG: ICON(LUCIDE.x),
+        zoomSVG: ICON(LUCIDE.zoomIn),
+        arrowPrevSVG: ICON(LUCIDE.chevronLeft),
+        arrowNextSVG: ICON(LUCIDE.chevronRight),
       });
 
       lightbox.on('uiRegister', () => {
@@ -157,7 +168,7 @@ const labels = {
             order: 8,
             isButton: true,
             tagName: 'a',
-            html: ICON('M16 6v14M10 14l6 6 6-6M7 26h18'),
+            html: ICON(LUCIDE.download),
             onInit: (el) => {
               const a = el as HTMLAnchorElement;
               a.href = pdf;

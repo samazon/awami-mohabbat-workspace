@@ -71,6 +71,13 @@
   --ui-button-lg: 16px;     /* the one primary action on a page */
   --ui-wordmark-sub: 11px;
 
+  /* ---- icons (Lucide, 24px grid). Fixed px: icons sit beside chrome type,
+         which does not scale with the reader control, so neither do they. ---- */
+  --icon-sm: 14px;   /* inline with meta text: contact rows, date pill */
+  --icon-md: 18px;   /* default: buttons, inline links */
+  --icon-lg: 20px;   /* icon buttons: hamburger, close, search */
+  --icon-xl: 28px;   /* viewer controls */
+
   /* ---- letter-spacing for Latin eyebrows ---- */
   --track-eyebrow: 0.16em;
   --track-wordmark: 0.3em;

@@ -8,6 +8,7 @@ import { t, type Locale } from '@/i18n';
 import { formatEyebrow, formatFileSize } from '@/lib/dates';
 import { viewerHref } from '@/lib/links';
 import type { EditionView } from '@/lib/services/editions';
+import Icon from './Icon.astro';
 import LtrRun from './LtrRun.astro';
 import PageThumb from './PageThumb.astro';
 
@@ -42,7 +43,7 @@ const front = edition.pages[0]!;
         />
         <div class="front__caption">
           <span class="t-label">{s.today.pageOf(1, edition.pages.length)}</span>
-          <a class="front__open" href={viewerHref(locale, edition, 1)} data-viewer-open><LtrRun>{s.today.openViewer}</LtrRun></a>
+          <a class="front__open" href={viewerHref(locale, edition, 1)} data-viewer-open><LtrRun>{s.today.openViewer}</LtrRun> <Icon name="arrow-right" size="sm" /></a>
         </div>
       </div>
 
@@ -60,12 +61,12 @@ const front = edition.pages[0]!;
 
         <div class="actions">
           <a class="btn btn--lg" href={viewerHref(locale, edition, 1)} data-viewer-open>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h10a3 3 0 0 1 3 3v11H7a3 3 0 0 0-3 3V5z" /><path d="M17 8h3v11a3 3 0 0 1-3 3" /><path d="M7 9h7M7 13h7" /></svg>
+            <Icon name="book-open-text" />
             <span>{s.today.readFull}</span>
           </a>
           {edition.pdfUrl && (
             <a class="btn btn--outline" href={edition.pdfUrl} download={`awami-mohabbat-${edition.date}.pdf`} title={s.today.pdfNote}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M12 4v11" /><path d="M7 11l5 5 5-5" /><path d="M4 20h16" /></svg>
+              <Icon name="download" />
               <LtrRun>{s.today.viewPdf}</LtrRun>
               {edition.pdfBytes && <LtrRun class="btn__meta">{formatFileSize(edition.pdfBytes)}</LtrRun>}
             </a>

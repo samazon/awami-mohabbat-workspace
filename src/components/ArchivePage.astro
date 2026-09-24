@@ -12,6 +12,7 @@ import { getSiteConfig } from '@/lib/services/config';
 import AMHeader from './AMHeader.astro';
 import AMFooter from './AMFooter.astro';
 import ArchiveCards from './ArchiveCards.astro';
+import Icon from './Icon.astro';
 import LtrRun from './LtrRun.astro';
 
 interface Props {
@@ -45,8 +46,6 @@ for (let i = 1; i <= result.pageCount; i++) {
   if (i === 1 || i === result.pageCount || Math.abs(i - result.page) <= 1) pageItems.push(i);
   else if (pageItems.at(-1) !== '…') pageItems.push('…');
 }
-const arrowBack = locale === 'ur' ? '→' : '←';
-const arrowFwd = locale === 'ur' ? '←' : '→';
 ---
 
 <BaseLayout title={`${s.archive.pageTitle} — ${s.meta.siteName}`} description={s.archive.description}>
@@ -107,9 +106,9 @@ const arrowFwd = locale === 'ur' ? '←' : '→';
         <LtrRun class="pagination__meta">{s.archive.showing(from, to, result.total)}</LtrRun>
         <div class="pages">
           {result.page > 1 ? (
-            <a class="pg" href={href(year, month, result.page - 1)} aria-label={s.archive.prevPage}>{arrowBack}</a>
+            <a class="pg" href={href(year, month, result.page - 1)} aria-label={s.archive.prevPage}><Icon name="chevron-left" size="sm" /></a>
           ) : (
-            <span class="pg pg--off" aria-hidden="true">{arrowBack}</span>
+            <span class="pg pg--off" aria-hidden="true"><Icon name="chevron-left" size="sm" /></span>
           )}
           {pageItems.map((it) =>
             it === '…' ? (
@@ -119,9 +118,9 @@ const arrowFwd = locale === 'ur' ? '←' : '→';
             ),
           )}
           {result.page < result.pageCount ? (
-            <a class="pg" href={href(year, month, result.page + 1)} aria-label={s.archive.nextPage}>{arrowFwd}</a>
+            <a class="pg" href={href(year, month, result.page + 1)} aria-label={s.archive.nextPage}><Icon name="chevron-right" size="sm" /></a>
           ) : (
-            <span class="pg pg--off" aria-hidden="true">{arrowFwd}</span>
+            <span class="pg pg--off" aria-hidden="true"><Icon name="chevron-right" size="sm" /></span>
           )}
         </div>
       </nav>

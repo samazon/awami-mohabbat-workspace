@@ -73,7 +73,7 @@ export const en: Catalog = {
     pagesEyebrow: 'PAGES',
     frontPage: 'Today\'s front page',
     pageOf: (n: number, total: number) => `Page ${n} of ${total}`,
-    openViewer: 'OPEN VIEWER →',
+    openViewer: 'OPEN VIEWER',
     fourPages: 'Today\'s four pages',
     readFull: 'Read the full edition',
     viewPdf: 'View PDF',

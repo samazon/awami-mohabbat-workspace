@@ -3,6 +3,7 @@
 import { localePath, t, type Locale } from '@/i18n';
 import type { EditionCard } from '@/lib/services/editions';
 import ArchiveCards from './ArchiveCards.astro';
+import Icon from './Icon.astro';
 
 interface Props {
   editions: EditionCard[];
@@ -10,7 +11,6 @@ interface Props {
 }
 const { editions, locale } = Astro.props;
 const s = t(locale);
-const arrow = locale === 'ur' ? '←' : '→';
 ---
 
 {editions.length > 0 && (
@@ -18,7 +18,7 @@ const arrow = locale === 'ur' ? '←' : '→';
     <div class="container">
       <header class="section-head">
         <h2 class="section-title">{s.archive.title}</h2>
-        <a class="all t-label" href={localePath(locale, '/archive')}>{s.archive.viewAll} {arrow}</a>
+        <a class="all t-label" href={localePath(locale, '/archive')}>{s.archive.viewAll} <Icon name="arrow-right" size="sm" /></a>
       </header>
       <ArchiveCards editions={editions} locale={locale} />
     </div>

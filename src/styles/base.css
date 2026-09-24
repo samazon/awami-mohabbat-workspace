@@ -221,12 +221,6 @@ a:hover {
   transition: background-color 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out;
 }
 
-.btn svg {
-  flex: none;
-  width: 18px;
-  height: 18px;
-}
-
 .btn:hover {
   background: var(--red);
   border-color: var(--red);

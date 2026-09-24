@@ -1,0 +1,66 @@
+---
+/**
+ * The site's only icon. Wraps astro-icon so every icon shares one source
+ * (Lucide, 24px grid, 2px stroke), one size scale and one RTL rule.
+ *
+ *   <Icon name="phone" />                 16px, inherits currentColor
+ *   <Icon name="menu" size="lg" />        20px
+ *   <Icon name="arrow-left" />            flips to → in Urdu, automatically
+ *
+ * Directional icons (anything ending -left / -right) mirror in RTL, so call
+ * sites always name the LTR-correct icon and never branch on locale.
+ * Pass `flip={false}` for the rare icon that must not mirror (a logo, a glyph
+ * that reads as a letter).
+ */
+import { Icon as Iconify } from 'astro-icon/components';
+
+interface Props {
+  name: string;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  /** Override the automatic RTL mirroring. */
+  flip?: boolean;
+  class?: string;
+  title?: string;
+}
+const { name, size = 'md', flip, class: className, title } = Astro.props;
+
+const directional = /-(left|right)$/.test(name);
+const shouldFlip = flip ?? directional;
+---
+
+<Iconify
+  name={`lucide:${name}`}
+  class:list={['icon', `icon--${size}`, { 'icon--flip': shouldFlip }, className]}
+  title={title}
+  aria-hidden={title ? undefined : 'true'}
+/>
+
+<style is:global>
+  /* Sized in px, not em: icons sit beside chrome type, which never scales
+     with the reader control, so they must not either. */
+  .icon {
+    flex: none;
+    display: inline-block;
+    vertical-align: middle;
+    color: inherit;
+  }
+  .icon--sm {
+    width: var(--icon-sm);
+    height: var(--icon-sm);
+  }
+  .icon--md {
+    width: var(--icon-md);
+    height: var(--icon-md);
+  }
+  .icon--lg {
+    width: var(--icon-lg);
+    height: var(--icon-lg);
+  }
+  .icon--xl {
+    width: var(--icon-xl);
+    height: var(--icon-xl);
+  }
+  html[dir='rtl'] .icon--flip {
+    transform: scaleX(-1);
+  }
+</style>
