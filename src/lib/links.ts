@@ -14,5 +14,6 @@ export const nav = (locale: Locale) => ({
   archive: localePath(locale, '/archive'),
   articles: localePath(locale, '/articles'),
   about: localePath(locale, '/about'),
+  contact: localePath(locale, '/contact'),
   search: localePath(locale, '/search'),
 });

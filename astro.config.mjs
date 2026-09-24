@@ -18,7 +18,7 @@ export default defineConfig({
   }),
   // Lucide, inlined at build time: only the icons actually used reach the HTML,
   // so there is no icon font, no extra request and no runtime JS.
-  integrations: [react(), icon({ include: { lucide: ['*'] } })],
+  integrations: [react(), icon({ include: { lucide: ['*'], 'circle-flags': ['*'] } })],
 
   i18n: {
     defaultLocale: 'ur',
@@ -34,6 +34,9 @@ export default defineConfig({
       // Where R2 objects are served from. In dev it's the in-app /media route
       // (reads the R2 binding); in prod it's the R2 custom domain.
       CDN_BASE: envField.string({ context: 'server', access: 'public', default: '/media' }),
+      // Salts the IP hash used to rate-limit the join form. Set a real secret
+      // in production: `wrangler secret put JOIN_IP_SALT`.
+      JOIN_IP_SALT: envField.string({ context: 'server', access: 'secret', default: 'awami-mohabbat-dev-salt' }),
     },
   },
 

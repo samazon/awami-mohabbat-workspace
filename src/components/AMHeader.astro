@@ -11,7 +11,7 @@ import LanguageSwitcher from './LanguageSwitcher.astro';
 
 interface Props {
   locale: Locale;
-  active?: 'home' | 'archive' | 'articles' | 'about';
+  active?: 'home' | 'archive' | 'articles' | 'about' | 'contact';
   /** Today's edition, when the page has one: powers the e-paper button and card. */
   epaper?: { href: string; pages: number; pdfUrl: string | null; pdfBytes: number | null } | null;
 }
@@ -29,6 +29,7 @@ const items = [
   { key: 'archive', href: links.archive, label: s.nav.archive },
   { key: 'articles', href: links.articles, label: s.nav.articles },
   { key: 'about', href: links.about, label: s.nav.about },
+  { key: 'contact', href: links.contact, label: s.contact.title },
 ] as const;
 
 // Today, in the paper's home time zone, localised; the inline script swaps in
@@ -50,8 +51,8 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
         <Icon name="calendar" size="sm" />
         <span class="pill__text">{todayText}</span>
       </span>
-      <LtrRun class="pill pill--abc">{s.strip.abc}</LtrRun>
     </div>
+    <LtrRun class="pill pill--abc">{s.strip.abc}</LtrRun>
     <div class="strip__group strip__group--end">
       <ReaderControls locale={locale} variant="dark" />
       <LanguageSwitcher locale={locale} pathname={pathname} variant="dark" />
@@ -237,11 +238,12 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     background: var(--strip-bg);
     color: var(--on-red);
   }
+  /* 1fr auto 1fr: the badge sits dead-centre on the strip regardless of how
+     wide the date and the controls are. */
   .strip__row {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    justify-content: space-between;
     gap: 6px 12px;
     padding-block: 5px;
   }
@@ -249,7 +251,11 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    justify-self: start;
     gap: 8px 12px;
+  }
+  .strip__group--end {
+    justify-self: end;
   }
   .pill {
     display: inline-flex;
@@ -276,12 +282,13 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     opacity: 0.85;
   }
   .pill--abc {
+    justify-self: center;
     font-family: var(--font-ui);
     font-size: var(--ui-eyebrow-sm);
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.14em;
-    color: var(--gold);
-    border-color: rgba(217, 179, 74, 0.55);
+    color: var(--on-red);
+    border-color: var(--on-red);
   }
   .epaper-btn {
     display: inline-flex;
@@ -740,7 +747,8 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
 
   @media (max-width: 767px) {
     .strip__row {
-      justify-content: center;
+      grid-template-columns: 1fr;
+      justify-items: center;
     }
     .strip__group {
       justify-content: center;

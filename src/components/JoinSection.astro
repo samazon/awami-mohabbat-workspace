@@ -1,0 +1,302 @@
+---
+/**
+ * "Join us" — English in both locales, by request. Two columns: a picture on
+ * the start side, the form on a dark panel at the end side.
+ *
+ * The form posts to the `join` action, so it works with JavaScript disabled:
+ * the browser POSTs, the action validates, the page re-renders with either the
+ * success note or per-field errors. Values are echoed back on failure so
+ * nothing has to be retyped.
+ */
+import { Image } from 'astro:assets';
+import { actions, isInputError } from 'astro:actions';
+import { join } from '@/content/contact';
+import type { Locale } from '@/i18n';
+import Icon from './Icon.astro';
+
+interface Props {
+  locale: Locale;
+  /** Drop a real photograph in src/assets and pass it here. */
+  image?: ImageMetadata;
+}
+const { locale, image } = Astro.props;
+
+const result = Astro.getActionResult(actions.join);
+const sent = result && !result.error;
+const fieldErrors = result?.error && isInputError(result.error) ? result.error.fields : undefined;
+const formError = result?.error && !isInputError(result.error) ? result.error.message : undefined;
+const prev = result?.error ? ((result.error as { inputValue?: Record<string, string> }).inputValue ?? {}) : {};
+
+const fields = [
+  { name: 'name', ...join.fields.name },
+  { name: 'profession', ...join.fields.profession },
+  { name: 'address', ...join.fields.address },
+  { name: 'contact', ...join.fields.contact },
+] as const;
+---
+
+{/* lang/dir pinned: this section is English even on the Urdu page. */}
+<section class="join" id="join" lang="en" dir="ltr" aria-labelledby="join-title">
+  <div class="join__media">
+    {image ? (
+      <Image src={image} alt={join.imageAlt} widths={[400, 800]} sizes="(max-width: 899px) 100vw, 40vw" format="webp" loading="lazy" />
+    ) : (
+      <div class="placeholder" role="img" aria-label={join.imageAlt}>
+        <Icon name="users" size="xl" />
+        <span>{join.imageAlt}</span>
+      </div>
+    )}
+  </div>
+
+  <div class="join__panel">
+    <p class="eyebrow-gold">{join.eyebrow}</p>
+    <h2 id="join-title" class="title">{join.title}</h2>
+    <p class="blurb">{join.blurb}</p>
+
+    {sent ? (
+      <p class="alert alert--ok" role="status">
+        <Icon name="check" size="sm" />
+        <span>{join.success}</span>
+      </p>
+    ) : (
+      <form method="POST" action={actions.join} class="form">
+        {formError && (
+          <p class="alert alert--bad" role="alert">
+            <Icon name="triangle-alert" size="sm" />
+            <span>{formError}</span>
+          </p>
+        )}
+
+        <input type="hidden" name="locale" value={locale} />
+        {/* Honeypot: off-screen, out of the tab order, hidden from assistive tech. */}
+        <div class="hp" aria-hidden="true">
+          <label for="website">Website</label>
+          <input id="website" type="text" name="website" tabindex="-1" autocomplete="off" />
+        </div>
+
+        {fields.map((f) => {
+          const err = fieldErrors?.[f.name]?.[0];
+          return (
+            <p class:list={['field', { 'field--wide': f.name === 'address' || f.name === 'contact' }]}>
+              <label class="field__label" for={`join-${f.name}`}>{f.label}</label>
+              <input
+                class:list={['field__input', { 'field__input--bad': err }]}
+                id={`join-${f.name}`}
+                name={f.name}
+                type="text"
+                placeholder={f.placeholder}
+                autocomplete={f.autocomplete}
+                required
+                aria-invalid={err ? 'true' : undefined}
+                aria-describedby={err ? `join-${f.name}-error` : undefined}
+                value={prev[f.name] ?? ''}
+              />
+              {err && <span class="field__error" id={`join-${f.name}-error`}>{err}</span>}
+            </p>
+          );
+        })}
+
+        <div class="actions">
+          <button type="submit" class="submit">
+            <Icon name="send" size="sm" />
+            <span>{join.submit}</span>
+          </button>
+          <span class="note">{join.note}</span>
+        </div>
+      </form>
+    )}
+  </div>
+</section>
+
+<style>
+  .join {
+    display: grid;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    gap: 20px;
+    margin-block-end: 48px;
+  }
+
+  /* ---- media ---- */
+  .join__media {
+    position: relative;
+    min-height: 100%;
+    background: var(--thumb-ground);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .join__media :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 24px;
+    text-align: center;
+    color: var(--placeholder);
+    font-family: var(--font-ui);
+    font-size: var(--ui-meta);
+  }
+
+  /* ---- dark form panel ---- */
+  .join__panel {
+    padding: 28px 28px 26px;
+    background: var(--nav-bg);
+    color: var(--on-dark);
+    border-radius: var(--radius-sm);
+  }
+  .eyebrow-gold {
+    font-family: var(--font-ui);
+    font-size: var(--ui-eyebrow-sm);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .title {
+    margin-block-start: 6px;
+    font-family: var(--font-serif);
+    line-height: var(--lh-serif-head);
+    font-size: var(--fs-section);
+    font-weight: 700;
+    color: var(--on-dark);
+  }
+  .blurb {
+    max-width: 58ch;
+    margin-block: 8px 20px;
+    font-family: var(--font-serif);
+    line-height: var(--lh-serif-body);
+    font-size: var(--fs-card);
+    color: var(--on-dark-muted);
+  }
+
+  .form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 16px;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+  .field--wide {
+    grid-column: 1 / -1;
+  }
+  .field__label {
+    font-family: var(--font-ui);
+    font-size: var(--ui-meta);
+    font-weight: 600;
+    color: var(--on-dark-muted);
+  }
+  .field__input {
+    min-height: var(--touch);
+    padding: 0 12px;
+    border: 1px solid var(--on-dark-rule);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.05);
+    font-family: var(--font-ui);
+    font-size: var(--ui-input-touch);
+    color: var(--on-dark);
+  }
+  .field__input::placeholder {
+    color: rgba(255, 255, 255, 0.34);
+  }
+  .field__input:focus {
+    outline: none;
+    border-color: var(--gold);
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .field__input--bad {
+    border-color: #ff8a8a;
+  }
+  .field__error {
+    font-family: var(--font-ui);
+    font-size: var(--ui-meta);
+    color: #ff8a8a;
+  }
+
+  .actions {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 16px;
+    padding-block-start: 4px;
+  }
+  .submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: var(--touch);
+    padding: 0 22px;
+    border-radius: var(--radius-sm);
+    background: var(--gold);
+    color: #2a1a00;
+    font-family: var(--font-ui);
+    font-size: var(--ui-button);
+    font-weight: 700;
+    transition: background-color 120ms ease-out;
+  }
+  .submit:hover {
+    background: #e6c15e;
+  }
+  .note {
+    font-family: var(--font-ui);
+    font-size: var(--ui-caption);
+    color: var(--on-dark-muted);
+  }
+
+  .alert {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border: 1px solid currentcolor;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-ui);
+    font-size: var(--fs-card);
+  }
+  .alert--ok {
+    color: #7ddcaa;
+  }
+  .alert--bad {
+    color: #ff8a8a;
+  }
+
+  .hp {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 899px) {
+    .join {
+      grid-template-columns: 1fr;
+    }
+    .join__media {
+      min-height: 200px;
+    }
+    .join__panel {
+      padding: 24px 20px;
+    }
+  }
+  @media (max-width: 539px) {
+    .form {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

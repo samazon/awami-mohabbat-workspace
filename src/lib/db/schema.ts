@@ -233,3 +233,32 @@ export type EmergencyContact = typeof emergencyContacts.$inferSelect;
 export type AdSlot = typeof adSlots.$inferSelect;
 export type AdCampaign = typeof adCampaigns.$inferSelect;
 export type SiteConfig = typeof siteConfig.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Join requests — public form submissions from /contact
+// ---------------------------------------------------------------------------
+export const joinRequests = sqliteTable(
+  'join_requests',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    name: text('name').notNull(),
+    address: text('address').notNull(),
+    profession: text('profession').notNull(),
+    contact: text('contact').notNull(),
+    /** Which language the form was filled in from. */
+    locale: text('locale', { enum: LOCALE_VALUES }).notNull(),
+    status: text('status', { enum: ['new', 'contacted', 'archived'] }).notNull().default('new'),
+    /**
+     * A salted hash of the sender's IP, never the address itself: enough to
+     * rate-limit a flood, not enough to identify a person (rule 09 / CWE-778).
+     */
+    ipHash: text('ip_hash'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [
+    index('join_requests_created_idx').on(t.createdAt),
+    index('join_requests_ip_idx').on(t.ipHash, t.createdAt),
+  ],
+);
+
+export type JoinRequest = typeof joinRequests.$inferSelect;

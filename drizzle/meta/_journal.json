@@ -22,6 +22,13 @@
       "when": 1790105557832,
       "tag": "0002_site_config_drop_phone",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790251711803,
+      "tag": "0003_join_requests",
+      "breakpoints": true
     }
   ]
 }

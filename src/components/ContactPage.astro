@@ -1,0 +1,618 @@
+---
+/**
+ * /contact — a red hero band with jump links, the head office as a dark
+ * identity card beside a white contact card, the bureau network as numbered
+ * cards with a coloured edge, the global network as a flag grid, then the
+ * join-us form.
+ *
+ * Every number, address and tag here comes from the paper. Bureaus with no
+ * number on record say so rather than printing a stub.
+ */
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { t, type Locale } from '@/i18n';
+import { contact } from '@/content/contact';
+import { internationalPhone } from '@/lib/phone';
+import { getSiteConfig } from '@/lib/services/config';
+import { Icon as Iconify } from 'astro-icon/components';
+import AMHeader from './AMHeader.astro';
+import AMFooter from './AMFooter.astro';
+import Icon from './Icon.astro';
+import JoinSection from './JoinSection.astro';
+import LtrRun from './LtrRun.astro';
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const s = t(locale);
+const c = contact[locale];
+const config = await getSiteConfig(locale);
+
+const hq = c.hq;
+const hqPhones = (hq.phones ?? []).map((p) => ({ label: p.label, ...internationalPhone(p.number) }));
+
+const jumps = [
+  { href: '#hq', icon: 'landmark', label: s.contact.jumpHq },
+  { href: '#bureaus', icon: 'map-pin', label: s.contact.jumpBureaus },
+  { href: '#global', icon: 'globe', label: s.contact.jumpGlobal },
+] as const;
+
+/** Cycles the card edge colour so the grid reads as a set, not a stack. */
+const ACCENTS = ['red', 'gold', 'ink', 'red', 'gold'] as const;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'ContactPage',
+  name: `${s.contact.title} — ${s.meta.siteNameLatin}`,
+  mainEntity: {
+    '@type': 'NewsMediaOrganization',
+    name: s.meta.siteNameLatin,
+    url: Astro.url.origin,
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: contact.en.hq.lines[0],
+      addressLocality: 'Lahore',
+      postalCode: '54600',
+      addressCountry: 'PK',
+    },
+    telephone: hqPhones.map((p) => p.tel),
+    email: hq.emails ?? [],
+  },
+};
+---
+
+<BaseLayout title={`${s.contact.title} — ${s.meta.siteName}`} description={s.contact.description}>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  </Fragment>
+
+  <AMHeader slot="header" locale={locale} active="contact" />
+
+  <div class="container">
+    {/* ---- hero ---- */}
+    <section class="hero">
+      <h1 class="hero__title">{s.contact.heroTitle}</h1>
+      <p class="hero__intro">{c.intro}</p>
+      <nav class="hero__jumps" aria-label={s.contact.title}>
+        {jumps.map((j) => (
+          <a class="jump" href={j.href}>
+            <Icon name={j.icon} size="sm" />
+            <span>{j.label}</span>
+          </a>
+        ))}
+        <a class="jump jump--primary" href="#join">
+          <Icon name="user-plus" size="sm" />
+          <span>{s.contact.jumpJoin}</span>
+        </a>
+      </nav>
+    </section>
+
+    {/* ---- head office ---- */}
+    <section class="hq" id="hq" aria-labelledby="hq-title">
+      <div class="hq__id">
+        <LtrRun block class="hq__badge">DAILY AWAMI MOHABBAT HQ</LtrRun>
+        <p class="hq__blurb">{s.contact.hqBlurb}</p>
+        {config && (
+          <div class="editor">
+            <LtrRun block class="editor__label">{s.contact.chiefEditor}</LtrRun>
+            <p class="editor__name">{config.editor}</p>
+          </div>
+        )}
+        {hq.emails && (
+          <ul class="hq__mails">
+            {hq.emails.map((e) => (
+              <li><Icon name="mail" size="sm" /><LtrRun><a href={`mailto:${e}`}>{e}</a></LtrRun></li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div class="hq__reach">
+        <header class="hq__head">
+          <LtrRun block class="eyebrow">{hq.zone}</LtrRun>
+          <h2 id="hq-title" class="hq__name">{hq.name}</h2>
+        </header>
+
+        <div class="row">
+          <span class="row__icon"><Icon name="map-pin" size="sm" /></span>
+          <div>
+            <LtrRun block class="row__label">{s.contact.location}</LtrRun>
+            <address class="address">
+              {hq.lines.map((l) => <span>{l}</span>)}
+            </address>
+          </div>
+        </div>
+
+        <LtrRun block class="group-label">{s.contact.helplines}</LtrRun>
+        <ul class="phones">
+          {hqPhones.map((p) => (
+            <li class="phone">
+              <span class="row__icon"><Icon name="phone" size="sm" /></span>
+              <span class="phone__text">
+                <span class="phone__label">{p.label}</span>
+                <LtrRun tabular class="phone__num"><a href={`tel:${p.tel}`}>{p.display}</a></LtrRun>
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        <LtrRun class="code">{s.contact.code}: LHR-HQ-01</LtrRun>
+      </div>
+    </section>
+
+    {/* ---- bureau network ---- */}
+    <section class="section" id="bureaus" aria-labelledby="bureaus-title">
+      <header class="section__head">
+        <h2 id="bureaus-title" class="section__title"><span class="dot" aria-hidden="true"></span>{s.contact.bureaus}</h2>
+        <LtrRun class="pill">{s.contact.bureausCount(c.bureaus.length)}</LtrRun>
+      </header>
+      <p class="section__note">{s.contact.bureausNote}</p>
+
+      <div class="bureaus">
+        {c.bureaus.map((b, i) => (
+          <article class:list={['bureau', `bureau--${ACCENTS[i % ACCENTS.length]}`]} id={`office-${b.key}`}>
+            <div class="bureau__top">
+              <LtrRun class="bureau__no">{s.contact.bureauNo(i + 1)}</LtrRun>
+              <span class="bureau__zone">{b.zone}</span>
+            </div>
+            <h3 class="bureau__name">{b.name}</h3>
+            <address class="address address--sm">
+              {b.lines.map((l) => <span>{l}</span>)}
+            </address>
+            {b.phones && b.phones.length > 0 ? (
+              <ul class="bureau__phones">
+                {b.phones.map((p) => ({ label: p.label, ...internationalPhone(p.number) })).map((p) => (
+                  <li>
+                    <span class="bureau__plabel">{p.label}</span>
+                    <LtrRun tabular class="bureau__pnum"><a href={`tel:${p.tel}`}>{p.display}</a></LtrRun>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p class="bureau__nophone">{s.contact.noPhone}</p>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
+
+    {/* ---- global network ---- */}
+    <section class="section" id="global" aria-labelledby="global-title">
+      <header class="section__head">
+        <h2 id="global-title" class="section__title"><span class="dot" aria-hidden="true"></span>{s.contact.global}</h2>
+        <LtrRun class="pill">{s.contact.globalCount(c.countries.length)}</LtrRun>
+      </header>
+      <p class="section__note">{s.contact.globalNote}</p>
+
+      <ul class="countries">
+        {c.countries.map((n) => (
+          <li class="country">
+            <Iconify name={`circle-flags:${n.code}`} class="country__flag" aria-hidden="true" />
+            <span class="country__name">{n.name}</span>
+            <LtrRun class="country__code">{n.code.toUpperCase()}</LtrRun>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    {/* ---- join us: English in both locales, form posts to the join action ---- */}
+    <JoinSection locale={locale} />
+  </div>
+
+  <AMFooter slot="footer" locale={locale} config={config} />
+</BaseLayout>
+
+<style>
+  /* ================= hero ================= */
+  .hero {
+    margin-block: 26px 34px;
+    padding: 36px 34px 30px;
+    background: linear-gradient(135deg, var(--strip-bg), #6d1414);
+    color: var(--on-red);
+    border-radius: var(--radius-sm);
+  }
+  .hero__title {
+    font-family: var(--font-head);
+    line-height: var(--lh-head);
+    font-size: var(--fs-h1);
+    font-weight: 700;
+  }
+  .hero__intro {
+    max-width: 68ch;
+    margin-block: 12px 22px;
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
+    font-size: var(--fs-card);
+    color: rgba(255, 255, 255, 0.82);
+  }
+  .hero__jumps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .jump {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: var(--touch);
+    padding: 0 16px;
+    border: 1px solid var(--on-red-border);
+    border-radius: var(--radius-pill);
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-nav);
+    color: var(--on-red);
+    text-decoration: none;
+    transition: background-color 120ms ease-out;
+  }
+  .jump:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: var(--on-red);
+    text-decoration: none;
+  }
+  .jump--primary {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #2a1a00;
+    font-weight: 700;
+  }
+  .jump--primary:hover {
+    background: #e6c15e;
+    color: #2a1a00;
+  }
+
+  /* ================= head office ================= */
+  .hq {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: 20px;
+    margin-block-end: 40px;
+  }
+  .hq__id {
+    display: flex;
+    flex-direction: column;
+    padding: 26px 24px;
+    background: var(--nav-bg);
+    color: var(--on-dark);
+    border-radius: var(--radius-sm);
+  }
+  .hq__badge {
+    align-self: start;
+    padding: 5px 10px;
+    background: var(--red);
+    color: var(--on-red);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-ui);
+    font-size: var(--ui-eyebrow-sm);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+  }
+  .hq__blurb {
+    margin-block-start: 14px;
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
+    font-size: var(--fs-card);
+    color: var(--on-dark-muted);
+  }
+  .editor {
+    margin-block-start: 20px;
+    padding: 14px 16px;
+    border: 1px solid var(--on-dark-rule);
+    border-inline-start: 3px solid var(--gold);
+    border-radius: var(--radius-sm);
+  }
+  .editor__label {
+    font-family: var(--font-ui);
+    font-size: var(--ui-eyebrow-sm);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .editor__name {
+    margin-block-start: 4px;
+    font-family: var(--font-head);
+    line-height: var(--lh-head);
+    font-size: var(--fs-section);
+    font-weight: 700;
+    color: var(--on-dark);
+  }
+  .hq__mails {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-block-start: auto;
+    padding-block-start: 20px;
+  }
+  .hq__mails li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-ui);
+    font-size: var(--ui-meta);
+  }
+  .hq__mails :global(.icon) {
+    color: var(--on-dark-muted);
+  }
+  .hq__mails a {
+    color: var(--gold);
+  }
+
+  .hq__reach {
+    padding: 26px 26px 22px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+  }
+  .hq__head {
+    padding-block-end: 16px;
+    margin-block-end: 18px;
+    border-block-end: 1px solid var(--rule);
+  }
+  .hq__name {
+    margin-block-start: 4px;
+    font-family: var(--font-head);
+    line-height: var(--lh-head);
+    font-size: var(--fs-section);
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .row {
+    display: flex;
+    gap: 12px;
+    padding-block-end: 18px;
+    margin-block-end: 18px;
+    border-block-end: 1px solid var(--hairline);
+  }
+  .row__icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-sm);
+    color: var(--red);
+  }
+  .row__label,
+  .group-label {
+    font-family: var(--font-ui);
+    font-size: var(--ui-eyebrow-sm);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .group-label {
+    display: block;
+    margin-block-end: 12px;
+  }
+  .address {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-block-start: 4px;
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
+    font-size: var(--fs-card);
+    font-style: normal;
+    color: var(--body);
+  }
+  .address--sm {
+    font-size: var(--ui-meta);
+  }
+
+  .phones {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+  }
+  .phone {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-sm);
+  }
+  .phone__text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .phone__label {
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
+    font-size: var(--ui-caption);
+    color: var(--muted);
+  }
+  .phone__num {
+    font-family: var(--font-ui);
+    font-size: var(--fs-card);
+    font-weight: 700;
+  }
+  .phone__num a {
+    color: var(--red);
+  }
+  .code {
+    display: inline-block;
+    margin-block-start: 18px;
+    padding: 4px 10px;
+    background: var(--thumb-ground);
+    border-radius: var(--radius-sm);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: var(--ui-caption);
+    color: var(--secondary);
+  }
+
+  /* ================= sections ================= */
+  .section {
+    margin-block-end: 40px;
+  }
+  .section__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 20px;
+  }
+  .section__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-head);
+    line-height: var(--lh-head);
+    font-size: var(--fs-section);
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--red);
+  }
+  .pill {
+    padding: 4px 12px;
+    background: var(--thumb-ground);
+    border-radius: var(--radius-pill);
+    font-family: var(--font-ui);
+    font-size: var(--ui-meta);
+    font-weight: 600;
+    color: var(--secondary);
+  }
+  .section__note {
+    margin-block: 8px 20px;
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
+    font-size: var(--fs-card);
+    color: var(--secondary);
+  }
+
+  /* ---- bureau cards ---- */
+  .bureaus {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: 16px;
+  }
+  .bureau {
+    min-width: 0;
+    padding: 18px 20px;
+    border: 1px solid var(--rule);
+    border-inline-start: 4px solid var(--red);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+  }
+  .bureau--gold {
+    border-inline-start-color: var(--gold-deep);
+  }
+  .bureau--ink {
+    border-inline-start-color: var(--ink);
+  }
+  .bureau__top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 12px;
+  }
+  .bureau__no {
+    font-family: var(--font-ui);
+    font-size: var(--ui-eyebrow-sm);
+    letter-spacing: 0.12em;
+    color: var(--muted);
+  }
+  .bureau__zone {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-meta);
+    font-weight: 600;
+    color: var(--red);
+  }
+  .bureau__name {
+    margin-block: 6px 6px;
+    font-family: var(--font-head);
+    line-height: var(--lh-head);
+    font-size: var(--fs-card);
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .bureau__phones {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-block-start: 12px;
+    padding-block-start: 12px;
+    border-block-start: 1px solid var(--hairline);
+  }
+  .bureau__phones li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .bureau__plabel {
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
+    font-size: var(--ui-caption);
+    color: var(--muted);
+  }
+  .bureau__pnum {
+    font-family: var(--font-ui);
+    font-size: var(--fs-card);
+    font-weight: 700;
+  }
+  .bureau__pnum a {
+    color: var(--red);
+  }
+  .bureau__nophone {
+    margin-block-start: 12px;
+    padding-block-start: 12px;
+    border-block-start: 1px solid var(--hairline);
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
+    font-size: var(--ui-caption);
+    color: var(--muted);
+  }
+
+  /* ---- countries ---- */
+  .countries {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+  }
+  .country {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+  }
+  .country :global(.country__flag) {
+    flex: none;
+    width: 22px;
+    height: 22px;
+  }
+  .country__name {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--fs-card);
+    color: var(--ink);
+  }
+  .country__code {
+    font-family: var(--font-ui);
+    font-size: var(--ui-caption);
+    color: var(--muted);
+  }
+
+  @media (max-width: 899px) {
+    .hq {
+      grid-template-columns: 1fr;
+    }
+    .hero {
+      padding: 26px 20px 24px;
+    }
+  }
+</style>

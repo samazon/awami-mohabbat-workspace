@@ -27,10 +27,12 @@
     "drizzle-orm": "0.45.3",
     "photoswipe": "^5.4.4",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
+    "@iconify-json/circle-flags": "^1.2.11",
     "@iconify-json/lucide": "^1.2.136",
     "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",
@@ -41,7 +43,6 @@
     "stylelint": "17.15.0",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
-    "wrangler": "4.136.2",
-    "zod": "^4.6.5"
+    "wrangler": "4.136.2"
   }
 }

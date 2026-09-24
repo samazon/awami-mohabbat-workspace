@@ -10,6 +10,7 @@ export const GET: APIRoute = async ({ url }) => {
     { path: '/', changefreq: 'daily' },
     { path: '/archive', changefreq: 'daily' },
     { path: '/about', changefreq: 'monthly' },
+    { path: '/contact', changefreq: 'monthly' },
     ...editions.map((e) => ({ path: `/edition/${e.date}`, changefreq: 'yearly' })),
   ];
   const urls = routes
