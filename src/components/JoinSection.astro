@@ -11,6 +11,7 @@
 import { Image } from 'astro:assets';
 import { actions, isInputError } from 'astro:actions';
 import { join } from '@/content/contact';
+import { JOIN_LIMITS, PHONE_PATTERN_ATTR } from '@/lib/join-rules';
 import type { Locale } from '@/i18n';
 import Icon from './Icon.astro';
 
@@ -28,10 +29,11 @@ const formError = result?.error && !isInputError(result.error) ? result.error.me
 const prev = result?.error ? ((result.error as { inputValue?: Record<string, string> }).inputValue ?? {}) : {};
 
 const fields = [
-  { name: 'name', ...join.fields.name },
-  { name: 'profession', ...join.fields.profession },
-  { name: 'address', ...join.fields.address },
-  { name: 'contact', ...join.fields.contact },
+  { name: 'name', type: 'text', ...join.fields.name, ...JOIN_LIMITS.name },
+  { name: 'profession', type: 'text', ...join.fields.profession, ...JOIN_LIMITS.profession },
+  { name: 'address', type: 'text', ...join.fields.address, ...JOIN_LIMITS.address },
+  { name: 'email', type: 'email', ...join.fields.email, ...JOIN_LIMITS.email },
+  { name: 'phone', type: 'tel', ...join.fields.phone, ...JOIN_LIMITS.phone, pattern: PHONE_PATTERN_ATTR },
 ] as const;
 ---
 
@@ -74,18 +76,26 @@ const fields = [
           <input id="website" type="text" name="website" tabindex="-1" autocomplete="off" />
         </div>
 
+        {/* The asterisks are visual only; `required` is what assistive tech announces. */}
+        <p class="required-note"><span class="req" aria-hidden="true">*</span> {join.requiredNote}</p>
+
         {fields.map((f) => {
           const err = fieldErrors?.[f.name]?.[0];
           return (
-            <p class:list={['field', { 'field--wide': f.name === 'address' || f.name === 'contact' }]}>
-              <label class="field__label" for={`join-${f.name}`}>{f.label}</label>
+            <p class:list={['field', { 'field--wide': f.name === 'address' }]}>
+              <label class="field__label" for={`join-${f.name}`}>
+                {f.label}<span class="req" aria-hidden="true">*</span>
+              </label>
               <input
                 class:list={['field__input', { 'field__input--bad': err }]}
                 id={`join-${f.name}`}
                 name={f.name}
-                type="text"
+                type={f.type}
                 placeholder={f.placeholder}
                 autocomplete={f.autocomplete}
+                minlength={f.min}
+                maxlength={f.max}
+                pattern={'pattern' in f ? f.pattern : undefined}
                 required
                 aria-invalid={err ? 'true' : undefined}
                 aria-describedby={err ? `join-${f.name}-error` : undefined}
@@ -195,6 +205,16 @@ const fields = [
     font-family: var(--font-ui);
     font-size: var(--ui-meta);
     font-weight: 600;
+    color: var(--on-dark-muted);
+  }
+  .req {
+    margin-inline-start: 2px;
+    color: var(--gold);
+  }
+  .required-note {
+    grid-column: 1 / -1;
+    font-family: var(--font-ui);
+    font-size: var(--ui-caption);
     color: var(--on-dark-muted);
   }
   .field__input {

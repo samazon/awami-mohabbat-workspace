@@ -29,6 +29,13 @@
       "when": 1790251711803,
       "tag": "0003_join_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790256116669,
+      "tag": "0004_join_requests_email_phone",
+      "breakpoints": true
     }
   ]
 }

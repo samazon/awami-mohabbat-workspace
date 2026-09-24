@@ -11,7 +11,8 @@ export interface NewJoinRequest {
   name: string;
   address: string;
   profession: string;
-  contact: string;
+  email: string;
+  phone: string;
   locale: Locale;
   ipHash: string | null;
 }

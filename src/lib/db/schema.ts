@@ -244,7 +244,12 @@ export const joinRequests = sqliteTable(
     name: text('name').notNull(),
     address: text('address').notNull(),
     profession: text('profession').notNull(),
-    contact: text('contact').notNull(),
+    /**
+     * The form requires both. Nullable only because rows from before the split
+     * had a single "email or phone" field, so one of the two is missing there.
+     */
+    email: text('email'),
+    phone: text('phone'),
     /** Which language the form was filled in from. */
     locale: text('locale', { enum: LOCALE_VALUES }).notNull(),
     status: text('status', { enum: ['new', 'contacted', 'archived'] }).notNull().default('new'),
