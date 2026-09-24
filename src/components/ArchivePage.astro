@@ -186,7 +186,8 @@ const arrowFwd = locale === 'ur' ? '←' : '→';
     min-height: var(--control-h);
     padding: 0 12px;
     border: 1px solid var(--ink);
-    font-family: var(--font-ui);
+    font-family: var(--font-ui-mixed);
+    line-height: var(--lh-label);
     font-size: var(--ui-nav);
     font-weight: 600;
     color: var(--ink);
@@ -197,15 +198,19 @@ const arrowFwd = locale === 'ur' ? '←' : '→';
     font-weight: 500;
     color: var(--secondary);
   }
-  .chip:hover {
+  /* Selected and hover states are written as descendants too: Astro scopes every
+     compound in a descendant selector, so `.chip[aria-current]` alone would lose
+     to `.chips--months .chip` and the selected month would stay grey on ink. */
+  .chips .chip:hover {
     color: var(--red);
     border-color: var(--red);
     text-decoration: none;
   }
-  .chip[aria-current] {
+  .chips .chip[aria-current] {
     background: var(--ink);
     border-color: var(--ink);
     color: var(--on-red);
+    font-weight: 600;
   }
   .chip--off {
     color: var(--placeholder);
@@ -287,7 +292,7 @@ const arrowFwd = locale === 'ur' ? '←' : '→';
     border-block-start: 1px solid var(--rule);
   }
   .pagination__meta {
-    font-family: var(--font-ui);
+    font-family: var(--font-ui-mixed);
     font-size: var(--ui-meta);
     color: var(--muted);
   }

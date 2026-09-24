@@ -116,7 +116,7 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
             <span class="epaper-card__title">{s.masthead.epaperTitle}</span>
           </a>
         )}
-        <LtrRun block class="eyebrow side__eyebrow side__eyebrow--end">{s.masthead.epaperHint}</LtrRun>
+        <span class="side__hint">{s.masthead.epaperHint}</span>
       </div>
       <picture class="emblem emblem--globe">
         <source srcset={PIXEL} media="(max-width: 767px)" />
@@ -259,8 +259,7 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     border: 1px solid var(--strip-pill-border);
     border-radius: var(--radius-pill);
     background: var(--strip-pill);
-    /* Plex first so digits render crisp; Naskh only picks up the Urdu words. */
-    font-family: var(--font-ui), var(--font-naskh);
+    font-family: var(--font-ui-mixed);
     font-size: var(--ui-control);
     line-height: 1.5;
     color: var(--on-red);
@@ -383,8 +382,14 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     letter-spacing: 0.18em;
     color: var(--muted);
   }
-  .side__eyebrow--end {
+  /* localized hint → label face; never the Latin eyebrow treatment */
+  .side__hint {
+    display: block;
     margin-block-start: 6px;
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-eyebrow);
+    color: var(--muted);
   }
   .side__title {
     margin-block-start: 6px;

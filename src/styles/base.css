@@ -133,6 +133,8 @@ a:hover {
   padding: 10px 14px;
   background: var(--ink);
   color: var(--on-red);
+  font-family: var(--font-label);
+  line-height: var(--lh-label);
   font-size: var(--ui-nav);
 }
 

@@ -104,7 +104,7 @@ const front = edition.pages[0]!;
 
       {/* the page: one image whose sources swap; click opens the viewer at that page */}
       <div class="stage" id="page-panel" role="tabpanel" aria-labelledby="tab-1">
-        <LtrRun class="stage__badge" data-page-badge>{s.today.pageOf(1, edition.pages.length).toUpperCase()}</LtrRun>
+        <span class="stage__badge" data-page-badge>{s.today.pageOf(1, edition.pages.length)}</span>
         <a class="stage__link" href={viewerHref(locale, edition, 1)} data-viewer-page="1" data-stage-link title={s.edition.zoomHint}>
           <img
             data-stage-img
@@ -122,7 +122,7 @@ const front = edition.pages[0]!;
         <p class="stage__hint t-label">{s.edition.zoomHint}</p>
       </div>
 
-      <script type="application/json" data-pages set:html={JSON.stringify(edition.pages.map((p) => ({ n: p.n, view: p.view, zoom: p.zoom, width: p.width, height: p.height, alt: s.a11y.pageThumb(p.n, edition.date), badge: s.today.pageOf(p.n, edition.pages.length).toUpperCase() })))} />
+      <script type="application/json" data-pages set:html={JSON.stringify(edition.pages.map((p) => ({ n: p.n, view: p.view, zoom: p.zoom, width: p.width, height: p.height, alt: s.a11y.pageThumb(p.n, edition.date), badge: s.today.pageOf(p.n, edition.pages.length) })))} />
     </am-edition-pages>
 
     {/* previous / next edition */}
@@ -365,10 +365,10 @@ const front = edition.pages[0]!;
     padding: 4px 8px;
     background: var(--ink);
     color: var(--on-red);
-    font-family: var(--font-ui);
-    font-size: var(--ui-eyebrow-sm);
+    font-family: var(--font-ui-mixed);
+    line-height: var(--lh-label);
+    font-size: var(--ui-eyebrow);
     font-weight: 600;
-    letter-spacing: 0.14em;
   }
   .stage__link {
     display: block;

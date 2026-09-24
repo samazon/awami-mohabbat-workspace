@@ -83,10 +83,20 @@
   --lh-ui: 1.5;
 
   /* ---- font stacks ---- */
-  --font-nastaliq: "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", serif;
-  --font-naskh: "Noto Naskh Arabic", "Geeza Pro", "Noto Naskh Arabic UI", serif;
+  /* Our Urdu faces are subsetted to the Arabic range, so the Latin characters
+     inside Urdu text — digits, spaces, punctuation — fall through. Plex Sans is
+     listed NEXT so they come from a font we ship, identically on every platform,
+     instead of whatever the OS supplies (Geeza Pro on macOS, Times elsewhere).
+     The system Urdu faces stay after it, as the fallback if our webfont fails. */
+  --font-nastaliq: "Noto Nastaliq Urdu", "IBM Plex Sans", "Jameel Noori Nastaleeq", serif;
+  --font-naskh: "Noto Naskh Arabic", "IBM Plex Sans", "Geeza Pro", "Noto Naskh Arabic UI", serif;
   --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
   --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Mixed runs (dates, counts, "2 of 12"): Latin face first so digits stay crisp,
+     the Urdu face NEXT — before any generic, which would otherwise swallow the
+     Urdu and hand it to a system font. Never use --font-ui for Urdu text: IBM
+     Plex Sans has no Urdu glyphs. */
+  --font-ui-mixed: "IBM Plex Sans", "Noto Naskh Arabic", system-ui, sans-serif;
 
   /* ---- per-locale resolved roles (switched by html[lang] below) ----
      THE TYPE STANDARD (Urdu):
