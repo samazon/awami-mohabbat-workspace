@@ -32,12 +32,9 @@ export function findLocalSqlite(root: string): string {
   return join(dir, files[0]!);
 }
 
-export function localDb(root: string): { db: SeedDb; path: string } {
-  const path = findLocalSqlite(root);
-  const sqlite = new DatabaseSync(path);
-  sqlite.exec('PRAGMA foreign_keys = ON'); // D1 enforces FKs; match it locally
-
-  const db = drizzle(
+/** Drizzle over an open node:sqlite handle. Shared by the local seed target and the test suite. */
+export function proxyDb(sqlite: DatabaseSync): SeedDb {
+  return drizzle(
     async (sql, params, method) => {
       const stmt = sqlite.prepare(sql);
       stmt.setReturnArrays(true);
@@ -54,7 +51,13 @@ export function localDb(root: string): { db: SeedDb; path: string } {
     },
     { schema },
   );
-  return { db, path };
+}
+
+export function localDb(root: string): { db: SeedDb; path: string } {
+  const path = findLocalSqlite(root);
+  const sqlite = new DatabaseSync(path);
+  sqlite.exec('PRAGMA foreign_keys = ON'); // D1 enforces FKs; match it locally
+  return { db: proxyDb(sqlite), path };
 }
 
 export interface RemoteCreds {

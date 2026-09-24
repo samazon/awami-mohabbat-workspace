@@ -20,6 +20,9 @@
     "scripts/**/*",
     "src/lib/db/schema.ts",
     "src/lib/media.ts",
-    "drizzle.config.ts"
+    "drizzle.config.ts",
+    "tests/**/*",
+    "vitest.config.ts",
+    "src/lib/columns/**/*"
   ]
 }
