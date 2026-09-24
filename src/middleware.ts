@@ -39,6 +39,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
     const hit = await edgeCache().match(request);
     if (hit) {
       const h = new Headers(hit.headers);
+      // The Cache API hands entries back with the zone's Browser Cache TTL
+      // (4 h by default) written into max-age. Browsers must revalidate.
+      const cc = h.get('cache-control');
+      if (cc) h.set('cache-control', /\bmax-age=\d+/.test(cc) ? cc.replace(/\bmax-age=\d+/, 'max-age=0') : `max-age=0, ${cc}`);
       h.set('x-cache', 'HIT');
       return new Response(hit.body, { status: hit.status, statusText: hit.statusText, headers: h });
     }
