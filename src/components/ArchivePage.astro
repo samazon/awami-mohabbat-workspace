@@ -1,0 +1,331 @@
+---
+/**
+ * /archive — design screen 02: title + "every edition since…", year chips,
+ * month chips, a date picker, the month's editions 12-up, numbered pagination.
+ * State lives in the URL (?y=&m=&p=) so every view is linkable and cacheable.
+ */
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { localePath, t, type Locale } from '@/i18n';
+import { formatLong } from '@/lib/dates';
+import { getArchiveMonths, getEditionsInMonth, type ArchiveMonth } from '@/lib/services/editions';
+import { getSiteConfig } from '@/lib/services/config';
+import AMHeader from './AMHeader.astro';
+import AMFooter from './AMFooter.astro';
+import ArchiveCards from './ArchiveCards.astro';
+import LtrRun from './LtrRun.astro';
+
+interface Props {
+  locale: Locale;
+  /** Already-validated view state from the route. */
+  year: number;
+  month: number;
+  page: number;
+  months: ArchiveMonth[];
+  /** A picked date with no edition — tell the reader, then show that month. */
+  missingDate?: string | null;
+}
+const { locale, year, month, page, months, missingDate = null } = Astro.props;
+const s = t(locale);
+
+const [config, result] = await Promise.all([getSiteConfig(locale), getEditionsInMonth(locale, year, month, { page })]);
+
+const years = [...new Set(months.map((m) => m.year))].sort((a, b) => b - a);
+const monthsInYear = new Set(months.filter((m) => m.year === year).map((m) => m.month));
+const fromYear = years.at(-1) ?? year;
+const monthName = (m: number) => s.archive.months[m - 1] ?? String(m);
+
+const base = localePath(locale, '/archive');
+const href = (y: number, m: number, p = 1) => `${base}?y=${y}&m=${m}${p > 1 ? `&p=${p}` : ''}`;
+const from = result.total === 0 ? 0 : (result.page - 1) * result.perPage + 1;
+const to = Math.min(result.total, result.page * result.perPage);
+
+/** Pagination: 1 … p-1 p p+1 … N, collapsed. */
+const pageItems: (number | '…')[] = [];
+for (let i = 1; i <= result.pageCount; i++) {
+  if (i === 1 || i === result.pageCount || Math.abs(i - result.page) <= 1) pageItems.push(i);
+  else if (pageItems.at(-1) !== '…') pageItems.push('…');
+}
+const arrowBack = locale === 'ur' ? '→' : '←';
+const arrowFwd = locale === 'ur' ? '←' : '→';
+---
+
+<BaseLayout title={`${s.archive.pageTitle} — ${s.meta.siteName}`} description={s.archive.description}>
+  <AMHeader slot="header" locale={locale} active="archive" />
+
+  <div class="container">
+    <header class="head">
+      <h1 class="title t-head">{s.archive.pageTitle}</h1>
+      <p class="sub">{s.archive.subtitle(fromYear)}</p>
+    </header>
+
+    {/* filters */}
+    <div class="filters">
+      <div class="filter">
+        <span class="filter__label">{s.archive.year}</span>
+        <div class="chips">
+          {years.map((y) => (
+            <a class="chip" href={href(y, months.find((m) => m.year === y)?.month ?? 1)} aria-current={y === year ? 'true' : undefined}><LtrRun>{y}</LtrRun></a>
+          ))}
+        </div>
+      </div>
+
+      <div class="filter">
+        <span class="filter__label">{s.archive.month}</span>
+        <div class="chips chips--months" dir="ltr">
+          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) =>
+            monthsInYear.has(m) ? (
+              <a class="chip" href={href(year, m)} aria-current={m === month ? 'true' : undefined}>{monthName(m)}</a>
+            ) : (
+              <span class="chip chip--off" aria-disabled="true">{monthName(m)}</span>
+            ),
+          )}
+        </div>
+      </div>
+
+      <form class="filter filter--date" method="get" action={base}>
+        <label class="filter__label" for="pick">{s.archive.pickDate}</label>
+        <div class="date">
+          <input id="pick" class="date__input" type="date" name="date" min={`${fromYear}-01-01`} value={missingDate ?? ''} />
+          <button type="submit" class="date__go t-label">{s.archive.go}</button>
+        </div>
+      </form>
+    </div>
+
+    {missingDate && <p class="notice">{s.archive.noEditionOn(formatLong(missingDate))}</p>}
+
+    {/* month heading */}
+    <div class="month-head">
+      <h2 class="month-title"><span class="t-label">{monthName(month)}</span> <LtrRun>{year}</LtrRun></h2>
+      <span class="month-count">{s.archive.editionsCount(result.total)}</span>
+    </div>
+
+    {result.items.length > 0 ? <ArchiveCards editions={result.items} locale={locale} /> : <p class="empty t-body">{s.archive.empty}</p>}
+
+    {/* pagination */}
+    {result.pageCount > 1 && (
+      <nav class="pagination" aria-label={s.archive.pagination}>
+        <LtrRun class="pagination__meta">{s.archive.showing(from, to, result.total)}</LtrRun>
+        <div class="pages">
+          {result.page > 1 ? (
+            <a class="pg" href={href(year, month, result.page - 1)} aria-label={s.archive.prevPage}>{arrowBack}</a>
+          ) : (
+            <span class="pg pg--off" aria-hidden="true">{arrowBack}</span>
+          )}
+          {pageItems.map((it) =>
+            it === '…' ? (
+              <span class="pg pg--gap" aria-hidden="true">…</span>
+            ) : (
+              <a class="pg" href={href(year, month, it)} aria-current={it === result.page ? 'page' : undefined}><LtrRun>{it}</LtrRun></a>
+            ),
+          )}
+          {result.page < result.pageCount ? (
+            <a class="pg" href={href(year, month, result.page + 1)} aria-label={s.archive.nextPage}>{arrowFwd}</a>
+          ) : (
+            <span class="pg pg--off" aria-hidden="true">{arrowFwd}</span>
+          )}
+        </div>
+      </nav>
+    )}
+  </div>
+
+  <AMFooter slot="footer" locale={locale} config={config} />
+</BaseLayout>
+
+<style>
+  .t-label {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+  }
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 20px;
+    padding: 34px 0 14px;
+    border-block-end: 1px solid var(--ink);
+  }
+  .title {
+    font-size: var(--fs-h1);
+  }
+  .sub {
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
+    font-size: var(--fs-card);
+    color: var(--secondary);
+  }
+
+  /* filters */
+  .filters {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 18px 36px;
+    align-items: start;
+    padding: 22px 0 20px;
+    border-block-end: 1px solid var(--rule);
+  }
+  .filter {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .filter__label {
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
+    font-size: var(--ui-meta);
+    color: var(--muted);
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--control-h);
+    padding: 0 12px;
+    border: 1px solid var(--ink);
+    font-family: var(--font-ui);
+    font-size: var(--ui-nav);
+    font-weight: 600;
+    color: var(--ink);
+    text-decoration: none;
+    background: var(--surface);
+  }
+  .chips--months .chip {
+    font-weight: 500;
+    color: var(--secondary);
+  }
+  .chip:hover {
+    color: var(--red);
+    border-color: var(--red);
+    text-decoration: none;
+  }
+  .chip[aria-current] {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--on-red);
+  }
+  .chip--off {
+    color: var(--placeholder);
+    border-color: var(--rule);
+    cursor: default;
+  }
+  .date {
+    display: flex;
+  }
+  .date__input {
+    min-height: var(--control-h);
+    padding: 0 10px;
+    border: 1px solid var(--ink);
+    border-inline-end: 0;
+    background: var(--surface);
+    font-family: var(--font-ui);
+    font-size: var(--ui-nav);
+    color: var(--ink);
+  }
+  .date__go {
+    min-height: var(--control-h);
+    padding: 0 14px;
+    border: 1px solid var(--ink);
+    background: var(--ink);
+    color: var(--on-red);
+    font-size: var(--ui-nav);
+  }
+  .date__go:hover {
+    background: var(--red);
+    border-color: var(--red);
+  }
+  .notice {
+    margin-block-start: 16px;
+    padding: 10px 14px;
+    border: 1px solid var(--red);
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
+    font-size: var(--fs-card);
+    color: var(--red);
+  }
+
+  .month-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px 20px;
+    padding: 22px 0 16px;
+  }
+  .month-title {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    font-family: var(--font-ui);
+    font-size: var(--fs-section);
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .month-count {
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
+    font-size: var(--ui-meta);
+    color: var(--muted);
+  }
+  .empty {
+    padding: 30px 0 40px;
+    font-size: var(--fs-body);
+    color: var(--secondary);
+  }
+
+  .pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 20px;
+    padding: 24px 0 44px;
+    margin-block-start: 8px;
+    border-block-start: 1px solid var(--rule);
+  }
+  .pagination__meta {
+    font-family: var(--font-ui);
+    font-size: var(--ui-meta);
+    color: var(--muted);
+  }
+  .pages {
+    display: flex;
+    gap: 6px;
+  }
+  .pg {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--touch);
+    min-height: var(--touch);
+    padding: 0 10px;
+    border: 1px solid var(--ink);
+    font-family: var(--font-ui);
+    font-size: var(--ui-nav);
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .pg:hover {
+    color: var(--red);
+    border-color: var(--red);
+    text-decoration: none;
+  }
+  .pg[aria-current] {
+    background: var(--ink);
+    color: var(--on-red);
+  }
+  .pg--gap,
+  .pg--off {
+    border-color: var(--rule);
+    color: var(--muted);
+  }
+
+  @media (max-width: 1023px) {
+    .filters {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

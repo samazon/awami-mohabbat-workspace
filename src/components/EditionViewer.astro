@@ -191,9 +191,13 @@ const labels = {
         e.preventDefault();
         lightbox.loadAndOpen(index);
       };
+      // Read the page number at CLICK time: the edition page rewrites this
+      // attribute as its tabs change which page is on the stage.
       document.querySelectorAll<HTMLElement>('[data-viewer-page]').forEach((el) => {
-        const n = Number(el.dataset.viewerPage);
-        if (Number.isInteger(n) && n >= 1 && n <= items.length) el.addEventListener('click', (e) => open(n - 1, e));
+        el.addEventListener('click', (e) => {
+          const n = Number(el.dataset.viewerPage);
+          if (Number.isInteger(n) && n >= 1 && n <= items.length) open(n - 1, e);
+        });
       });
       document.querySelectorAll<HTMLElement>('[data-viewer-open]').forEach((el) => {
         el.addEventListener('click', (e) => open(0, e));

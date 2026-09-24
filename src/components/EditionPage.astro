@@ -1,0 +1,434 @@
+---
+/**
+ * /edition/[date] — design screen 03: back link + dateline, headline, summary,
+ * PDF download and share, four page tabs with prev/next, the page itself
+ * (click to zoom in the PhotoSwipe viewer), then previous/next edition.
+ * Rule 04: built for exactly four pages.
+ */
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { localePath, t, type Locale } from '@/i18n';
+import { formatFileSize, formatLong } from '@/lib/dates';
+import { viewerHref } from '@/lib/links';
+import { getAdjacentEditions, type EditionView } from '@/lib/services/editions';
+import { getSiteConfig } from '@/lib/services/config';
+import AMHeader from './AMHeader.astro';
+import AMFooter from './AMFooter.astro';
+import EditionViewer from './EditionViewer.astro';
+import LtrRun from './LtrRun.astro';
+
+interface Props {
+  locale: Locale;
+  edition: EditionView;
+}
+const { locale, edition } = Astro.props;
+const s = t(locale);
+const [config, adjacent] = await Promise.all([getSiteConfig(locale), getAdjacentEditions(edition.date)]);
+const notice = edition.translation.isFallback ? s.mt.fallback : edition.translation.isMachineTranslated ? s.mt.notice : null;
+const title = `${edition.headline} — ${formatLong(edition.date)} — ${s.meta.siteName}`;
+const archiveHref = localePath(locale, '/archive');
+const arrowBack = locale === 'ur' ? '→' : '←';
+const arrowFwd = locale === 'ur' ? '←' : '→';
+const front = edition.pages[0]!;
+---
+
+<BaseLayout title={title} description={s.edition.description(formatLong(edition.date))} ogImage={new URL(front.view, Astro.url.origin).toString()}>
+  <Fragment slot="head">
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'PublicationIssue',
+        name: `${s.meta.siteNameLatin} — ${edition.date}`,
+        datePublished: edition.date,
+        issueNumber: edition.issue,
+        isPartOf: { '@type': 'Periodical', name: s.meta.siteNameLatin, issn: undefined },
+        ...(edition.pdfUrl ? { associatedMedia: { '@type': 'MediaObject', contentUrl: new URL(edition.pdfUrl, Astro.url.origin).toString(), encodingFormat: 'application/pdf' } } : {}),
+      })}
+    />
+  </Fragment>
+
+  <AMHeader
+    slot="header"
+    locale={locale}
+    active="archive"
+    epaper={{ href: viewerHref(locale, edition, 1), pages: edition.pages.length, pdfUrl: edition.pdfUrl, pdfBytes: edition.pdfBytes }}
+  />
+
+  <div class="container">
+    {/* crumb + dateline */}
+    <div class="crumbs">
+      <a class="crumb t-label" href={archiveHref}>{arrowBack} {s.edition.backToArchive}</a>
+      <LtrRun class="dateline">{formatLong(edition.date)} &nbsp;|&nbsp; {edition.hijriDate}</LtrRun>
+    </div>
+
+    {/* headline block */}
+    <header class="lead">
+      <div class="lead__text">
+        {notice && (
+          <p class="mt">
+            <LtrRun class="mt__badge">{s.mt.badge}</LtrRun>
+            <span class="t-body">{notice}</span>
+          </p>
+        )}
+        <h1 class="headline t-head" lang={edition.translation.locale}>{edition.headline}</h1>
+        <p class="summary" lang={edition.translation.locale}>{edition.summary}</p>
+      </div>
+      <div class="lead__actions">
+        {edition.pdfUrl && (
+          <a class="btn" href={edition.pdfUrl} download={`awami-mohabbat-${edition.date}.pdf`} title={s.today.pdfNote}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="square" aria-hidden="true"><path d="M12 4v11" /><path d="M7 11l5 5 5-5" /><path d="M4 20h16" /></svg>
+            <span>{s.edition.downloadPdf}</span>
+            {edition.pdfBytes && <LtrRun class="btn__meta">{formatFileSize(edition.pdfBytes)}</LtrRun>}
+          </a>
+        )}
+        <button type="button" class="btn btn--outline" data-share data-copied={s.edition.copied}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.5" /><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="19" r="2.5" /><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4" /></svg>
+          <span data-share-label>{s.edition.share}</span>
+        </button>
+      </div>
+    </header>
+
+    {/* page tabs + prev/next */}
+    <am-edition-pages class="pager">
+      <div class="controls">
+        <div class="tabs" role="tablist" aria-label={s.today.pages}>
+          {edition.pages.map((p) => (
+            <button type="button" class="tab t-label" role="tab" id={`tab-${p.n}`} aria-selected={p.n === 1 ? 'true' : 'false'} aria-controls="page-panel" data-page={p.n}>{s.edition.pageTab(p.n)}</button>
+          ))}
+        </div>
+        <div class="steps">
+          <button type="button" class="step t-label" data-step="-1" disabled>{arrowBack} {s.edition.prevPage}</button>
+          <button type="button" class="step t-label" data-step="1">{s.edition.nextPage} {arrowFwd}</button>
+        </div>
+      </div>
+
+      {/* the page: one image whose sources swap; click opens the viewer at that page */}
+      <div class="stage" id="page-panel" role="tabpanel" aria-labelledby="tab-1">
+        <LtrRun class="stage__badge" data-page-badge>{s.today.pageOf(1, edition.pages.length).toUpperCase()}</LtrRun>
+        <a class="stage__link" href={viewerHref(locale, edition, 1)} data-viewer-page="1" data-stage-link title={s.edition.zoomHint}>
+          <img
+            data-stage-img
+            src={front.view}
+            srcset={`${front.view} 1200w, ${front.zoom} 2400w`}
+            sizes="(max-width: 767px) calc(100vw - 40px), 720px"
+            width={front.width}
+            height={front.height}
+            alt={s.a11y.pageThumb(1, edition.date)}
+            loading="eager"
+            fetchpriority="high"
+            decoding="async"
+          />
+        </a>
+        <p class="stage__hint t-label">{s.edition.zoomHint}</p>
+      </div>
+
+      <script type="application/json" data-pages set:html={JSON.stringify(edition.pages.map((p) => ({ n: p.n, view: p.view, zoom: p.zoom, width: p.width, height: p.height, alt: s.a11y.pageThumb(p.n, edition.date), badge: s.today.pageOf(p.n, edition.pages.length).toUpperCase() })))} />
+    </am-edition-pages>
+
+    {/* previous / next edition */}
+    <nav class="adjacent" aria-label={s.archive.pageTitle}>
+      <div class="adj adj--prev">
+        {adjacent.prev && (
+          <a class="adj__link" href={localePath(locale, `/edition/${adjacent.prev}`)}>
+            <span class="adj__label t-label">{arrowBack} {s.edition.prevEdition}</span>
+            <LtrRun class="adj__date">{formatLong(adjacent.prev)}</LtrRun>
+          </a>
+        )}
+      </div>
+      <div class="adj adj--next">
+        {adjacent.next && (
+          <a class="adj__link" href={localePath(locale, `/edition/${adjacent.next}`)}>
+            <span class="adj__label t-label">{s.edition.nextEdition} {arrowFwd}</span>
+            <LtrRun class="adj__date">{formatLong(adjacent.next)}</LtrRun>
+          </a>
+        )}
+      </div>
+    </nav>
+  </div>
+
+  <AMFooter slot="footer" locale={locale} config={config} />
+  <EditionViewer slot="after" edition={edition} locale={locale} />
+</BaseLayout>
+
+<script>
+  interface P { n: number; view: string; zoom: string; width: number; height: number; alt: string; badge: string }
+
+  class EditionPages extends HTMLElement {
+    private pages: P[] = [];
+    private current = 1;
+
+    connectedCallback() {
+      this.pages = JSON.parse(this.querySelector('[data-pages]')?.textContent ?? '[]') as P[];
+      if (this.pages.length === 0) return;
+      this.querySelectorAll<HTMLButtonElement>('[data-page]').forEach((b) => b.addEventListener('click', () => this.show(Number(b.dataset.page))));
+      this.querySelectorAll<HTMLButtonElement>('[data-step]').forEach((b) => b.addEventListener('click', () => this.show(this.current + Number(b.dataset.step))));
+      this.addEventListener('keydown', (e) => {
+        if (!(e.target as HTMLElement).matches('[role=tab]')) return;
+        const rtl = document.documentElement.dir === 'rtl';
+        if (e.key === 'ArrowRight') this.show(this.current + (rtl ? -1 : 1));
+        if (e.key === 'ArrowLeft') this.show(this.current + (rtl ? 1 : -1));
+      });
+      // deep link: #page-3
+      const m = /^#page-(\d)$/.exec(location.hash);
+      if (m) this.show(Number(m[1]), false);
+    }
+
+    private show(n: number, focusTab = true) {
+      const p = this.pages.find((x) => x.n === n);
+      if (!p) return;
+      this.current = n;
+      const img = this.querySelector<HTMLImageElement>('[data-stage-img]');
+      const link = this.querySelector<HTMLAnchorElement>('[data-stage-link]');
+      const badge = this.querySelector<HTMLElement>('[data-page-badge]');
+      if (img) {
+        img.src = p.view;
+        img.srcset = `${p.view} 1200w, ${p.zoom} 2400w`;
+        img.width = p.width;
+        img.height = p.height;
+        img.alt = p.alt;
+      }
+      if (link) {
+        link.href = p.zoom;
+        link.dataset.viewerPage = String(n);
+      }
+      if (badge) badge.textContent = p.badge;
+      this.querySelectorAll<HTMLButtonElement>('[data-page]').forEach((b) => {
+        const on = Number(b.dataset.page) === n;
+        b.setAttribute('aria-selected', String(on));
+        b.tabIndex = on ? 0 : -1;
+        if (on && focusTab) b.focus();
+      });
+      const panel = this.querySelector('#page-panel');
+      panel?.setAttribute('aria-labelledby', `tab-${n}`);
+      this.querySelectorAll<HTMLButtonElement>('[data-step]').forEach((b) => {
+        const target = n + Number(b.dataset.step);
+        b.disabled = target < 1 || target > this.pages.length;
+      });
+      history.replaceState(null, '', n === 1 ? location.pathname : `#page-${n}`);
+    }
+  }
+  if (!customElements.get('am-edition-pages')) customElements.define('am-edition-pages', EditionPages);
+
+  // Share: native sheet where available, otherwise copy the link.
+  const share = document.querySelector<HTMLButtonElement>('[data-share]');
+  share?.addEventListener('click', async () => {
+    const url = location.origin + location.pathname;
+    const title = document.title;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      const label = share.querySelector<HTMLElement>('[data-share-label]');
+      if (label) {
+        const prev = label.textContent;
+        label.textContent = share.dataset.copied ?? '';
+        setTimeout(() => (label.textContent = prev), 1800);
+      }
+    } catch {}
+  });
+</script>
+
+<style>
+  .t-label {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+  }
+  .crumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 20px;
+    padding: 16px 0 12px;
+    border-block-end: 1px solid var(--rule);
+    font-size: var(--ui-meta);
+    color: var(--secondary);
+  }
+  .crumb {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--control-h);
+    font-size: var(--ui-nav);
+    color: var(--red);
+  }
+  .dateline {
+    font-family: var(--font-ui);
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .lead {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 20px 40px;
+    align-items: start;
+    padding: 24px 0 26px;
+    border-block-end: 2px solid var(--ink);
+  }
+  .lead__text {
+    min-width: 0;
+  }
+  .mt {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    margin-block-end: 12px;
+    font-size: var(--fs-card);
+    color: var(--secondary);
+  }
+  .mt__badge {
+    padding: 2px 8px;
+    border: 1px solid var(--red);
+    font-family: var(--font-ui);
+    font-size: var(--ui-eyebrow-sm);
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    color: var(--red);
+  }
+  .headline {
+    font-size: var(--fs-title);
+  }
+  .summary {
+    max-width: var(--measure-summary);
+    margin-block-start: 10px;
+    font-family: var(--font-head);
+    line-height: var(--lh-head);
+    font-size: var(--fs-body);
+    color: var(--body);
+  }
+  .lead__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-block-start: 6px;
+  }
+
+  /* tabs row */
+  .pager {
+    display: block;
+  }
+  /* tabs at the start, prev/next at the end — one row on desktop, as designed */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 24px;
+    padding-block: 16px;
+  }
+  .tabs,
+  .steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .tab,
+  .step {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch);
+    padding: 0 16px;
+    border: 1px solid var(--ink);
+    font-size: var(--ui-nav);
+    color: var(--ink);
+    background: var(--surface);
+  }
+  .tab[aria-selected='true'] {
+    background: var(--ink);
+    color: var(--on-red);
+  }
+  .tab:hover:not([aria-selected='true']),
+  .step:hover:not(:disabled) {
+    color: var(--red);
+    border-color: var(--red);
+  }
+  .step:disabled {
+    color: var(--muted);
+    border-color: var(--rule-strong);
+    cursor: default;
+  }
+
+  /* the page */
+  .stage {
+    position: relative;
+    padding: 28px 20px 18px;
+    background: var(--thumb-ground);
+    border: 1px solid var(--rule);
+  }
+  .stage__badge {
+    position: absolute;
+    inset-block-start: 12px;
+    inset-inline-start: 12px;
+    padding: 4px 8px;
+    background: var(--ink);
+    color: var(--on-red);
+    font-family: var(--font-ui);
+    font-size: var(--ui-eyebrow-sm);
+    font-weight: 600;
+    letter-spacing: 0.14em;
+  }
+  .stage__link {
+    display: block;
+    width: min(720px, 100%);
+    margin-inline: auto;
+    background: #ffffff;
+    border: 1px solid var(--rule-strong);
+    cursor: zoom-in;
+  }
+  .stage__link img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .stage__hint {
+    margin-block-start: 10px;
+    text-align: center;
+    font-size: var(--ui-meta);
+    color: var(--muted);
+  }
+
+  /* prev / next edition */
+  .adjacent {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    padding: 28px 0 44px;
+    margin-block-start: 28px;
+    border-block-start: 1px solid var(--rule);
+  }
+  .adj--next {
+    text-align: end;
+  }
+  .adj__link {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 2px;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .adj__link:hover {
+    color: var(--red);
+    text-decoration: none;
+  }
+  .adj__label {
+    font-size: var(--ui-nav);
+    color: var(--red);
+  }
+  .adj__date {
+    font-family: var(--font-ui);
+    font-size: var(--fs-card);
+    font-weight: 700;
+  }
+
+  @media (max-width: 767px) {
+    .lead {
+      grid-template-columns: 1fr;
+    }
+    .stage {
+      padding: 22px 10px 14px;
+    }
+  }
+</style>

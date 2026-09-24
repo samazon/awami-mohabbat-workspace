@@ -1,0 +1,9 @@
+---
+import ArchivePage from '@/components/ArchivePage.astro';
+import { resolveArchive } from '@/lib/archive-route';
+
+const state = await resolveArchive(Astro, 'en');
+if (state instanceof Response) return state;
+---
+
+<ArchivePage locale="en" {...state} />

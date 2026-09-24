@@ -1,18 +1,25 @@
 import type { APIRoute } from 'astro';
 import { LOCALES, localePath } from '@/i18n';
+import { getRecentEditions } from '@/lib/services/editions';
 
-/** Homepage in each locale with hreflang alternates. Editions/articles join in phase 2. */
-export const GET: APIRoute = ({ url }) => {
+/** Static routes plus every published edition, each in both locales with hreflang alternates. */
+export const GET: APIRoute = async ({ url }) => {
   const base = new URL(url.origin);
-  const routes = ['/', '/about'];
+  const editions = await getRecentEditions('ur', { limit: 5000 });
+  const routes: { path: string; changefreq: string }[] = [
+    { path: '/', changefreq: 'daily' },
+    { path: '/archive', changefreq: 'daily' },
+    { path: '/about', changefreq: 'monthly' },
+    ...editions.map((e) => ({ path: `/edition/${e.date}`, changefreq: 'yearly' })),
+  ];
   const urls = routes
-    .flatMap((route) =>
+    .flatMap((r) =>
       LOCALES.map((l) => {
-        const loc = new URL(localePath(l, route), base).toString();
+        const loc = new URL(localePath(l, r.path), base).toString();
         const alts = LOCALES.map(
-          (a) => `<xhtml:link rel="alternate" hreflang="${a}" href="${new URL(localePath(a, route), base).toString()}"/>`,
+          (a) => `<xhtml:link rel="alternate" hreflang="${a}" href="${new URL(localePath(a, r.path), base).toString()}"/>`,
         ).join('');
-        return `<url><loc>${loc}</loc>${alts}<changefreq>daily</changefreq></url>`;
+        return `<url><loc>${loc}</loc>${alts}<changefreq>${r.changefreq}</changefreq></url>`;
       }),
     )
     .join('');

@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, lt } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, like, lt, sql } from 'drizzle-orm';
 import { CDN_BASE } from 'astro:env/server';
 import type { Locale } from '@/i18n';
 import { db } from '@/lib/db/client';
@@ -127,4 +127,84 @@ export async function getRecentEditions(
     thumb: v.pages[0]?.thumb ?? null,
     translation: v.translation,
   }));
+}
+
+// ---------------------------------------------------------------------------
+// Archive + edition navigation
+// ---------------------------------------------------------------------------
+
+/** The editions immediately before and after `date` (published only). */
+export async function getAdjacentEditions(
+  date: string,
+): Promise<{ prev: string | null; next: string | null }> {
+  const [[prev], [next]] = await Promise.all([
+    db().select({ date: editions.date }).from(editions).where(and(publishedOnly, lt(editions.date, date))).orderBy(desc(editions.date)).limit(1),
+    db().select({ date: editions.date }).from(editions).where(and(publishedOnly, gt(editions.date, date))).orderBy(asc(editions.date)).limit(1),
+  ]);
+  return { prev: prev?.date ?? null, next: next?.date ?? null };
+}
+
+export interface ArchiveMonth {
+  year: number;
+  month: number; // 1..12
+  count: number;
+}
+
+/** Every (year, month) that has at least one published edition, newest first. */
+export async function getArchiveMonths(): Promise<ArchiveMonth[]> {
+  const ym = sql<string>`substr(${editions.date}, 1, 7)`;
+  const rows = await db()
+    .select({ ym, count: sql<number>`count(*)` })
+    .from(editions)
+    .where(publishedOnly)
+    .groupBy(ym)
+    .orderBy(desc(ym));
+  return rows.map((r) => ({ year: Number(r.ym.slice(0, 4)), month: Number(r.ym.slice(5, 7)), count: Number(r.count) }));
+}
+
+export interface ArchivePage {
+  items: EditionCard[];
+  total: number;
+  page: number;
+  perPage: number;
+  pageCount: number;
+}
+
+/** Published editions in a month, newest first, paginated. */
+export async function getEditionsInMonth(
+  locale: Locale,
+  year: number,
+  month: number,
+  opts: { page?: number; perPage?: number } = {},
+): Promise<ArchivePage> {
+  const perPage = Math.min(48, Math.max(1, opts.perPage ?? 12));
+  const prefix = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-%`;
+  const where = and(publishedOnly, like(editions.date, prefix));
+
+  const [countRow] = await db().select({ total: sql<number>`count(*)` }).from(editions).where(where);
+  const total = Number(countRow?.total ?? 0);
+  const pageCount = Math.max(1, Math.ceil(total / perPage));
+  const page = Math.min(pageCount, Math.max(1, opts.page ?? 1));
+
+  const rows = await db()
+    .select()
+    .from(editions)
+    .where(where)
+    .orderBy(desc(editions.date))
+    .limit(perPage)
+    .offset((page - 1) * perPage);
+  const views = await assemble(rows, locale);
+  return {
+    items: views.map((v) => ({ date: v.date, headline: v.headline, thumb: v.pages[0]?.thumb ?? null, translation: v.translation })),
+    total,
+    page,
+    perPage,
+    pageCount,
+  };
+}
+
+/** True when a published edition exists for `date`. */
+export async function editionExists(date: string): Promise<boolean> {
+  const [row] = await db().select({ id: editions.id }).from(editions).where(and(publishedOnly, eq(editions.date, date))).limit(1);
+  return !!row;
 }

@@ -1,0 +1,11 @@
+---
+import EditionPage from '@/components/EditionPage.astro';
+import { getEditionByDate } from '@/lib/services/editions';
+
+const { date = '' } = Astro.params;
+if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return Astro.rewrite('/404');
+const edition = await getEditionByDate(date, 'ur');
+if (!edition) return Astro.rewrite('/404');
+---
+
+<EditionPage locale="ur" edition={edition} />
