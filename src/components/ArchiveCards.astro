@@ -24,7 +24,7 @@ const s = t(locale);
         sizes="(max-width: 767px) 45vw, 170px"
       >
         <LtrRun block class="card__date">{formatShort(e.date)}</LtrRun>
-        <h3 class="card__title t-head" lang={e.translation.locale}>{e.headline}</h3>
+        <h3 class="card__title" lang={e.translation.locale}>{e.headline}</h3>
       </PageThumb>
     </article>
   ))}
@@ -43,7 +43,10 @@ const s = t(locale);
     color: var(--muted);
   }
   .card__title {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
     font-size: var(--fs-card);
-    font-weight: 700;
+    font-weight: 600;
+    color: var(--ink);
   }
 </style>

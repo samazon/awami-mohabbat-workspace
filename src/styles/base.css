@@ -268,7 +268,7 @@ a:hover {
   color: inherit;
 }
 
-/* Nastaliq has tall ascenders; nudge the label so it sits optically centred. */
+/* Naskh labels sit a touch high in a fixed-height button; a taller line box centres them. */
 html[lang="ur"] .btn {
-  line-height: 1.9;
+  line-height: 1.7;
 }

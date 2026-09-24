@@ -88,15 +88,19 @@
   --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
   --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 
-  /* ---- per-locale resolved roles (switched by html[lang] below) ---- */
+  /* ---- per-locale resolved roles (switched by html[lang] below) ----
+     THE TYPE STANDARD (Urdu):
+       --font-head   Nastaliq  page titles, article & edition headlines, section titles
+       --font-body   Naskh     running text, summaries, descriptions
+       --font-label  Naskh     buttons, nav, tabs, chips, card titles, form & UI labels
+     Nastaliq is reserved for headings; everything a reader taps or scans is Naskh,
+     which stays crisp at small sizes. English: serif for head/body, Plex for labels. */
   --font-head: var(--font-nastaliq);
   --font-body: var(--font-naskh);
   --lh-head: var(--lh-nastaliq);
   --lh-body: var(--lh-naskh);
-  /* UI labels in the reader's script: nav, section links, button text.
-     Nastaliq for Urdu (the brand voice), Plex Sans for Latin. */
-  --font-label: var(--font-nastaliq);
-  --lh-label: 1.9;
+  --font-label: var(--font-naskh);
+  --lh-label: 1.7;
 
   /* ---- the one sanctioned breakpoint (header collapse + pinned edition bar) ---- */
   /* @media (max-width: 767px) — referenced by comment; CSS can't var() a media query. */

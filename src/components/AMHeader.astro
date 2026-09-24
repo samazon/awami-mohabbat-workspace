@@ -158,7 +158,7 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
           </div>
           <nav class="drawer__nav" aria-label={s.a11y.mainNav}>
             {items.map((i) => (
-              <a class="drawer__link t-label" href={i.href} aria-current={i.key === active ? 'page' : undefined}>{i.label}</a>
+              <a class="drawer__link" href={i.href} aria-current={i.key === active ? 'page' : undefined}>{i.label}</a>
             ))}
           </nav>
           <div class="drawer__tools">
@@ -317,9 +317,9 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     gap: 6px 24px;
     padding-block: 10px;
     border-block-end: 1px solid var(--rule);
-    font-family: var(--font-nastaliq);
+    font-family: var(--font-body);
     font-size: var(--ui-nav);
-    line-height: 2;
+    line-height: var(--lh-body);
     color: var(--body);
   }
   :global(html[lang='en']) .subrow {
@@ -695,6 +695,8 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     display: flex;
     align-items: center;
     min-height: 56px;
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
     font-size: var(--ui-drawer-link);
     font-weight: 700;
     color: var(--ink);
@@ -722,8 +724,8 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
   .drawer__foot {
     margin-block-start: auto;
     padding: 18px var(--gutter) calc(18px + env(safe-area-inset-bottom));
-    font-family: var(--font-nastaliq);
-    line-height: 2;
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
     font-size: var(--ui-meta);
     color: var(--muted);
     border-block-start: 1px solid var(--rule);

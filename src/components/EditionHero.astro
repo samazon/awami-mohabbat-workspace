@@ -153,13 +153,12 @@ const front = edition.pages[0]!;
     color: var(--red);
     text-decoration: none;
   }
-  /* The summary shares the headline's face (Nastaliq in Urdu): two or three
-     lines carry the brand voice fine — article bodies stay in Naskh. */
+  /* Summary is running text → body face (Naskh), per the type standard. */
   .summary {
     max-width: var(--measure-summary);
     margin-block-start: 10px;
-    font-family: var(--font-head);
-    line-height: var(--lh-head);
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
     font-size: var(--fs-body);
     color: var(--body);
   }
