@@ -10,8 +10,13 @@ import { defineMiddleware } from 'astro:middleware';
  * Cache API stores successful anonymous GETs for the page's `s-maxage`. Media
  * (/media/*) is immutable and bypasses this. Five minutes of staleness is
  * invisible on a daily paper and means no purge machinery at all.
+ *
+ * Browsers get `max-age=0` and no `stale-while-revalidate`: with SWR, Chrome
+ * shows a returning reader the copy it already has (up to a day old — the
+ * previous edition, the previous header) and only fetches the new one in the
+ * background. The edge cache ignores SWR, so dropping it costs nothing there.
  */
-const PUBLIC_PAGE = 'public, s-maxage=300, stale-while-revalidate=86400';
+const PUBLIC_PAGE = 'public, max-age=0, s-maxage=300';
 const NO_STORE = 'private, no-store';
 
 /** Workers' shared edge cache. The DOM lib types `caches` without `.default`. */
