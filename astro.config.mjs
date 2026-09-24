@@ -43,4 +43,13 @@ export default defineConfig({
   build: {
     inlineStylesheets: 'always',
   },
+
+  vite: {
+    optimizeDeps: {
+      // PhotoSwipe's core is loaded lazily on first open. Without listing it
+      // here Vite discovers it late, re-optimises, and the dev server can serve
+      // a stale chunk URL — the viewer then silently falls back to the raw link.
+      include: ['photoswipe', 'photoswipe/lightbox'],
+    },
+  },
 });
