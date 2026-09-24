@@ -15,8 +15,12 @@ export interface Office {
   zone: string;
   name: string;
   lines: string[];
-  /** As printed; formatted to +92 … at render time. */
-  phones?: { label: string; number: string }[];
+  /**
+   * As printed; formatted to +92 … at render time. No role labels: we were
+   * not told which number is which desk, and the page derives landline vs
+   * mobile from the number itself.
+   */
+  phones?: string[];
   emails?: string[];
 }
 
@@ -54,14 +58,9 @@ export const contact: Record<Locale, ContactContent> = {
     hq: {
       key: 'lahore',
       zone: 'صدر دفتر',
-      name: 'مرکزی سیکرٹریٹ — لاہور',
+      name: 'ہیڈ آفس — لاہور',
       lines: ['حمزہ ٹاؤن، 19 کلومیٹر فیروزپور روڈ، یوحنا آباد کے سامنے', 'لاہور 54600، پاکستان'],
-      phones: [
-        { label: 'لینڈ لائن ایکسچینج', number: '+92 42 35950333' },
-        { label: 'نیوز ڈیسک', number: '+92 304 2198241' },
-        { label: 'اشتہارات', number: '+92 322 8077033' },
-        { label: 'سرکولیشن', number: '+92 337 3337158' },
-      ],
+      phones: ['042 35950333', '0304 2198241', '0322 8077033', '0337 3337158'],
       emails: ['awami_mohabbat@yahoo.com', 'info@awamimohabbat.com'],
     },
     bureaus: [
@@ -70,12 +69,12 @@ export const contact: Record<Locale, ContactContent> = {
         zone: 'ضلع قصور — اصل بنیاد',
         name: 'قصور بیورو',
         lines: ['کوٹ علی گڑھ، کوٹ رادھا کشن، ضلع قصور', 'پی او بکس 08'],
-        phones: [{ label: 'رابطہ نمبر', number: '+92 321 6462430' }],
+        phones: ['0321 6462430', '0303 4692623'],
       },
-      { key: 'islamabad', zone: 'وفاقی دارالحکومت', name: 'اسلام آباد / راولپنڈی بیورو', lines: ['103-NB، پنڈورہ، ناظم آباد 194', 'راولپنڈی / اسلام آباد'] },
-      { key: 'sialkot', zone: 'صنعتی زون پنجاب', name: 'سیالکوٹ بیورو', lines: ['لال کرتی، سیالکوٹ کینٹ، سیالکوٹ'] },
-      { key: 'karachi', zone: 'سندھ و جنوبی زون', name: 'کراچی بیورو', lines: ['ایف سی ایریا، کرسچن کالونی، کراچی'] },
-      { key: 'quetta', zone: 'بلوچستان', name: 'کوئٹہ بیورو', lines: ['نواں کلی، زرغون آباد، کوئٹہ'] },
+      { key: 'islamabad', zone: 'وفاقی دارالحکومت', name: 'اسلام آباد / راولپنڈی بیورو', lines: ['103-NB، پنڈورہ، ناظم آباد 194', 'راولپنڈی / اسلام آباد'], phones: ['0304 5922052'] },
+      { key: 'sialkot', zone: 'صنعتی زون پنجاب', name: 'سیالکوٹ بیورو', lines: ['لال کرتی، سیالکوٹ کینٹ، سیالکوٹ'], phones: ['0311 7831895', '0345 6749261'] },
+      { key: 'karachi', zone: 'سندھ و جنوبی زون', name: 'کراچی بیورو', lines: ['ایف سی ایریا، کرسچن کالونی، کراچی'], phones: ['0311 2435151'] },
+      { key: 'quetta', zone: 'بلوچستان', name: 'کوئٹہ بیورو', lines: ['نواں کلی، زرغون آباد، کوئٹہ'], phones: ['0341 8096057'] },
     ],
     countries: countries('ur'),
   },
@@ -84,14 +83,9 @@ export const contact: Record<Locale, ContactContent> = {
     hq: {
       key: 'lahore',
       zone: 'Head office',
-      name: 'Central secretariat — Lahore',
+      name: 'Head office — Lahore',
       lines: ['Hamza Town, 19-km Ferozepur Road, opposite Youhanabad', 'Lahore 54600, Pakistan'],
-      phones: [
-        { label: 'Landline exchange', number: '+92 42 35950333' },
-        { label: 'News desk', number: '+92 304 2198241' },
-        { label: 'Advertising', number: '+92 322 8077033' },
-        { label: 'Circulation', number: '+92 337 3337158' },
-      ],
+      phones: ['042 35950333', '0304 2198241', '0322 8077033', '0337 3337158'],
       emails: ['awami_mohabbat@yahoo.com', 'info@awamimohabbat.com'],
     },
     bureaus: [
@@ -100,12 +94,12 @@ export const contact: Record<Locale, ContactContent> = {
         zone: 'District Kasur — founding base',
         name: 'Kasur bureau',
         lines: ['Kot Aligarh, Kot Radha Kishan, District Kasur', 'P.O. Box 08'],
-        phones: [{ label: 'Contact', number: '+92 321 6462430' }],
+        phones: ['0321 6462430', '0303 4692623'],
       },
-      { key: 'islamabad', zone: 'Federal capital', name: 'Islamabad / Rawalpindi bureau', lines: ['103-NB, Pandora, Nazimabad 194', 'Rawalpindi / Islamabad'] },
-      { key: 'sialkot', zone: 'Punjab industrial zone', name: 'Sialkot bureau', lines: ['Lal Kurti, Sialkot Cantt, Sialkot'] },
-      { key: 'karachi', zone: 'Sindh & southern zone', name: 'Karachi bureau', lines: ['FC Area, Christian Colony, Karachi'] },
-      { key: 'quetta', zone: 'Balochistan', name: 'Quetta bureau', lines: ['Nawan Killi, Zarghoonabad, Quetta'] },
+      { key: 'islamabad', zone: 'Federal capital', name: 'Islamabad / Rawalpindi bureau', lines: ['103-NB, Pandora, Nazimabad 194', 'Rawalpindi / Islamabad'], phones: ['0304 5922052'] },
+      { key: 'sialkot', zone: 'Punjab industrial zone', name: 'Sialkot bureau', lines: ['Lal Kurti, Sialkot Cantt, Sialkot'], phones: ['0311 7831895', '0345 6749261'] },
+      { key: 'karachi', zone: 'Sindh & southern zone', name: 'Karachi bureau', lines: ['FC Area, Christian Colony, Karachi'], phones: ['0311 2435151'] },
+      { key: 'quetta', zone: 'Balochistan', name: 'Quetta bureau', lines: ['Nawan Killi, Zarghoonabad, Quetta'], phones: ['0341 8096057'] },
     ],
     countries: countries('en'),
   },
