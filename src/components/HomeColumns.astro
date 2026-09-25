@@ -1,0 +1,39 @@
+---
+/** The editors' column picks. Renders nothing when no slot holds a published column. */
+import { localePath, t, type Locale } from '@/i18n';
+import type { ColumnCardView } from '@/lib/services/columns';
+import ColumnGrid from './ColumnGrid.astro';
+import Icon from './Icon.astro';
+
+interface Props {
+  columns: ColumnCardView[];
+  locale: Locale;
+}
+const { columns, locale } = Astro.props;
+const s = t(locale);
+---
+
+{columns.length > 0 && (
+  <section id="columns" class="section">
+    <div class="container">
+      <header class="section-head">
+        <h2 class="section-title">{s.columns.title}</h2>
+        <a class="all t-label" href={localePath(locale, '/columns')}>{s.columns.viewAll} <Icon name="arrow-right" size="sm" /></a>
+      </header>
+      <ColumnGrid columns={columns} locale={locale} />
+    </div>
+  </section>
+)}
+
+<style>
+  .t-label {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+  }
+  .all {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch);
+    font-size: var(--ui-nav);
+  }
+</style>

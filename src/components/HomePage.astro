@@ -11,6 +11,7 @@ import { getAdSlotsForPage } from '@/lib/services/ads';
 import { getSiteConfig } from '@/lib/services/config';
 import { getEmergencyContacts } from '@/lib/services/contacts';
 import { getLatestEdition, getRecentEditions } from '@/lib/services/editions';
+import { getHomepageColumns } from '@/lib/services/columns';
 import { getUtilityContent } from '@/lib/services/utility';
 import AMHeader from './AMHeader.astro';
 import AMFooter from './AMFooter.astro';
@@ -18,6 +19,7 @@ import AMAd from './AMAd.astro';
 import UtilityTicker from './UtilityTicker.astro';
 import EditionHero from './EditionHero.astro';
 import ArchiveGrid from './ArchiveGrid.astro';
+import HomeColumns from './HomeColumns.astro';
 import EmergencyNumbers from './EmergencyNumbers.astro';
 import MobileEditionBar from './MobileEditionBar.astro';
 import EditionViewer from './EditionViewer.astro';
@@ -30,11 +32,12 @@ const s = t(locale);
 const today = todayIso();
 const SHOW_UTILITY_TICKER = false;
 
-const [edition, config, contacts, ads] = await Promise.all([
+const [edition, config, contacts, ads, columns] = await Promise.all([
   getLatestEdition(locale),
   getSiteConfig(locale),
   getEmergencyContacts(locale),
   getAdSlotsForPage('home', today),
+  getHomepageColumns(locale),
 ]);
 const [recent, utility] = await Promise.all([
   getRecentEditions(locale, { limit: 8, beforeDate: edition?.date }),
@@ -88,6 +91,8 @@ const jsonLd = {
       </div>
     </section>
   )}
+
+  <HomeColumns columns={columns} locale={locale} />
 
   <AMAd ad={ads['home-sponsor-strip']} locale={locale} />
 
