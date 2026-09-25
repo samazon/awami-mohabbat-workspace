@@ -66,11 +66,11 @@ const jsonLdText = JSON.stringify(jsonLd).replace(/</g, '\\u003c');
       <p class="read__label">
         <span>{s.columns.label}</span>
         <span aria-hidden="true">·</span>
-        <span lang={c.columnist.columnTitleLang}>{c.columnist.columnTitle}</span>
+        <span lang={c.columnist.columnTitleLang} dir={dirFor(c.columnist.columnTitleLang)}>{c.columnist.columnTitle}</span>
       </p>
-      <h1 class="read__title t-head" lang={c.translation.locale}>{c.title}</h1>
+      <h1 class="read__title t-head" lang={c.translation.locale} dir={dirFor(c.translation.locale)}>{c.title}</h1>
       <p class="read__byline">
-        <span class="read__author" lang={c.columnist.nameLang}>{c.columnist.name}</span>
+        <span class="read__author" lang={c.columnist.nameLang} dir={dirFor(c.columnist.nameLang)}>{c.columnist.name}</span>
         <span aria-hidden="true">·</span>
         <LtrRun>{formatLong(c.publishedDate)}</LtrRun>
         <span aria-hidden="true">·</span>
