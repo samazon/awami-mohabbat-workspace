@@ -1,7 +1,8 @@
 ---
 import StubPage from '@/components/StubPage.astro';
 
-const SECTIONS = ['articles', 'search'] as const;
+// Sections that are in the nav but not built yet: each renders the under-construction page.
+const SECTIONS = ['columns', 'gallery', 'media-forum', 'magazine', 'articles', 'search'] as const;
 type Section = (typeof SECTIONS)[number];
 const isSection = (v: unknown): v is Section => (SECTIONS as readonly string[]).includes(v as string);
 

@@ -1,7 +1,7 @@
 ---
 /**
  * Placeholder for sections that exist in the nav but ship in phase 2
- * (/archive, /articles, /about, /search) — and the 404. Full header/footer so
+ * (/columns, /gallery, /media-forum, /magazine, /articles, /search) — and the 404. Full header/footer so
  * the site never dead-ends; noindex so search engines don't record soft-404s.
  */
 import BaseLayout from '@/layouts/BaseLayout.astro';
@@ -14,7 +14,7 @@ import AMFooter from './AMFooter.astro';
 
 interface Props {
   locale: Locale;
-  section: 'articles' | 'search' | 'notfound';
+  section: 'columns' | 'gallery' | 'media-forum' | 'magazine' | 'articles' | 'search' | 'notfound';
 }
 const { locale, section } = Astro.props;
 const s = t(locale);
@@ -24,14 +24,14 @@ const [config, edition] = await Promise.all([getSiteConfig(locale), getLatestEdi
 const copy = {
   ur: {
     soon: 'یہ حصہ تعمیر کے مراحل میں ہے۔',
-    soonBody: 'مکمل آرکائیو، مضامین اور تعارف کے صفحات جلد شائع کیے جائیں گے۔ اس وقت آج کا اخبار صفحۂ اول پر دستیاب ہے۔',
+    soonBody: 'یہ صفحہ جلد شائع کیا جائے گا۔ اس وقت آج کا اخبار صفحۂ اول پر دستیاب ہے۔',
     notfound: 'یہ صفحہ موجود نہیں۔',
     notfoundBody: 'ممکن ہے لنک پرانا ہو یا غلط ٹائپ ہوا ہو۔',
     back: 'صفحۂ اول پر واپس جائیں',
   },
   en: {
     soon: 'This section is under construction.',
-    soonBody: 'The full archive, articles and about pages are coming soon. Today\'s edition is available on the front page.',
+    soonBody: 'This page is coming soon. Today\'s edition is available on the front page.',
     notfound: 'This page does not exist.',
     notfoundBody: 'The link may be out of date or mistyped.',
     back: 'Back to the front page',
@@ -39,13 +39,17 @@ const copy = {
 }[locale];
 
 const titles: Record<Props['section'], string> = {
+  columns: s.nav.columns,
+  gallery: s.nav.gallery,
+  'media-forum': s.nav.mediaForum,
+  magazine: s.nav.magazine,
   articles: s.nav.articles,
   search: s.search.label,
   notfound: '404',
 };
 const isNotFound = section === 'notfound';
 if (isNotFound) Astro.response.status = 404;
-const active = section === 'articles' ? section : undefined;
+const active = section === 'notfound' || section === 'search' ? undefined : section;
 ---
 
 <BaseLayout title={`${titles[section]} — ${s.meta.siteName}`} noindex>
@@ -53,6 +57,7 @@ const active = section === 'articles' ? section : undefined;
 
   <section class="section">
     <div class="container">
+      {!isNotFound && <p class="label">{titles[section]}</p>}
       <h1 class="t-head title">{isNotFound ? copy.notfound : copy.soon}</h1>
       <p class="t-body body">{isNotFound ? copy.notfoundBody : copy.soonBody}</p>
       <a class="btn" href={localePath(locale, '/')}>{copy.back}</a>
@@ -63,6 +68,14 @@ const active = section === 'articles' ? section : undefined;
 </BaseLayout>
 
 <style>
+  .label {
+    margin-block-end: 8px;
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-nav);
+    font-weight: 700;
+    color: var(--red);
+  }
   .title {
     font-size: var(--fs-h1);
   }

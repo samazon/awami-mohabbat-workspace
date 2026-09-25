@@ -11,7 +11,7 @@ import LanguageSwitcher from './LanguageSwitcher.astro';
 
 interface Props {
   locale: Locale;
-  active?: 'home' | 'archive' | 'articles' | 'about' | 'contact';
+  active?: 'home' | 'archive' | 'columns' | 'gallery' | 'media-forum' | 'magazine' | 'team' | 'articles' | 'about' | 'contact';
   /** Today's edition, when the page has one: powers the e-paper button and card. */
   epaper?: { href: string; pages: number; pdfUrl: string | null; pdfBytes: number | null } | null;
 }
@@ -24,13 +24,30 @@ const pathname = Astro.url.pathname;
 const SHOW_SEARCH = true;
 const SHOW_TAGLINE_ROW = false;
 
-const items = [
+type NavLink = { key: string; href: string; label: string };
+type NavItem = NavLink | { key: string; label: string; children: NavLink[] };
+
+// "Today's paper" is the front page, so it never claims aria-current (Home does).
+const items: NavItem[] = [
   { key: 'home', href: links.home, label: s.nav.home },
-  { key: 'archive', href: links.archive, label: s.nav.archive },
-  { key: 'articles', href: links.articles, label: s.nav.articles },
+  { key: 'columns', href: links.columns, label: s.nav.columns },
+  {
+    key: 'paper',
+    label: s.nav.paper,
+    children: [
+      { key: 'today', href: links.home, label: s.nav.paperToday },
+      { key: 'archive', href: links.archive, label: s.nav.paperPast },
+    ],
+  },
+  { key: 'gallery', href: links.gallery, label: s.nav.gallery },
+  { key: 'media-forum', href: links.mediaForum, label: s.nav.mediaForum },
+  { key: 'magazine', href: links.magazine, label: s.nav.magazine },
   { key: 'about', href: links.about, label: s.nav.about },
+  { key: 'team', href: links.team, label: s.nav.team },
   { key: 'contact', href: links.contact, label: s.contact.title },
-] as const;
+];
+const current = (key: string) => (key === active ? 'page' : undefined);
+const groupHasActive = (i: NavItem) => 'children' in i && i.children.some((c) => c.key === active);
 
 // Today, in the paper's home time zone, localised; the inline script swaps in
 // the visitor's own local date (the page is edge-cached and shared).
@@ -132,9 +149,23 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
   <div class="navbar">
     <div class="container navbar__row">
       <nav class="nav" aria-label={s.a11y.mainNav}>
-        {items.map((i) => (
-          <a class="nav__link" href={i.href} aria-current={i.key === active ? 'page' : undefined}>{i.label}</a>
-        ))}
+        {items.map((i) =>
+          'children' in i ? (
+            <am-nav-menu class="nav__group">
+              <button type="button" class="nav__link nav__toggle" aria-expanded="false" aria-controls={`nav-menu-${i.key}`} data-current={groupHasActive(i) ? '' : undefined}>
+                {i.label}
+                <Icon name="chevron-down" size="sm" />
+              </button>
+              <ul class="nav__menu" id={`nav-menu-${i.key}`}>
+                {i.children.map((c) => (
+                  <li><a class="nav__sublink" href={c.href} aria-current={current(c.key)}>{c.label}</a></li>
+                ))}
+              </ul>
+            </am-nav-menu>
+          ) : (
+            <a class="nav__link" href={i.href} aria-current={current(i.key)}>{i.label}</a>
+          ),
+        )}
       </nav>
 
       {SHOW_SEARCH && (
@@ -159,9 +190,18 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
             </button>
           </div>
           <nav class="drawer__nav" aria-label={s.a11y.mainNav}>
-            {items.map((i) => (
-              <a class="drawer__link" href={i.href} aria-current={i.key === active ? 'page' : undefined}>{i.label}</a>
-            ))}
+            {items.map((i) =>
+              'children' in i ? (
+                <div class="drawer__group" role="group" aria-labelledby={`drawer-group-${i.key}`}>
+                  <span class="drawer__link drawer__heading" id={`drawer-group-${i.key}`}>{i.label}</span>
+                  {i.children.map((c) => (
+                    <a class="drawer__link drawer__sublink" href={c.href} aria-current={current(c.key)}>{c.label}</a>
+                  ))}
+                </div>
+              ) : (
+                <a class="drawer__link" href={i.href} aria-current={current(i.key)}>{i.label}</a>
+              ),
+            )}
           </nav>
           <div class="drawer__tools">
             <LanguageSwitcher locale={locale} pathname={pathname} class="drawer__wide" />
@@ -230,6 +270,35 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     }
   }
   if (!customElements.get('am-mobile-nav')) customElements.define('am-mobile-nav', MobileNav);
+
+  /**
+   * Desktop dropdown. Hover opens it via CSS (mouse only); the button toggles it
+   * for touch and keyboard. Escape, a click elsewhere, or focus leaving the
+   * group closes it.
+   */
+  class NavMenu extends HTMLElement {
+    connectedCallback() {
+      const toggle = this.querySelector<HTMLButtonElement>('.nav__toggle');
+      if (!toggle) return;
+      const set = (open: boolean) => toggle.setAttribute('aria-expanded', String(open));
+
+      toggle.addEventListener('click', () => set(toggle.getAttribute('aria-expanded') !== 'true'));
+      this.addEventListener('mouseleave', () => set(false));
+      this.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') {
+          set(false);
+          toggle.focus();
+        }
+      });
+      this.addEventListener('focusout', (e) => {
+        if (!this.contains(e.relatedTarget as Node | null)) set(false);
+      });
+      document.addEventListener('click', (e) => {
+        if (!this.contains(e.target as Node)) set(false);
+      });
+    }
+  }
+  if (!customElements.get('am-nav-menu')) customElements.define('am-nav-menu', NavMenu);
 </script>
 
 <style>
@@ -515,16 +584,14 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     gap: 16px;
     min-height: 60px;
   }
+  /* Wraps rather than scrolls: a scroll container would clip the dropdown. */
   .nav {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 4px;
     min-width: 0;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .nav::-webkit-scrollbar {
-    display: none;
+    padding-block: 10px;
   }
   .nav__link {
     display: inline-flex;
@@ -549,9 +616,84 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     color: var(--on-dark);
     text-decoration: none;
   }
-  .nav__link[aria-current='page'] {
+  .nav__link[aria-current='page'],
+  .nav__toggle[data-current] {
     background: var(--red);
     color: var(--on-red);
+  }
+
+  /* ---- dropdown ---- */
+  .nav__group {
+    position: relative;
+    display: inline-flex;
+  }
+  .nav__toggle {
+    gap: 6px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+  .nav__toggle :global(svg) {
+    transition: rotate 160ms ease-out;
+  }
+  .nav__toggle[aria-expanded='true'] :global(svg) {
+    rotate: 180deg;
+  }
+  .nav__menu {
+    position: absolute;
+    inset-block-start: 100%;
+    inset-inline-start: 0;
+    z-index: 20;
+    display: none;
+    min-width: 200px;
+    margin: 0;
+    padding: 6px;
+    list-style: none;
+    border-radius: var(--radius-sm);
+    border-block-start: 3px solid var(--strip-bg);
+    background: var(--nav-bg);
+    box-shadow: 0 10px 24px rgba(17, 17, 17, 0.28);
+  }
+  /* A strip of padding above the menu bridges the pointer from button to menu. */
+  .nav__menu::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 100%;
+    height: 8px;
+  }
+  .nav__toggle[aria-expanded='true'] + .nav__menu {
+    display: block;
+  }
+  @media (hover: hover) {
+    .nav__group:hover .nav__menu {
+      display: block;
+    }
+  }
+  .nav__sublink {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 12px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-naskh);
+    font-size: var(--ui-nav);
+    font-weight: 600;
+    line-height: 1.6;
+    color: var(--on-dark);
+    white-space: nowrap;
+    text-decoration: none;
+  }
+  :global(html[lang='en']) .nav__sublink {
+    font-family: var(--font-ui);
+  }
+  .nav__sublink:hover {
+    background: var(--nav-bg-elev);
+    color: var(--on-dark);
+    text-decoration: none;
+  }
+  .nav__sublink[aria-current='page'] {
+    color: var(--gold);
   }
   .search {
     display: flex;
@@ -718,6 +860,14 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
   }
   .drawer__link[aria-current='page'] {
     color: var(--red);
+  }
+  .drawer__heading {
+    color: var(--muted);
+  }
+  .drawer__sublink {
+    min-height: 48px;
+    padding-inline-start: 16px;
+    font-weight: 600;
   }
   .drawer__tools {
     display: flex;

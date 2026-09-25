@@ -1,0 +1,282 @@
+---
+/**
+ * /team — the chief editor as a feature card, then one grid per group.
+ * Member details are English in both locales (src/content/team.ts), so each
+ * run is isolated LTR inside the page's own direction; only the chrome and
+ * group titles translate. Photos are placeholders until we have them.
+ */
+import { Icon as Iconify } from 'astro-icon/components';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { t, type Locale } from '@/i18n';
+import { chiefEditor, groups, type TeamMember } from '@/content/team';
+import { getSiteConfig } from '@/lib/services/config';
+import { nav } from '@/lib/links';
+import AMHeader from './AMHeader.astro';
+import AMFooter from './AMFooter.astro';
+import Icon from './Icon.astro';
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const s = t(locale);
+const links = nav(locale);
+const config = await getSiteConfig(locale);
+
+// The chief editor heads the executive board, so they count towards it.
+const countFor = (key: string, members: TeamMember[]) => members.length + (key === 'executive' ? 1 : 0);
+const photoLabel = (m: TeamMember) => `${m.name} — ${s.about.photo}`;
+---
+
+<BaseLayout title={`${s.team.title} — ${s.meta.siteName}`} description={s.team.description}>
+  <AMHeader slot="header" locale={locale} active="team" />
+
+  <div class="container">
+    <header class="intro">
+      <a class="back" href={links.about}><Icon name="arrow-left" size="sm" />{s.nav.about}</a>
+      <h1 class="title t-head">{s.team.title}</h1>
+      <p class="lead t-body">{s.team.lead}</p>
+    </header>
+
+    {groups.map((g) => (
+      <section class="group" id={g.key} aria-labelledby={`${g.key}-h`}>
+        <div class="group__head">
+          <h2 id={`${g.key}-h`} class="group__title">{g.title[locale]}</h2>
+          <span class="group__rule" aria-hidden="true"></span>
+          <span class="group__count">{s.team.count(countFor(g.key, g.members))}</span>
+        </div>
+
+        {g.key === 'executive' && (
+          <article class="chief">
+            {chiefEditor.photo ? (
+              <img class="chief__photo" src={chiefEditor.photo} alt={chiefEditor.name} loading="lazy" />
+            ) : (
+              <div class="chief__photo photo--empty" role="img" aria-label={photoLabel(chiefEditor)}>
+                <span>{s.about.photo}</span>
+              </div>
+            )}
+            <div class="chief__text">
+              <p class="chief__role"><span dir="ltr" lang="en">{chiefEditor.role}</span></p>
+              <h3 class="chief__name"><span dir="ltr" lang="en">{chiefEditor.name}</span></h3>
+            </div>
+          </article>
+        )}
+
+        <ul class="grid">
+          {g.members.map((m) => (
+            <li class="card">
+              {m.photo ? (
+                <img class="card__photo" src={m.photo} alt={m.name} loading="lazy" />
+              ) : (
+                <div class="card__photo photo--empty" role="img" aria-label={photoLabel(m)}>
+                  <span>{s.about.photo}</span>
+                </div>
+              )}
+              <h3 class="card__name"><span dir="ltr" lang="en">{m.name}</span></h3>
+              {m.role && <p class="card__role"><span dir="ltr" lang="en">{m.role}</span></p>}
+              {m.place && (
+                <p class="card__place">
+                  {m.country && <Iconify name={`circle-flags:${m.country}`} class="card__flag" aria-hidden="true" />}
+                  <span dir="ltr" lang="en">{m.place}</span>
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))}
+
+    <aside class="join" aria-labelledby="join-h">
+      <div>
+        <h2 id="join-h" class="join__title">{s.team.joinTitle}</h2>
+        <p class="join__body t-body">{s.team.joinBody}</p>
+      </div>
+      <a class="btn" href={`${links.contact}#join`}>{s.team.joinCta}</a>
+    </aside>
+  </div>
+
+  <AMFooter slot="footer" locale={locale} config={config} />
+</BaseLayout>
+
+<style>
+  .intro {
+    padding: 30px 0 22px;
+    border-block-end: 1px solid var(--ink);
+  }
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-meta);
+    color: var(--red);
+    text-decoration: none;
+  }
+  .back:hover {
+    text-decoration: underline;
+  }
+  .title {
+    margin-block-start: 10px;
+    font-size: var(--fs-h1);
+  }
+  .lead {
+    max-width: var(--measure-body);
+    margin-block-start: 6px;
+    font-size: var(--fs-body);
+    color: var(--body);
+  }
+
+  /* ---- group ---- */
+  .group {
+    padding-block: 34px 6px;
+  }
+  .group__head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-block-end: 20px;
+  }
+  .group__title {
+    font-family: var(--font-head);
+    line-height: var(--lh-head);
+    font-size: var(--fs-section);
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .group__rule {
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+  }
+  .group__count {
+    flex: none;
+    font-family: var(--font-ui-mixed);
+    font-size: var(--ui-meta);
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- photos ---- */
+  .photo--empty {
+    display: grid;
+    place-items: center;
+    background: var(--thumb-ground);
+    border: 1px solid var(--rule);
+    color: var(--placeholder);
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-meta);
+  }
+  .chief__photo,
+  .card__photo {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+  }
+
+  /* ---- chief editor: deliberately smaller than the design's hero photo ---- */
+  .chief {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    align-items: end;
+    gap: 28px;
+    padding-block-end: 28px;
+    margin-block-end: 28px;
+    border-block-end: 1px solid var(--hairline);
+  }
+  .chief__role {
+    font-family: var(--font-ui);
+    font-size: var(--ui-meta);
+    color: var(--red);
+  }
+  .chief__name {
+    font-family: var(--font-serif);
+    line-height: var(--lh-serif-head);
+    font-size: var(--fs-h1);
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  /* ---- member grid ---- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 30px 24px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .card {
+    min-width: 0;
+  }
+  .card__name {
+    margin-block-start: 12px;
+    font-family: var(--font-serif);
+    line-height: 1.3;
+    font-size: var(--fs-summary);
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .card__role {
+    margin-block-start: 4px;
+    font-family: var(--font-ui);
+    font-size: var(--ui-meta);
+    color: var(--red);
+  }
+  .card__place {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-block-start: 4px;
+    font-family: var(--font-ui);
+    font-size: var(--ui-meta);
+    color: var(--muted);
+  }
+  .card :global(.card__flag) {
+    flex: none;
+    width: 16px;
+    height: 16px;
+  }
+
+  /* ---- work with us ---- */
+  .join {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px 32px;
+    margin-block: 40px 56px;
+    padding: 24px 26px;
+    border: 1px solid var(--rule-strong);
+  }
+  .join__title {
+    font-family: var(--font-head);
+    line-height: var(--lh-head);
+    font-size: var(--fs-section);
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .join__body {
+    margin-block-start: 4px;
+    font-size: var(--fs-card);
+  }
+  .join .btn {
+    flex: none;
+  }
+
+  @media (max-width: 767px) {
+    .chief {
+      grid-template-columns: 130px minmax(0, 1fr);
+      gap: 18px;
+    }
+    .grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px 16px;
+    }
+    .join {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>

@@ -12,6 +12,11 @@ export const viewerHref = (_locale: Locale, edition: EditionView, page: 1 | 2 | 
 export const nav = (locale: Locale) => ({
   home: localePath(locale, '/'),
   archive: localePath(locale, '/archive'),
+  columns: localePath(locale, '/columns'),
+  gallery: localePath(locale, '/gallery'),
+  mediaForum: localePath(locale, '/media-forum'),
+  magazine: localePath(locale, '/magazine'),
+  team: localePath(locale, '/team'),
   articles: localePath(locale, '/articles'),
   about: localePath(locale, '/about'),
   contact: localePath(locale, '/contact'),
