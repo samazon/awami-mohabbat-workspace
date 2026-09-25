@@ -92,12 +92,21 @@ export interface DerivedBanner {
   variants: { variant: BannerVariant; buffer: Buffer; width: number; height: number }[];
 }
 
+/** sharp throws on unrecognisable input (not just unsupported formats); give editors one clear message either way. */
+async function readBannerMetadata(input: Buffer) {
+  try {
+    return await sharp(input, { failOn: 'error' }).metadata();
+  } catch {
+    throw new Error('Banner must be JPEG or PNG, and this file could not be read as an image.');
+  }
+}
+
 /** Validate a banner upload and derive its WebP sizes. Never upscales; honours EXIF orientation. */
 export async function deriveBanner(input: Buffer): Promise<DerivedBanner> {
   if (input.byteLength > BANNER_MAX_BYTES) {
     throw new Error(`Banner is ${kb(input.byteLength)}; the limit is 10 MB.`);
   }
-  const meta = await sharp(input, { failOn: 'error' }).metadata();
+  const meta = await readBannerMetadata(input);
   if (meta.format !== 'jpeg' && meta.format !== 'png') {
     throw new Error(`Banner must be JPEG or PNG, got ${meta.format ?? 'an unknown format'}.`);
   }

@@ -28,4 +28,8 @@ describe('deriveBanner', () => {
   it('rejects files over 10 MB before decoding them', async () => {
     await expect(deriveBanner(Buffer.alloc(BANNER_MAX_BYTES + 1))).rejects.toThrow(/10 MB/);
   });
+
+  it('rejects a file that is not an image at all', async () => {
+    await expect(deriveBanner(Buffer.from('{"name":"x"}'))).rejects.toThrow(/JPEG or PNG/);
+  });
 });
