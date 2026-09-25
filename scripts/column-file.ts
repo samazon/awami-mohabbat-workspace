@@ -1,4 +1,4 @@
-import { parse as parseYaml } from 'yaml';
+import { parse as parseYaml, YAMLParseError } from 'yaml';
 import { z } from 'zod';
 import type { ColumnInput } from '../src/lib/columns/rules';
 
@@ -23,7 +23,16 @@ const FrontMatter = z
 export function parseColumnFile(text: string): z.input<typeof ColumnInput> {
   const m = FRONT.exec(text);
   if (!m) throw new Error('A column file must start with a --- front-matter block.');
-  const fm = FrontMatter.parse(parseYaml(m[1]!, { schema: 'core' }));
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(m[1]!, { schema: 'core' });
+  } catch (e) {
+    if (e instanceof YAMLParseError) {
+      throw new Error(`Front matter is not valid YAML (line ${e.linePos?.[0]?.line ?? '?'}, column ${e.linePos?.[0]?.col ?? '?'}).`);
+    }
+    throw e;
+  }
+  const fm = FrontMatter.parse(parsed);
   const hasEn = fm.title_en !== undefined || fm.excerpt_en !== undefined || fm.body_en !== undefined;
   return {
     slug: fm.slug,

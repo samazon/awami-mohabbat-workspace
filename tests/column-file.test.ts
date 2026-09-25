@@ -40,4 +40,16 @@ describe('parseColumnFile', () => {
     expect(() => parseColumnFile('no front matter')).toThrow(/front-matter/);
     expect(() => parseColumnFile(file.replace('status: published', 'status: published\nauthor: x'))).toThrow();
   });
+
+  it('reports invalid YAML by position, never by echoing the file', () => {
+    const bad = file.replace('slug: maqami-sahafat', 'slug: [unclosed');
+    let message = '';
+    try {
+      parseColumnFile(bad);
+    } catch (e) {
+      message = (e as Error).message;
+    }
+    expect(message).toMatch(/not valid YAML \(line/);
+    expect(message).not.toContain('unclosed');
+  });
 });
