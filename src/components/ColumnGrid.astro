@@ -6,12 +6,13 @@ import ColumnCard from './ColumnCard.astro';
 interface Props {
   columns: ColumnCardView[];
   locale: Locale;
+  headingLevel?: 'h2' | 'h3';
 }
-const { columns, locale } = Astro.props;
+const { columns, locale, headingLevel = 'h3' } = Astro.props;
 ---
 
 <div class="grid">
-  {columns.map((c) => <ColumnCard column={c} locale={locale} />)}
+  {columns.map((c) => <ColumnCard column={c} locale={locale} headingLevel={headingLevel} />)}
 </div>
 
 <style>

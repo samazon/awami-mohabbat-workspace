@@ -53,7 +53,7 @@ const title = page > 1 ? `${s.columns.title} (${page}) — ${s.meta.siteName}` :
     )}
 
     {result.items.length > 0 ? (
-      <div class="list"><ColumnGrid columns={result.items} locale={locale} /></div>
+      <div class="list"><ColumnGrid columns={result.items} locale={locale} headingLevel="h2" /></div>
     ) : (
       <p class="empty t-body">{s.columns.empty}</p>
     )}
