@@ -39,6 +39,7 @@ import { localDb, remoteCredsFromEnv, remoteDb, type SeedDb, type Target } from 
 import { contentHash, derivePage, kb } from './ingest';
 import { R2Uploader, type Upload } from './r2';
 import { AD_SLOTS, DEMO_UTILITY, EMERGENCY_CONTACTS, SITE_CONFIG, type NewUtility } from './seed-static';
+import { readWranglerConfig } from './wrangler-config';
 
 const ROOT = resolve(import.meta.dirname, '..');
 
@@ -129,18 +130,6 @@ function readArgs() {
   return parsed.data;
 }
 
-async function readWranglerConfig(): Promise<{ bucket: string; databaseId: string }> {
-  const raw = await readFile(resolve(ROOT, 'wrangler.jsonc'), 'utf8');
-  const json = JSON.parse(raw.replace(/^\s*\/\/.*$/gm, '')) as {
-    r2_buckets?: { binding: string; bucket_name: string }[];
-    d1_databases?: { binding: string; database_id: string }[];
-  };
-  const bucket = json.r2_buckets?.find((b) => b.binding === 'MEDIA')?.bucket_name;
-  const databaseId = json.d1_databases?.find((d) => d.binding === 'DB')?.database_id;
-  if (!bucket || !databaseId) throw new Error('wrangler.jsonc is missing the MEDIA bucket or DB database.');
-  return { bucket, databaseId };
-}
-
 function openDb(target: Target, databaseId: string): { db: SeedDb; label: string } {
   if (target === 'local') {
     const { db, path } = localDb(ROOT);
@@ -173,7 +162,7 @@ async function seedStaticOnly() {
   });
   const target = z.enum(['local', 'remote']).default('local').parse(values.target);
   const now = Date.now();
-  const { databaseId } = await readWranglerConfig();
+  const { databaseId } = await readWranglerConfig(ROOT);
   console.log(`\nStatic seed  ·  target: ${target}${values['dry-run'] ? '  ·  DRY RUN' : ''}`);
   console.log(`  ${AD_SLOTS.length} ad slots · ${EMERGENCY_CONTACTS.length} contacts · site config (${SITE_CONFIG(now).phones.length} phones)`);
   if (values['dry-run']) return console.log('\nDry run — nothing written.\n');
@@ -196,7 +185,7 @@ async function main() {
   const args = readArgs();
   const date = assertIsoDate(args.date);
   const now = Date.now();
-  const { bucket, databaseId } = await readWranglerConfig();
+  const { bucket, databaseId } = await readWranglerConfig(ROOT);
 
   console.log(`\nEdition ${date}  ·  Vol ${args.volume}  Issue ${args.issue}  ·  target: ${args.target}${args.dryRun ? '  ·  DRY RUN' : ''}`);
 
