@@ -5,10 +5,12 @@
  *   local   the miniflare SQLite file that `wrangler d1 migrations apply --local`
  *           creates — the same file `astro dev` reads
  *   remote  the D1 REST API (`/raw`), which takes `{ sql, params }` — no string
- *           building, no shelling out
+ *           building; wrangler is called only to borrow its login (see remoteCreds)
  */
+import { execFile } from 'node:child_process';
 import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
 import { DatabaseSync } from 'node:sqlite';
 import { drizzle, type SqliteRemoteDatabase } from 'drizzle-orm/sqlite-proxy';
 import * as schema from '../src/lib/db/schema';
@@ -17,6 +19,7 @@ export type SeedDb = SqliteRemoteDatabase<typeof schema>;
 export type Target = 'local' | 'remote';
 
 const LOCAL_D1_DIR = '.wrangler/state/v3/d1/miniflare-D1DatabaseObject';
+const execFileP = promisify(execFile);
 
 export function findLocalSqlite(root: string): string {
   const dir = join(root, LOCAL_D1_DIR);
@@ -63,17 +66,41 @@ export interface RemoteCreds {
   databaseId: string;
 }
 
-/** Reads credentials from the environment. Never logged, never written. */
-export function remoteCredsFromEnv(databaseId: string): RemoteCreds {
-  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-  const apiToken = process.env.CLOUDFLARE_API_TOKEN;
-  if (!accountId || !apiToken) {
-    throw new Error('Remote seeding needs CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in the environment.');
-  }
+/**
+ * Credentials for the D1 REST API. CLOUDFLARE_API_TOKEN (+ CLOUDFLARE_ACCOUNT_ID)
+ * win when set; otherwise borrow the `wrangler login` OAuth session via
+ * `wrangler auth token` / `wrangler whoami --json`. Never logged, never written.
+ */
+export async function remoteCreds(root: string, databaseId: string): Promise<RemoteCreds> {
   if (!/^[0-9a-f-]{36}$/.test(databaseId) || /^0+-0+-0+-0+-0+$/.test(databaseId)) {
     throw new Error('wrangler.jsonc still has the placeholder database_id. Run `wrangler d1 create awami-mohabbat` and paste the real id.');
   }
-  return { accountId, apiToken, databaseId };
+  const envToken = process.env.CLOUDFLARE_API_TOKEN;
+  const envAccount = process.env.CLOUDFLARE_ACCOUNT_ID;
+  if (envToken) {
+    if (!envAccount) throw new Error('CLOUDFLARE_API_TOKEN is set without CLOUDFLARE_ACCOUNT_ID.');
+    return { accountId: envAccount, apiToken: envToken, databaseId };
+  }
+
+  const wrangler = join(root, 'node_modules', '.bin', 'wrangler');
+  const run = async (args: string[]) => (await execFileP(wrangler, args, { cwd: root, maxBuffer: 1024 * 1024 })).stdout;
+
+  // `auth token` prints a version banner, then the token alone on the last line.
+  const tokenLine = (await run(['auth', 'token'])).trim().split('\n').pop()?.trim() ?? '';
+  if (!/^[A-Za-z0-9._~+/=-]{20,}$/.test(tokenLine)) {
+    throw new Error('Remote seeding needs `wrangler login` (or CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID).');
+  }
+
+  let accountId = envAccount;
+  if (!accountId) {
+    const who = JSON.parse(await run(['whoami', '--json'])) as { accounts?: { id: string }[] };
+    const ids = (who.accounts ?? []).map((a) => a.id);
+    if (ids.length !== 1) {
+      throw new Error(`The wrangler login sees ${ids.length} accounts; set CLOUDFLARE_ACCOUNT_ID to pick one.`);
+    }
+    accountId = ids[0]!;
+  }
+  return { accountId, apiToken: tokenLine, databaseId };
 }
 
 export function remoteDb(creds: RemoteCreds): SeedDb {

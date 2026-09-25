@@ -6,18 +6,20 @@
  *             --headline-ur "…" --summary-ur "…" --headline-en "…" --summary-en "…"
  *
  *   --target local|remote   default local (the DB `astro dev` reads)
- *   --hijri "3 Rabi al-Thani 1448"   default: computed (Umm al-Qura)
  *   --mt-en                 mark the English text as machine-translated (shows the AI badge)
- *   --utility file.json     prayer times + rates for the day (else the design's demo values, labelled manual)
  *   --static                also (re)seed ad slots, emergency contacts, site config
+ *
+ * No Hijri date, prayer times or rates: the site shows none of them (the ticker
+ * is off, and the computed Hijri date ran two days ahead of the printed one).
  *   --dry-run               validate, derive, print the plan; write nothing
  *
  * Order is R2 first, then D1, so a failure mid-way leaves harmless orphaned
  * objects rather than rows that point at files that don't exist. Re-running
  * for the same date replaces that edition (new hashed keys, old rows removed).
  *
- * Remote target needs CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in the
- * environment (e.g. `tsx --env-file=.env scripts/seed.ts …`). Nothing is logged.
+ * Remote target uses the `wrangler login` session for both R2 and D1. A
+ * CLOUDFLARE_API_TOKEN (+ CLOUDFLARE_ACCOUNT_ID) in the environment overrides
+ * it; that token then needs D1 Edit and R2 Edit. Nothing is logged.
  */
 import { readFile } from 'node:fs/promises';
 import { basename, resolve } from 'node:path';
@@ -31,32 +33,19 @@ import {
   editions,
   emergencyContacts,
   siteConfig,
-  utilityContent,
 } from '../src/lib/db/schema';
-import { hijriFor, isoToDate } from '../src/lib/dates';
+import { isoToDate } from '../src/lib/dates';
 import { PAGE_COUNT, assertIsoDate, contentTypeFor, editionPageKey, editionPdfKey } from '../src/lib/media';
-import { localDb, remoteCredsFromEnv, remoteDb, type SeedDb, type Target } from './d1';
+import { localDb, remoteCreds, remoteDb, type SeedDb, type Target } from './d1';
 import { contentHash, derivePage, kb } from './ingest';
 import { R2Uploader, type Upload } from './r2';
-import { AD_SLOTS, DEMO_UTILITY, EMERGENCY_CONTACTS, SITE_CONFIG, type NewUtility } from './seed-static';
+import { AD_SLOTS, EMERGENCY_CONTACTS, SITE_CONFIG } from './seed-static';
 
 const ROOT = resolve(import.meta.dirname, '..');
 
 // ---------------------------------------------------------------------------
 // Input validation — every value here came from a human at a terminal
 // ---------------------------------------------------------------------------
-const hhmm = z.string().regex(/^\d{2}:\d{2}$/, 'expected HH:MM');
-const rate = z.object({
-  minor: z.number().int().nonnegative(),
-  updatedAt: z.union([z.number().int(), z.iso.datetime()]),
-  source: z.enum(['auto', 'manual']).default('manual'),
-});
-const UtilityFile = z.object({
-  prayers: z.object({ fajr: hhmm, zuhr: hhmm, asr: hhmm, maghrib: hhmm, isha: hhmm }),
-  prayerSource: z.enum(['auto', 'manual']).default('manual'),
-  rates: z.object({ gold: rate, silver: rate, petrol: rate, diesel: rate }),
-});
-
 const Args = z.object({
   target: z.enum(['local', 'remote']).default('local'),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD'),
@@ -64,13 +53,11 @@ const Args = z.object({
   pdf: z.string().min(1).optional(),
   volume: z.coerce.number().int().positive(),
   issue: z.coerce.number().int().positive(),
-  hijri: z.string().min(3).max(60).optional(),
   headlineUr: z.string().trim().min(1).max(300),
   summaryUr: z.string().trim().min(1).max(1200),
   headlineEn: z.string().trim().min(1).max(300).optional(),
   summaryEn: z.string().trim().min(1).max(1200).optional(),
   mtEn: z.boolean().default(false),
-  utility: z.string().min(1).optional(),
   static: z.boolean().default(false),
   /** Upload the media objects only; leave D1 alone (rows already mirrored another way). */
   r2Only: z.boolean().default(false),
@@ -86,13 +73,11 @@ function readArgs() {
       pdf: { type: 'string' },
       volume: { type: 'string' },
       issue: { type: 'string' },
-      hijri: { type: 'string' },
       'headline-ur': { type: 'string' },
       'summary-ur': { type: 'string' },
       'headline-en': { type: 'string' },
       'summary-en': { type: 'string' },
       'mt-en': { type: 'boolean' },
-      utility: { type: 'string' },
       static: { type: 'boolean' },
       'r2-only': { type: 'boolean' },
       'dry-run': { type: 'boolean' },
@@ -106,13 +91,11 @@ function readArgs() {
     pdf: values.pdf,
     volume: values.volume,
     issue: values.issue,
-    hijri: values.hijri,
     headlineUr: values['headline-ur'],
     summaryUr: values['summary-ur'],
     headlineEn: values['headline-en'],
     summaryEn: values['summary-en'],
     mtEn: values['mt-en'],
-    utility: values.utility,
     static: values.static,
     r2Only: values['r2-only'],
     dryRun: values['dry-run'],
@@ -141,28 +124,12 @@ async function readWranglerConfig(): Promise<{ bucket: string; databaseId: strin
   return { bucket, databaseId };
 }
 
-function openDb(target: Target, databaseId: string): { db: SeedDb; label: string } {
+async function openDb(target: Target, databaseId: string): Promise<{ db: SeedDb; label: string }> {
   if (target === 'local') {
     const { db, path } = localDb(ROOT);
     return { db, label: `local D1 (${basename(path)})` };
   }
-  return { db: remoteDb(remoteCredsFromEnv(databaseId)), label: 'remote D1' };
-}
-
-async function loadUtility(date: string, file: string | undefined, now: number): Promise<NewUtility> {
-  if (!file) return DEMO_UTILITY(date, now);
-  const parsed = UtilityFile.parse(JSON.parse(await readFile(resolve(file), 'utf8')));
-  const ms = (v: number | string) => (typeof v === 'number' ? v : Date.parse(v));
-  const r = parsed.rates;
-  return {
-    date,
-    ...parsed.prayers,
-    prayerSource: parsed.prayerSource,
-    goldMinor: r.gold.minor, goldUpdatedAt: ms(r.gold.updatedAt), goldSource: r.gold.source,
-    silverMinor: r.silver.minor, silverUpdatedAt: ms(r.silver.updatedAt), silverSource: r.silver.source,
-    petrolMinor: r.petrol.minor, petrolUpdatedAt: ms(r.petrol.updatedAt), petrolSource: r.petrol.source,
-    dieselMinor: r.diesel.minor, dieselUpdatedAt: ms(r.diesel.updatedAt), dieselSource: r.diesel.source,
-  };
+  return { db: remoteDb(await remoteCreds(ROOT, databaseId)), label: 'remote D1' };
 }
 
 /** `pnpm seed --static-only [--target remote]` — refresh slots, contacts and site config; touch nothing else. */
@@ -178,7 +145,7 @@ async function seedStaticOnly() {
   console.log(`  ${AD_SLOTS.length} ad slots · ${EMERGENCY_CONTACTS.length} contacts · site config (${SITE_CONFIG(now).phones.length} phones)`);
   if (values['dry-run']) return console.log('\nDry run — nothing written.\n');
 
-  const { db, label } = openDb(target, databaseId);
+  const { db, label } = await openDb(target, databaseId);
   console.log(`  writing ${label}`);
   for (const s of AD_SLOTS) await db.insert(adSlots).values(s).onConflictDoUpdate({ target: adSlots.slotId, set: s });
   await db.delete(emergencyContacts);
@@ -236,11 +203,7 @@ async function main() {
   }
   console.log(`  ${uploads.length} objects → r2://${bucket}  (${kb(totalDerived)} of derivatives)`);
 
-  const hijri = args.hijri ?? hijriFor(date);
-  const utility = await loadUtility(date, args.utility, now);
-  console.log(`  hijri   ${hijri}${args.hijri ? '' : '  (computed — confirm against the printed masthead)'}`);
-  console.log(`  utility ${args.utility ? args.utility : 'design demo values (manual) — replace with --utility'}`);
-  console.log(`  text    ur${args.headlineEn ? ` + en${args.mtEn ? ' (machine-translated)' : ''}` : ' only (English falls back to Urdu, labelled)'}`);
+  console.log(`  text   ur${args.headlineEn ? ` + en${args.mtEn ? ' (machine-translated)' : ''}` : ' only (English falls back to Urdu, labelled)'}`);
   if (args.static) console.log(`  static  ${AD_SLOTS.length} ad slots · ${EMERGENCY_CONTACTS.length} contacts · site config`);
 
   if (args.dryRun) {
@@ -268,7 +231,7 @@ async function main() {
   }
 
   // ---- then D1 ----
-  const { db, label } = openDb(args.target, databaseId);
+  const { db, label } = await openDb(args.target, databaseId);
   console.log(`  writing ${label}`);
 
   if (args.static) {
@@ -281,15 +244,14 @@ async function main() {
     await db.insert(siteConfig).values(cfg).onConflictDoUpdate({ target: siteConfig.id, set: cfg });
   }
 
-  await db.insert(utilityContent).values(utility).onConflictDoUpdate({ target: utilityContent.date, set: utility });
-
   // Replace any existing edition for this date (cascades to pages + translations).
   await db.delete(editions).where(eq(editions.date, date));
   const [inserted] = await db
     .insert(editions)
     .values({
       date,
-      hijriDate: hijri,
+      // Retired (not shown anywhere); the column is NOT NULL, so store empty.
+      hijriDate: '',
       volume: args.volume,
       issue: args.issue,
       pdfHash,

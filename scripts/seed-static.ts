@@ -1,16 +1,12 @@
 /**
- * Static seed data: the nine ad slots from the design, emergency contacts,
- * the site-config singleton, and a demo utility row shape.
- *
- * Utility values here are the DESIGN'S demo figures, labelled `manual`. Replace
- * them per day with `--utility <file.json>` until the auto-feeds exist.
+ * Static seed data: the nine ad slots from the design, emergency contacts and
+ * the site-config singleton.
  */
-import type { adSlots, emergencyContacts, siteConfig, utilityContent } from '../src/lib/db/schema';
+import type { adSlots, emergencyContacts, siteConfig } from '../src/lib/db/schema';
 
 type NewSlot = typeof adSlots.$inferInsert;
 type NewContact = typeof emergencyContacts.$inferInsert;
 type NewConfig = typeof siteConfig.$inferInsert;
-export type NewUtility = typeof utilityContent.$inferInsert;
 
 export const AD_SLOTS: NewSlot[] = [
   { slotId: 'home-leaderboard', page: 'home', kind: 'leaderboard', fallbackMode: 'google', displayOrder: 1 },
@@ -57,27 +53,4 @@ export const SITE_CONFIG = (now: number): NewConfig => ({
   youtubeUrl: 'https://www.youtube.com/@awamimohabbat',
   linkedinUrl: null,
   updatedAt: now,
-});
-
-/** The design's demo ticker values for `date`, marked manual with honest stamps. */
-export const DEMO_UTILITY = (date: string, stampMs: number): NewUtility => ({
-  date,
-  fajr: '04:42',
-  zuhr: '12:08',
-  asr: '16:32',
-  maghrib: '18:14',
-  isha: '19:38',
-  prayerSource: 'manual',
-  goldMinor: 311_450_00,
-  goldUpdatedAt: stampMs,
-  goldSource: 'manual',
-  silverMinor: 3_540_00,
-  silverUpdatedAt: stampMs,
-  silverSource: 'manual',
-  petrolMinor: 264_61,
-  petrolUpdatedAt: stampMs,
-  petrolSource: 'manual',
-  dieselMinor: 272_98,
-  dieselUpdatedAt: stampMs,
-  dieselSource: 'manual',
 });
