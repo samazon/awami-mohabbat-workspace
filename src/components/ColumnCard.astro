@@ -1,0 +1,106 @@
+---
+/** One column as a card: banner (whole, never cropped), column name, title, excerpt, byline. */
+import { t, type Locale } from '@/i18n';
+import { formatShort } from '@/lib/dates';
+import { columnHref } from '@/lib/links';
+import type { ColumnCardView } from '@/lib/services/columns';
+import LtrRun from './LtrRun.astro';
+
+interface Props {
+  column: ColumnCardView;
+  locale: Locale;
+  headingLevel?: 'h2' | 'h3';
+}
+const { column: c, locale, headingLevel = 'h3' } = Astro.props;
+const H = headingLevel;
+const s = t(locale);
+---
+
+<article class="card">
+  <a class="card__link" href={columnHref(locale, c.slug)}>
+    <span class="card__frame">
+      <img
+        class="card__banner"
+        src={c.banner.card}
+        width={c.banner.width}
+        height={c.banner.height}
+        alt={s.columns.bannerAlt(c.columnist.name, c.columnist.columnTitle)}
+        loading="lazy"
+        decoding="async"
+      />
+    </span>
+    <span class="card__column" lang={c.columnist.columnTitleLang}>{c.columnist.columnTitle}</span>
+    <H class="card__title" lang={c.translation.locale}>{c.title}</H>
+  </a>
+  <p class="card__excerpt" lang={c.translation.locale}>{c.excerpt}</p>
+  <p class="card__meta">
+    <span lang={c.columnist.nameLang}>{c.columnist.name}</span>
+    <span aria-hidden="true">·</span>
+    <LtrRun>{formatShort(c.publishedDate)}</LtrRun>
+  </p>
+</article>
+
+<style>
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-block-end: 18px;
+    border-block-end: 1px solid var(--rule);
+  }
+  .card__link {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: inherit;
+    text-decoration: none;
+  }
+  /* Banners come in any shape. The frame keeps the grid even; contain keeps the whole banner visible. */
+  .card__frame {
+    display: block;
+    aspect-ratio: 36 / 25;
+    background: var(--thumb-ground);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .card__banner {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .card__column {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-meta);
+    color: var(--red);
+  }
+  .card__title {
+    font-family: var(--font-head);
+    line-height: var(--lh-head);
+    font-size: var(--fs-section);
+    color: var(--ink);
+  }
+  .card__link:hover .card__title {
+    color: var(--red);
+  }
+  .card__excerpt {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
+    font-size: var(--fs-card);
+    color: var(--body);
+  }
+  .card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-family: var(--font-ui-mixed);
+    font-size: var(--ui-meta);
+    color: var(--muted);
+  }
+</style>

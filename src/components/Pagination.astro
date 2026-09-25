@@ -1,0 +1,97 @@
+---
+/** Numbered pagination: ← 1 … p-1 p p+1 … N →. Renders nothing for a single page. */
+import Icon from './Icon.astro';
+import LtrRun from './LtrRun.astro';
+
+interface Props {
+  page: number;
+  pageCount: number;
+  href: (page: number) => string;
+  label: string;
+  prevLabel: string;
+  nextLabel: string;
+  /** e.g. "1–12 of 40 columns" */
+  meta: string;
+}
+const { page, pageCount, href, label, prevLabel, nextLabel, meta } = Astro.props;
+
+const items: (number | '…')[] = [];
+for (let i = 1; i <= pageCount; i++) {
+  if (i === 1 || i === pageCount || Math.abs(i - page) <= 1) items.push(i);
+  else if (items.at(-1) !== '…') items.push('…');
+}
+---
+
+{pageCount > 1 && (
+  <nav class="pagination" aria-label={label}>
+    <LtrRun class="pagination__meta">{meta}</LtrRun>
+    <div class="pages">
+      {page > 1 ? (
+        <a class="pg" href={href(page - 1)} aria-label={prevLabel}><Icon name="chevron-left" size="sm" /></a>
+      ) : (
+        <span class="pg pg--off" aria-hidden="true"><Icon name="chevron-left" size="sm" /></span>
+      )}
+      {items.map((it) =>
+        it === '…' ? (
+          <span class="pg pg--gap" aria-hidden="true">…</span>
+        ) : (
+          <a class="pg" href={href(it)} aria-current={it === page ? 'page' : undefined}><LtrRun>{it}</LtrRun></a>
+        ),
+      )}
+      {page < pageCount ? (
+        <a class="pg" href={href(page + 1)} aria-label={nextLabel}><Icon name="chevron-right" size="sm" /></a>
+      ) : (
+        <span class="pg pg--off" aria-hidden="true"><Icon name="chevron-right" size="sm" /></span>
+      )}
+    </div>
+  </nav>
+)}
+
+<style>
+  .pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 20px;
+    padding: 24px 0 44px;
+    margin-block-start: 8px;
+    border-block-start: 1px solid var(--rule);
+  }
+  .pagination__meta {
+    font-family: var(--font-ui-mixed);
+    font-size: var(--ui-meta);
+    color: var(--muted);
+  }
+  .pages {
+    display: flex;
+    gap: 6px;
+  }
+  .pg {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--touch);
+    min-height: var(--touch);
+    padding: 0 10px;
+    border: 1px solid var(--ink);
+    font-family: var(--font-ui);
+    font-size: var(--ui-nav);
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .pg:hover {
+    color: var(--red);
+    border-color: var(--red);
+    text-decoration: none;
+  }
+  .pg[aria-current] {
+    background: var(--ink);
+    color: var(--on-red);
+  }
+  .pg--gap,
+  .pg--off {
+    border-color: var(--rule);
+    color: var(--muted);
+  }
+</style>

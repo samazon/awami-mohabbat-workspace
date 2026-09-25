@@ -1,0 +1,9 @@
+---
+import ColumnsPage from '@/components/ColumnsPage.astro';
+import { resolveColumns } from '@/lib/columns-route';
+
+const state = await resolveColumns(Astro, 'en');
+if (!state) return Astro.rewrite('/en/404');
+---
+
+<ColumnsPage locale="en" {...state} />
