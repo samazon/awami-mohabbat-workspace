@@ -1,17 +1,20 @@
 import type { APIRoute } from 'astro';
 import { LOCALES, localePath } from '@/i18n';
 import { getRecentEditions } from '@/lib/services/editions';
+import { listPublishedColumnSlugs } from '@/lib/services/columns';
 
-/** Static routes plus every published edition, each in both locales with hreflang alternates. */
+/** Static routes plus every published edition and column, each in both locales with hreflang alternates. */
 export const GET: APIRoute = async ({ url }) => {
   const base = new URL(url.origin);
-  const editions = await getRecentEditions('ur', { limit: 5000 });
+  const [editions, columns] = await Promise.all([getRecentEditions('ur', { limit: 5000 }), listPublishedColumnSlugs()]);
   const routes: { path: string; changefreq: string }[] = [
     { path: '/', changefreq: 'daily' },
     { path: '/archive', changefreq: 'daily' },
+    { path: '/columns', changefreq: 'daily' },
     { path: '/about', changefreq: 'monthly' },
     { path: '/contact', changefreq: 'monthly' },
     ...editions.map((e) => ({ path: `/edition/${e.date}`, changefreq: 'yearly' })),
+    ...columns.map((c) => ({ path: `/columns/${c.slug}`, changefreq: 'monthly' })),
   ];
   const urls = routes
     .flatMap((r) =>

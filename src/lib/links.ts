@@ -12,8 +12,11 @@ export const viewerHref = (_locale: Locale, edition: EditionView, page: 1 | 2 | 
 export const nav = (locale: Locale) => ({
   home: localePath(locale, '/'),
   archive: localePath(locale, '/archive'),
+  columns: localePath(locale, '/columns'),
   articles: localePath(locale, '/articles'),
   about: localePath(locale, '/about'),
   contact: localePath(locale, '/contact'),
   search: localePath(locale, '/search'),
 });
+
+export const columnHref = (locale: Locale, slug: string): string => localePath(locale, `/columns/${slug}`);

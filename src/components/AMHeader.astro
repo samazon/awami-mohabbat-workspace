@@ -11,7 +11,7 @@ import LanguageSwitcher from './LanguageSwitcher.astro';
 
 interface Props {
   locale: Locale;
-  active?: 'home' | 'archive' | 'articles' | 'about' | 'contact';
+  active?: 'home' | 'archive' | 'columns' | 'articles' | 'about' | 'contact';
   /** Today's edition, when the page has one: powers the e-paper button and card. */
   epaper?: { href: string; pages: number; pdfUrl: string | null; pdfBytes: number | null } | null;
 }
@@ -27,6 +27,7 @@ const SHOW_TAGLINE_ROW = false;
 const items = [
   { key: 'home', href: links.home, label: s.nav.home },
   { key: 'archive', href: links.archive, label: s.nav.archive },
+  { key: 'columns', href: links.columns, label: s.nav.columns },
   { key: 'articles', href: links.articles, label: s.nav.articles },
   { key: 'about', href: links.about, label: s.nav.about },
   { key: 'contact', href: links.contact, label: s.contact.title },
