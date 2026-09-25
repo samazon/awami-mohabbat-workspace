@@ -8,12 +8,26 @@ interface Props {
   description?: string;
   noindex?: boolean;
   ogImage?: string;
+  ogType?: 'website' | 'article';
+  /** Only with ogImage: describe it, or the 1200×630 PNG defaults apply. */
+  ogImageType?: string;
+  ogImageWidth?: number;
+  ogImageHeight?: number;
 }
 
 const locale: Locale = isLocale(Astro.currentLocale) ? Astro.currentLocale : DEFAULT_LOCALE;
 const dir = dirFor(locale);
 const strings = t(locale);
-const { title, description = strings.meta.description, noindex = false, ogImage } = Astro.props;
+const {
+  title,
+  description = strings.meta.description,
+  noindex = false,
+  ogImage,
+  ogType = 'website',
+  ogImageType = 'image/png',
+  ogImageWidth = 1200,
+  ogImageHeight = 630,
+} = Astro.props;
 
 // Absolute URLs come from the REQUEST origin, so one build serves the real
 // domain and the workers.dev preview with correct canonicals and share cards.
@@ -45,15 +59,15 @@ const fonts =
     {alts.map((a) => <link rel="alternate" hreflang={a.hreflang} href={a.href} />)}
     {xDefault && <link rel="alternate" hreflang="x-default" href={xDefault} />}
 
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={ogType} />
     <meta property="og:site_name" content={strings.meta.siteNameLatin} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical.toString()} />
     <meta property="og:image" content={og} />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content={ogImageType} />
+    <meta property="og:image:width" content={String(ogImageWidth)} />
+    <meta property="og:image:height" content={String(ogImageHeight)} />
     <meta property="og:image:alt" content={ogAlt} />
     <meta property="og:locale" content={locale === 'ur' ? 'ur_PK' : 'en_PK'} />
     <meta property="og:locale:alternate" content={locale === 'ur' ? 'en_PK' : 'ur_PK'} />

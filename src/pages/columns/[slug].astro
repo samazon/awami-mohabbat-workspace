@@ -1,0 +1,13 @@
+---
+import ColumnPage from '@/components/ColumnPage.astro';
+import { SLUG_RE } from '@/lib/columns/rules';
+import { getColumn, moreFromColumnist } from '@/lib/services/columns';
+
+const { slug = '' } = Astro.params;
+if (slug.length > 80 || !SLUG_RE.test(slug)) return Astro.rewrite('/404');
+const column = await getColumn(slug, 'ur');
+if (!column) return Astro.rewrite('/404');
+const more = await moreFromColumnist(column.columnist.id, column.articleId, 'ur');
+---
+
+<ColumnPage locale="ur" column={column} more={more} />

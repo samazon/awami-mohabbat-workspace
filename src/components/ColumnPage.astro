@@ -1,0 +1,195 @@
+---
+/**
+ * One column. Layout follows screens/05-article-detail.png: label, title,
+ * byline, then the columnist's banner (whole, natural shape), then the body.
+ * The body HTML comes only from renderMarkdown (raw HTML off, links allow-listed).
+ */
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { dirFor, t, type Locale } from '@/i18n';
+import { formatLong } from '@/lib/dates';
+import { getSiteConfig } from '@/lib/services/config';
+import type { ColumnCardView, ColumnView } from '@/lib/services/columns';
+import AMFooter from './AMFooter.astro';
+import AMHeader from './AMHeader.astro';
+import ColumnGrid from './ColumnGrid.astro';
+import LtrRun from './LtrRun.astro';
+
+interface Props {
+  locale: Locale;
+  column: ColumnView;
+  more: ColumnCardView[];
+}
+const { locale, column: c, more } = Astro.props;
+const s = t(locale);
+const config = await getSiteConfig(locale);
+
+const notice = c.translation.isFallback ? s.mt.fallback : c.translation.isMachineTranslated ? s.mt.notice : null;
+const site = new URL(Astro.url.origin);
+const bannerAbs = new URL(c.banner.view, site).toString(); // CDN_BASE may be a path or an absolute URL
+const viewW = Math.min(960, c.banner.width);
+const viewH = Math.round((c.banner.height * viewW) / c.banner.width);
+const alt = s.columns.bannerAlt(c.columnist.name, c.columnist.columnTitle);
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'OpinionNewsArticle',
+  headline: c.title,
+  description: c.excerpt,
+  datePublished: c.publishedDate,
+  inLanguage: c.translation.locale,
+  image: [bannerAbs],
+  author: { '@type': 'Person', name: c.columnist.name },
+  publisher: { '@type': 'NewsMediaOrganization', name: s.meta.siteNameLatin, url: site.toString() },
+  mainEntityOfPage: new URL(Astro.url.pathname, site).toString(),
+};
+// Editor text goes into a <script>: escape "<" so no value can close the tag.
+const jsonLdText = JSON.stringify(jsonLd).replace(/</g, '\\u003c');
+---
+
+<BaseLayout
+  title={`${c.title} — ${s.meta.siteName}`}
+  description={c.excerpt}
+  ogType="article"
+  ogImage={bannerAbs}
+  ogImageType="image/webp"
+  ogImageWidth={viewW}
+  ogImageHeight={viewH}
+>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={jsonLdText} />
+  </Fragment>
+
+  <AMHeader slot="header" locale={locale} active="columns" />
+
+  <article class="container read">
+    <header class="read__head">
+      <p class="read__label">
+        <span>{s.columns.label}</span>
+        <span aria-hidden="true">·</span>
+        <span lang={c.columnist.columnTitleLang}>{c.columnist.columnTitle}</span>
+      </p>
+      <h1 class="read__title t-head" lang={c.translation.locale}>{c.title}</h1>
+      <p class="read__byline">
+        <span class="read__author" lang={c.columnist.nameLang}>{c.columnist.name}</span>
+        <span aria-hidden="true">·</span>
+        <LtrRun>{formatLong(c.publishedDate)}</LtrRun>
+        <span aria-hidden="true">·</span>
+        <span>{s.columns.readingTime(c.readingMinutes)}</span>
+      </p>
+    </header>
+
+    <img class="read__banner" src={c.banner.view} width={viewW} height={viewH} alt={alt} decoding="async" fetchpriority="high" />
+
+    {notice && <p class="read__notice">{notice}</p>}
+
+    <div class="read__body" lang={c.translation.locale} dir={dirFor(c.translation.locale)} set:html={c.bodyHtml} />
+  </article>
+
+  {more.length > 0 && (
+    <section class="section more">
+      <div class="container">
+        <header class="section-head">
+          <h2 class="section-title">{s.columns.moreFrom(c.columnist.name)}</h2>
+        </header>
+        <ColumnGrid columns={more} locale={locale} />
+      </div>
+    </section>
+  )}
+
+  <AMFooter slot="footer" locale={locale} config={config} />
+</BaseLayout>
+
+<style>
+  .read {
+    max-width: 760px;
+    padding-block: 34px 40px;
+  }
+  .read__label {
+    display: flex;
+    gap: 6px;
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-meta);
+    color: var(--red);
+  }
+  .read__title {
+    margin-block: 8px 14px;
+    font-size: var(--fs-title);
+  }
+  .read__byline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-block: 12px;
+    border-block: 1px solid var(--rule);
+    font-family: var(--font-ui-mixed);
+    font-size: var(--ui-meta);
+    color: var(--muted);
+  }
+  .read__author {
+    font-weight: 600;
+    color: var(--ink);
+  }
+  /* The printed banner, whole: its own proportions, never cropped or stretched. */
+  .read__banner {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+    margin-block: 22px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-sm);
+    background: var(--thumb-ground);
+  }
+  .read__notice {
+    margin-block-end: 18px;
+    padding: 10px 14px;
+    border: 1px solid var(--red);
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
+    font-size: var(--fs-card);
+    color: var(--red);
+  }
+  /* Body HTML comes from set:html, so it's outside Astro's scoping: target it with :global. */
+  .read__body :global(p),
+  .read__body :global(ul),
+  .read__body :global(ol) {
+    margin-block-end: 1em;
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
+    font-size: var(--fs-body);
+    color: var(--body);
+  }
+  .read__body :global(ul),
+  .read__body :global(ol) {
+    padding-inline-start: 1.4em;
+  }
+  .read__body :global(h2),
+  .read__body :global(h3) {
+    margin-block: 1.2em 0.4em;
+    font-family: var(--font-head);
+    line-height: var(--lh-head);
+    font-size: var(--fs-section);
+    color: var(--ink);
+  }
+  .read__body :global(blockquote) {
+    margin-block: 1.4em;
+    padding-inline-start: 18px;
+    border-inline-start: 3px solid var(--red);
+    font-family: var(--font-head);
+    line-height: var(--lh-head);
+    font-size: var(--fs-hero);
+    color: var(--ink);
+  }
+  .read__body :global(blockquote p) {
+    font: inherit;
+    color: inherit;
+  }
+  .read__body :global(a) {
+    color: var(--red);
+  }
+  .more {
+    border-block-start: 1px solid var(--ink);
+  }
+</style>
