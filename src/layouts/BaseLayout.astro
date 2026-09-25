@@ -63,6 +63,8 @@ const fonts =
     <meta name="twitter:image" content={og} />
     <meta name="twitter:image:alt" content={ogAlt} />
 
+    {/* .ico (16/32/48) for Google results and older browsers; SVG for the rest. */}
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     {fonts.map((href) => <link rel="preload" as="font" type="font/woff2" href={href} crossorigin />)}
 
