@@ -8,14 +8,24 @@ const journal = JSON.parse(readFileSync(join(ROOT, 'drizzle/meta/_journal.json')
   entries: { tag: string }[];
 };
 
-/** A fresh in-memory SQLite with every migration applied in journal order: the same SQL D1 runs. */
-export function testDb() {
-  const sqlite = new DatabaseSync(':memory:');
+/**
+ * Applies journal entries in order, the same SQL D1 runs. With `upTo`, stops after
+ * (and including) the entry whose tag matches — for tests that need the schema as it
+ * stood just before a specific migration.
+ */
+export function applyMigrations(sqlite: DatabaseSync, { upTo }: { upTo?: string } = {}) {
   for (const { tag } of journal.entries) {
     const sql = readFileSync(join(ROOT, 'drizzle', `${tag}.sql`), 'utf8');
     for (const stmt of sql.split('--> statement-breakpoint')) if (stmt.trim()) sqlite.exec(stmt);
+    if (tag === upTo) return;
   }
-  sqlite.exec('PRAGMA foreign_keys = ON');
+}
+
+/** A fresh in-memory SQLite with every migration applied in journal order: the same SQL D1 runs. */
+export function testDb() {
+  const sqlite = new DatabaseSync(':memory:');
+  sqlite.exec('PRAGMA foreign_keys = ON'); // D1 always enforces FKs; match it during migration too
+  applyMigrations(sqlite);
   return { db: proxyDb(sqlite), sqlite };
 }
 

@@ -23,6 +23,11 @@ CREATE TABLE `homepage_columns` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `homepage_columns_article_id_unique` ON `homepage_columns` (`article_id`);--> statement-breakpoint
+-- Fail closed: rebuilding `articles` cascades into `article_translations`
+-- (D1 always enforces FKs), so refuse to run unless both tables are empty.
+CREATE TABLE `__guard_0005` (`n` integer NOT NULL CHECK (`n` = 0));--> statement-breakpoint
+INSERT INTO `__guard_0005` SELECT (SELECT count(*) FROM `articles`) + (SELECT count(*) FROM `article_translations`);--> statement-breakpoint
+DROP TABLE `__guard_0005`;--> statement-breakpoint
 PRAGMA defer_foreign_keys = on;--> statement-breakpoint
 CREATE TABLE `__new_article_translations` (
 	`article_id` integer NOT NULL,
