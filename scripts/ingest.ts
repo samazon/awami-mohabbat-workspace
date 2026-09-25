@@ -12,7 +12,7 @@
  */
 import { createHash } from 'node:crypto';
 import sharp from 'sharp';
-import { PAGE_VARIANTS, type PageVariant } from '../src/lib/media';
+import { BANNER_VARIANTS, PAGE_VARIANTS, type BannerVariant, type PageVariant } from '../src/lib/media';
 
 export interface DerivedVariant {
   variant: PageVariant;
@@ -78,3 +78,47 @@ export async function derivePage(input: Buffer, label = 'page'): Promise<Derived
 }
 
 export const kb = (bytes: number): string => `${Math.round(bytes / 1024)} KB`;
+
+// ---------------------------------------------------------------------------
+// Columnist banners
+// ---------------------------------------------------------------------------
+export const BANNER_MAX_BYTES = 10 * 1024 * 1024;
+
+export interface DerivedBanner {
+  hash: string;
+  width: number;
+  height: number;
+  origExt: 'jpg' | 'png';
+  variants: { variant: BannerVariant; buffer: Buffer; width: number; height: number }[];
+}
+
+/** Validate a banner upload and derive its WebP sizes. Never upscales; honours EXIF orientation. */
+export async function deriveBanner(input: Buffer): Promise<DerivedBanner> {
+  if (input.byteLength > BANNER_MAX_BYTES) {
+    throw new Error(`Banner is ${kb(input.byteLength)}; the limit is 10 MB.`);
+  }
+  const meta = await sharp(input, { failOn: 'error' }).metadata();
+  if (meta.format !== 'jpeg' && meta.format !== 'png') {
+    throw new Error(`Banner must be JPEG or PNG, got ${meta.format ?? 'an unknown format'}.`);
+  }
+
+  const { info } = await sharp(input, { failOn: 'error' }).rotate().toBuffer({ resolveWithObject: true });
+  const variants: DerivedBanner['variants'] = [];
+  for (const variant of Object.keys(BANNER_VARIANTS) as BannerVariant[]) {
+    const spec = BANNER_VARIANTS[variant];
+    const { data, info: v } = await sharp(input, { failOn: 'error' })
+      .rotate()
+      .resize({ width: spec.width, withoutEnlargement: true })
+      .webp({ quality: spec.quality })
+      .toBuffer({ resolveWithObject: true });
+    variants.push({ variant, buffer: data, width: v.width, height: v.height });
+  }
+
+  return {
+    hash: contentHash(input),
+    width: info.width,
+    height: info.height,
+    origExt: meta.format === 'png' ? 'png' : 'jpg',
+    variants,
+  };
+}

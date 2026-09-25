@@ -7,10 +7,10 @@ import { IMMUTABLE_CACHE_CONTROL, contentTypeFor } from '@/lib/media';
  * custom domain (cdn.<domain>) is configured — after that CDN_BASE points
  * there and this route simply stops receiving traffic.
  *
- * Keys are allow-listed to our three prefixes and a conservative charset;
+ * Keys are allow-listed to our four prefixes and a conservative charset;
  * anything else is a 404, never a bucket listing or a traversal.
  */
-const KEY = /^(editions|articles|ads)\/[A-Za-z0-9][A-Za-z0-9._-]*(\/[A-Za-z0-9][A-Za-z0-9._-]*)+$/;
+const KEY = /^(editions|articles|ads|columnists)\/[A-Za-z0-9][A-Za-z0-9._-]*(\/[A-Za-z0-9][A-Za-z0-9._-]*)+$/;
 
 export const GET: APIRoute = async ({ params, request }) => {
   const key = params.key ?? '';
@@ -19,7 +19,12 @@ export const GET: APIRoute = async ({ params, request }) => {
   }
 
   const object = await env.MEDIA.get(key);
-  if (!object) return new Response('Not found', { status: 404 });
+  if (!object) {
+    // An allow-listed key with no object is a broken reference (e.g. a banner
+    // row whose upload failed). The key names the slug and hash, never a person's data.
+    console.warn(JSON.stringify({ event: 'media_miss', key }));
+    return new Response('Not found', { status: 404 });
+  }
 
   const etag = object.httpEtag;
   if (request.headers.get('if-none-match') === etag) {

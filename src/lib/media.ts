@@ -51,6 +51,35 @@ export const assertPageNumber = (n: number): PageNumber => {
   return n as PageNumber;
 };
 
+const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/** URL- and key-safe slug: lowercase words joined by single hyphens, 80 chars max. */
+export const assertSlug = (slug: string): string => {
+  if (slug.length > 80 || !SLUG.test(slug)) throw new RangeError(`Invalid slug: ${JSON.stringify(slug)}`);
+  return slug;
+};
+
+/**
+ * Columnist banners: the ready-made picture the paper prints above a column.
+ *
+ *   columnists/iqbal-khokhar/banner-card.a3f91c2e.webp   480w  cards, homepage
+ *   columnists/iqbal-khokhar/banner-view.a3f91c2e.webp   960w  reading page, share card
+ *   columnists/iqbal-khokhar/banner-orig.a3f91c2e.png    as uploaded
+ */
+export const BANNER_VARIANTS = {
+  card: { width: 480, quality: 82 },
+  view: { width: 960, quality: 82 },
+} as const;
+export type BannerVariant = keyof typeof BANNER_VARIANTS;
+
+export const columnistBannerKey = (
+  slug: string,
+  variant: BannerVariant | 'orig',
+  hash: string,
+  origExt: 'jpg' | 'png' = 'jpg',
+): string =>
+  `columnists/${assertSlug(slug)}/banner-${variant}.${assertHash(hash)}.${variant === 'orig' ? origExt : 'webp'}`;
+
 export const editionPageKey = (
   date: string,
   page: number,
