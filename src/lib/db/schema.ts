@@ -70,6 +70,30 @@ export const editionTranslations = sqliteTable(
 );
 
 // ---------------------------------------------------------------------------
+// Columnists — the writer behind a column, with the ready-made banner the
+// paper prints (photo, column name, byline). Profile pages don't exist yet;
+// `slug` is reserved for them and used by the /columns filter.
+// ---------------------------------------------------------------------------
+export const columnists = sqliteTable('columnists', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  slug: text('slug').notNull().unique(),
+  nameUr: text('name_ur').notNull(),
+  nameEn: text('name_en'),
+  columnTitleUr: text('column_title_ur').notNull(),
+  columnTitleEn: text('column_title_en'),
+  /** Content hash; R2 keys derive from it (src/lib/media.ts). URLs are never stored. */
+  bannerHash: text('banner_hash').notNull(),
+  bannerWidth: integer('banner_width').notNull(),
+  bannerHeight: integer('banner_height').notNull(),
+  /** Inactive writers leave the list filter; their columns stay published. */
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+export type Columnist = typeof columnists.$inferSelect;
+
+// ---------------------------------------------------------------------------
 // Articles — optional long-form text; the only indexable prose on the site
 // ---------------------------------------------------------------------------
 export const articles = sqliteTable(
@@ -78,6 +102,8 @@ export const articles = sqliteTable(
     id: integer('id').primaryKey({ autoIncrement: true }),
     slug: text('slug').notNull().unique(),
     category: text('category', { enum: ['column', 'report', 'education', 'sports'] }).notNull(),
+    /** Required for columns, forbidden otherwise (CHECK below). RESTRICT: retire a writer, don't delete them. */
+    columnistId: integer('columnist_id').references(() => columnists.id, { onDelete: 'restrict' }),
     publishedDate: text('published_date').notNull(),
     status: text('status', { enum: ['draft', 'published'] }).notNull().default('draft'),
     imageHash: text('image_hash'),
@@ -85,7 +111,11 @@ export const articles = sqliteTable(
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull(),
   },
-  (t) => [index('articles_status_date_idx').on(t.status, t.publishedDate)],
+  (t) => [
+    index('articles_status_date_idx').on(t.status, t.publishedDate),
+    index('articles_category_status_date_idx').on(t.category, t.status, t.publishedDate),
+    check('articles_column_has_columnist', sql`(${t.category} = 'column') = (${t.columnistId} IS NOT NULL)`),
+  ],
 );
 
 export const articleTranslations = sqliteTable(
@@ -96,7 +126,8 @@ export const articleTranslations = sqliteTable(
       .references(() => articles.id, { onDelete: 'cascade' }),
     locale: text('locale', { enum: LOCALE_VALUES }).notNull(),
     title: text('title').notNull(),
-    author: text('author').notNull(),
+    /** Columns take their byline from the columnist, so this is null for them; other categories require it (service rule). */
+    author: text('author'),
     excerpt: text('excerpt').notNull(),
     body: text('body').notNull(),
     imageCaption: text('image_caption'),
@@ -105,6 +136,29 @@ export const articleTranslations = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.articleId, t.locale] })],
 );
+
+export type Article = typeof articles.$inferSelect;
+export type ArticleTranslation = typeof articleTranslations.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Homepage columns — the editors' three picks, in slot order. Not "latest":
+// a slot is empty until someone fills it, and the homepage shows only what's
+// filled (and still published).
+// ---------------------------------------------------------------------------
+export const homepageColumns = sqliteTable(
+  'homepage_columns',
+  {
+    slot: integer('slot').primaryKey(),
+    articleId: integer('article_id')
+      .notNull()
+      .unique()
+      .references(() => articles.id, { onDelete: 'cascade' }),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (t) => [check('homepage_columns_slot_range', sql`${t.slot} IN (1, 2, 3)`)],
+);
+
+export type HomepageColumn = typeof homepageColumns.$inferSelect;
 
 // ---------------------------------------------------------------------------
 // Utility content — one row per day. Rule 05: every rate carries its OWN
