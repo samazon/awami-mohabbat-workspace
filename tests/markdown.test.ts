@@ -44,6 +44,10 @@ describe('renderMarkdown: the supported subset', () => {
   it('keeps Urdu punctuation intact', () => {
     expect(renderMarkdown('یہ، وہ۔')).toBe('<p>یہ، وہ۔</p>\n');
   });
+
+  it('does not render inline code spans', () => {
+    expect(renderMarkdown('`x`')).not.toContain('<code');
+  });
 });
 
 describe('reading time', () => {

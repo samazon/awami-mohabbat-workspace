@@ -7,13 +7,13 @@ import MarkdownIt from 'markdown-it';
  *
  *   html: false        raw HTML in the source is escaped, never passed through
  *   validateLink       only http(s), mailto, tel, same-site paths and #anchors
- *   no images/tables   not part of the column format; images would load
+ *   no images/tables/code  not part of the column format; images would load
  *                      third-party URLs on our pages
  */
 const SAFE_URL = /^(?:https?:|mailto:|tel:|\/(?!\/)|#)/i;
 
 const md = new MarkdownIt('default', { html: false, linkify: false, typographer: false, breaks: false });
-md.disable(['image', 'table', 'code', 'fence']);
+md.disable(['image', 'table', 'code', 'fence', 'backticks']);
 md.validateLink = (url) => SAFE_URL.test(url.trim());
 
 // The page's <h1> is the column title, so body headings are h2 or h3.
