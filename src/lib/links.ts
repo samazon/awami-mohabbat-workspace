@@ -9,6 +9,9 @@ import type { EditionView } from './services/editions';
 export const viewerHref = (_locale: Locale, edition: EditionView, page: 1 | 2 | 3 | 4 = 1): string =>
   edition.pages[page - 1]?.zoom ?? '#';
 
+/** AM News, the group's TV channel: its YouTube channel, linked from the masthead. */
+export const AM_NEWS_URL = 'https://www.youtube.com/@awamimohabbat';
+
 export const nav = (locale: Locale) => ({
   home: localePath(locale, '/'),
   archive: localePath(locale, '/archive'),

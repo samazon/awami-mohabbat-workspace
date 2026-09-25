@@ -1,14 +1,14 @@
 ---
 /**
  * /team — the chief editor as a feature card, then one grid per group.
- * Member details are English in both locales (src/content/team.ts), so each
- * run is isolated LTR inside the page's own direction; only the chrome and
- * group titles translate. Photos are placeholders until we have them.
+ * Urdu page: Urdu name, the English spelling beneath it (foreign visitors land
+ * here first), Urdu role and place. English page: English only. Every Latin
+ * run is isolated LTR. Photos are placeholders until we have them.
  */
 import { Icon as Iconify } from 'astro-icon/components';
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import { t, type Locale } from '@/i18n';
-import { chiefEditor, groups, type TeamMember } from '@/content/team';
+import { t, localePath, type Locale } from '@/i18n';
+import { chiefEditor, groups, ROLE_UR, PLACE_UR, type TeamMember } from '@/content/team';
 import { getSiteConfig } from '@/lib/services/config';
 import { nav } from '@/lib/links';
 import AMHeader from './AMHeader.astro';
@@ -25,7 +25,11 @@ const config = await getSiteConfig(locale);
 
 // The chief editor heads the executive board, so they count towards it.
 const countFor = (key: string, members: TeamMember[]) => members.length + (key === 'executive' ? 1 : 0);
-const photoLabel = (m: TeamMember) => `${m.name} — ${s.about.photo}`;
+const ur = locale === 'ur';
+const nameFor = (m: TeamMember) => (ur ? m.nameUr : m.name);
+const roleFor = (m: TeamMember) => m.role && (ur ? ROLE_UR[m.role] : m.role);
+const placeFor = (m: TeamMember) => m.place && (ur ? PLACE_UR[m.place] : m.place);
+const photoLabel = (m: TeamMember) => `${nameFor(m)} — ${s.about.photo}`;
 ---
 
 <BaseLayout title={`${s.team.title} — ${s.meta.siteName}`} description={s.team.description}>
@@ -33,7 +37,12 @@ const photoLabel = (m: TeamMember) => `${m.name} — ${s.about.photo}`;
 
   <div class="container">
     <header class="intro">
-      <a class="back" href={links.about}><Icon name="arrow-left" size="sm" />{s.nav.about}</a>
+      <div class="intro__links">
+        <a class="back" href={links.about}><Icon name="arrow-left" size="sm" />{s.nav.about}</a>
+        {ur && (
+          <a class="in-english" href={localePath('en', '/team')} hreflang="en" lang="en" dir="ltr">View in English<Icon name="arrow-right" size="sm" flip={false} /></a>
+        )}
+      </div>
       <h1 class="title t-head">{s.team.title}</h1>
       <p class="lead t-body">{s.team.lead}</p>
     </header>
@@ -49,15 +58,16 @@ const photoLabel = (m: TeamMember) => `${m.name} — ${s.about.photo}`;
         {g.key === 'executive' && (
           <article class="chief">
             {chiefEditor.photo ? (
-              <img class="chief__photo" src={chiefEditor.photo} alt={chiefEditor.name} loading="lazy" />
+              <img class="chief__photo" src={chiefEditor.photo} alt={nameFor(chiefEditor)} loading="lazy" />
             ) : (
               <div class="chief__photo photo--empty" role="img" aria-label={photoLabel(chiefEditor)}>
                 <span>{s.about.photo}</span>
               </div>
             )}
             <div class="chief__text">
-              <p class="chief__role"><span dir="ltr" lang="en">{chiefEditor.role}</span></p>
-              <h3 class="chief__name"><span dir="ltr" lang="en">{chiefEditor.name}</span></h3>
+              <p class="chief__role">{roleFor(chiefEditor)}</p>
+              <h3 class="chief__name">{nameFor(chiefEditor)}</h3>
+              {ur && <p class="chief__latin" dir="ltr" lang="en">{chiefEditor.name}</p>}
             </div>
           </article>
         )}
@@ -66,18 +76,19 @@ const photoLabel = (m: TeamMember) => `${m.name} — ${s.about.photo}`;
           {g.members.map((m) => (
             <li class="card">
               {m.photo ? (
-                <img class="card__photo" src={m.photo} alt={m.name} loading="lazy" />
+                <img class="card__photo" src={m.photo} alt={nameFor(m)} loading="lazy" />
               ) : (
                 <div class="card__photo photo--empty" role="img" aria-label={photoLabel(m)}>
                   <span>{s.about.photo}</span>
                 </div>
               )}
-              <h3 class="card__name"><span dir="ltr" lang="en">{m.name}</span></h3>
-              {m.role && <p class="card__role"><span dir="ltr" lang="en">{m.role}</span></p>}
+              <h3 class="card__name">{nameFor(m)}</h3>
+              {ur && <p class="card__latin" dir="ltr" lang="en">{m.name}</p>}
+              {m.role && <p class="card__role">{roleFor(m)}</p>}
               {m.place && (
                 <p class="card__place">
                   {m.country && <Iconify name={`circle-flags:${m.country}`} class="card__flag" aria-hidden="true" />}
-                  <span dir="ltr" lang="en">{m.place}</span>
+                  <span>{placeFor(m)}</span>
                 </p>
               )}
             </li>
@@ -103,7 +114,15 @@ const photoLabel = (m: TeamMember) => `${m.name} — ${s.about.photo}`;
     padding: 30px 0 22px;
     border-block-end: 1px solid var(--ink);
   }
-  .back {
+  .intro__links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 24px;
+  }
+  .back,
+  .in-english {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -113,7 +132,11 @@ const photoLabel = (m: TeamMember) => `${m.name} — ${s.about.photo}`;
     color: var(--red);
     text-decoration: none;
   }
-  .back:hover {
+  .in-english {
+    font-family: var(--font-ui);
+  }
+  .back:hover,
+  .in-english:hover {
     text-decoration: underline;
   }
   .title {
@@ -168,9 +191,12 @@ const photoLabel = (m: TeamMember) => `${m.name} — ${s.about.photo}`;
     line-height: var(--lh-label);
     font-size: var(--ui-meta);
   }
+  img.chief__photo,
+  img.card__photo {
+    display: block;
+  }
   .chief__photo,
   .card__photo {
-    display: block;
     width: 100%;
     aspect-ratio: 4 / 5;
     object-fit: cover;
@@ -187,16 +213,34 @@ const photoLabel = (m: TeamMember) => `${m.name} — ${s.about.photo}`;
     border-block-end: 1px solid var(--hairline);
   }
   .chief__role {
-    font-family: var(--font-ui);
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
     font-size: var(--ui-meta);
     color: var(--red);
   }
   .chief__name {
-    font-family: var(--font-serif);
-    line-height: var(--lh-serif-head);
+    font-family: var(--font-head);
+    line-height: var(--lh-head);
     font-size: var(--fs-h1);
     font-weight: 700;
     color: var(--ink);
+  }
+  /* The English spelling under an Urdu name: secondary, never competing. */
+  .chief__latin,
+  .card__latin {
+    font-family: var(--font-ui);
+    font-size: var(--ui-meta);
+    line-height: 1.4;
+    color: var(--muted);
+  }
+  /* A dir="ltr" block aligns left; keep it under the Urdu name's start edge. */
+  :global(html[dir='rtl']) .chief__latin,
+  :global(html[dir='rtl']) .card__latin {
+    text-align: right;
+  }
+  .chief__latin {
+    margin-block-start: 2px;
+    font-size: var(--ui-nav);
   }
 
   /* ---- member grid ---- */
@@ -213,15 +257,19 @@ const photoLabel = (m: TeamMember) => `${m.name} — ${s.about.photo}`;
   }
   .card__name {
     margin-block-start: 12px;
-    font-family: var(--font-serif);
-    line-height: 1.3;
+    font-family: var(--font-head);
+    line-height: var(--lh-head);
     font-size: var(--fs-summary);
     font-weight: 700;
     color: var(--ink);
   }
+  .card__latin {
+    margin-block-start: 2px;
+  }
   .card__role {
-    margin-block-start: 4px;
-    font-family: var(--font-ui);
+    margin-block-start: 6px;
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
     font-size: var(--ui-meta);
     color: var(--red);
   }
@@ -229,8 +277,8 @@ const photoLabel = (m: TeamMember) => `${m.name} — ${s.about.photo}`;
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-block-start: 4px;
-    font-family: var(--font-ui);
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
     font-size: var(--ui-meta);
     color: var(--muted);
   }

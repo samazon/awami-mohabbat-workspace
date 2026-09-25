@@ -28,8 +28,11 @@ export const EMERGENCY_CONTACTS: NewContact[] = [
   { labelUr: 'پولیس', labelEn: 'Police', number: '15', area: 'both', displayOrder: 1 },
   { labelUr: 'ریسکیو', labelEn: 'Rescue', number: '1122', area: 'both', displayOrder: 2 },
   { labelUr: 'فائر بریگیڈ', labelEn: 'Fire Brigade', number: '16', area: 'both', displayOrder: 3 },
-  { labelUr: 'ڈی ایچ کیو ہسپتال', labelEn: 'DHQ Hospital', number: '049 9250051', area: 'qasur', displayOrder: 4 },
-  { labelUr: 'ایدھی', labelEn: 'Edhi', number: '115', area: 'both', displayOrder: 5 },
+  { labelUr: 'ایدھی', labelEn: 'Edhi', number: '115', area: 'both', displayOrder: 4 },
+  { labelUr: 'موٹروے پولیس', labelEn: 'Motorway Police', number: '130', area: 'both', displayOrder: 5 },
+  { labelUr: 'خواتین ہیلپ لائن', labelEn: "Women's Helpline", number: '1043', area: 'both', displayOrder: 6 },
+  { labelUr: 'گیس ایمرجنسی', labelEn: 'Gas Emergency', number: '1199', area: 'both', displayOrder: 7 },
+  { labelUr: 'سائبر کرائم', labelEn: 'Cyber Crime', number: '1991', area: 'both', displayOrder: 8 },
 ];
 
 /** Contact details as printed in the 21 Sep 2026 edition (page 1 box, page 2 masthead). */

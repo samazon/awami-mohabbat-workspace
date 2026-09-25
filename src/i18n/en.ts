@@ -50,9 +50,8 @@ export const en: Catalog = {
     lockup: 'DAILY AWAMI MOHABBAT',
     subline: 'Daily Urdu newspaper • Kasur | Lahore',
     epaper: 'e-Paper',
-    epaperTitle: 'Today\'s full e-paper',
-    epaperPages: (n: number) => `${n} pages`,
-    epaperHint: 'PDF archive',
+    tvCta: 'Watch on YouTube',
+    tvLabel: 'AM News TV — watch on YouTube (opens in a new tab)',
   },
   ticker: {
     prayers: 'Prayer times',

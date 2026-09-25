@@ -54,9 +54,8 @@ export const ur = {
     lockup: 'DAILY AWAMI MOHABBAT',
     subline: 'Daily Urdu newspaper • Kasur | Lahore',
     epaper: 'ای پیپر',
-    epaperTitle: 'آج کا مکمل ای پیپر',
-    epaperPages: (n: number) => `${n} صفحات`,
-    epaperHint: 'پی ڈی ایف آرکائیو',
+    tvCta: 'یوٹیوب پر دیکھیں',
+    tvLabel: 'اے ایم نیوز ٹی وی — یوٹیوب پر دیکھیں (نئی ٹیب میں کھلے گا)',
   },
   ticker: {
     prayers: 'اوقاتِ نماز',
