@@ -29,7 +29,7 @@ md.core.ruler.push('clamp_headings', (state) => {
 md.core.ruler.push('external_link_rel', (state) => {
   for (const block of state.tokens) {
     for (const t of block.children ?? []) {
-      if (t.type === 'link_open' && /^https?:/i.test(t.attrGet('href') ?? '')) t.attrSet('rel', 'noopener nofollow');
+      if (t.type === 'link_open' && /^https?:/i.test(String(t.attrGet('href') ?? ''))) t.attrSet('rel', 'noopener nofollow');
     }
   }
 });
