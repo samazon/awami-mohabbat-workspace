@@ -7,9 +7,14 @@
  * spelling beneath, for foreign visitors who land there) and in English only
  * on /en/team. Roles and places translate through the two maps below, so a
  * new role or place is added once and a typo is a compile error.
- * No photos yet: every card renders a placeholder until `photo` is set.
+ * Photos live in src/assets/team/ (optimised to WebP at build); a member
+ * without `photo` renders a placeholder.
  */
+import type { ImageMetadata } from 'astro';
 import type { Locale } from '@/i18n';
+import iqbalDanialKhokhar from '@/assets/team/iqbal-danial-khokhar.png';
+import pervaizNadeemGill from '@/assets/team/pervaiz-nadeem-gill.png';
+import zohaibSami from '@/assets/team/zohaib-sami.png';
 
 export const ROLE_UR = {
   'Chief Editor': 'چیف ایڈیٹر',
@@ -58,8 +63,7 @@ export interface TeamMember {
   place?: Place;
   /** ISO 3166-1 alpha-2, for the flag. International members only. */
   country?: string;
-  /** Image URL, once we have one. */
-  photo?: string;
+  photo?: ImageMetadata;
 }
 
 export interface TeamGroup {
@@ -74,6 +78,7 @@ export const chiefEditor: TeamMember = {
   name: 'Iqbal Danial Khokhar',
   nameUr: 'اقبال دانیال کھوکھر',
   role: 'Chief Editor',
+  photo: iqbalDanialKhokhar,
 };
 
 export const groups: TeamGroup[] = [
@@ -89,7 +94,7 @@ export const groups: TeamGroup[] = [
     key: 'advisory',
     title: { ur: 'مشاورتی بورڈ', en: 'Advisory board' },
     members: [
-      { name: 'PS. Pervaiz Nadeem Gill', nameUr: 'پاسٹر پرویز ندیم گل', role: 'Chairman' },
+      { name: 'PS. Pervaiz Nadeem Gill', nameUr: 'پاسٹر پرویز ندیم گل', role: 'Chairman', photo: pervaizNadeemGill },
       { name: 'Moazzam Gill', nameUr: 'معظم گل', role: 'Member' },
       { name: 'Fiaz Ahmad Bhatti', nameUr: 'فیاض احمد بھٹی', role: 'Member' },
       { name: 'Abid Nawab', nameUr: 'عابد نواب', role: 'Member' },
@@ -136,7 +141,7 @@ export const groups: TeamGroup[] = [
     members: [
       { name: 'Zeva James Gill', nameUr: 'زیوا جیمز گل', place: 'United States', country: 'us' },
       { name: 'Bashir A. Sami', nameUr: 'بشیر اے سامی', place: 'Australia', country: 'au' },
-      { name: 'Zohaib Sami', nameUr: 'زوہیب سامی', place: 'Germany', country: 'de' },
+      { name: 'Zohaib Sami', nameUr: 'زوہیب سامی', place: 'Germany', country: 'de', photo: zohaibSami },
       { name: 'Javed Iqbal Gill', nameUr: 'جاوید اقبال گل', place: 'Spain', country: 'es' },
       { name: 'Bishop Arshad Khokhar', nameUr: 'بشپ ارشد کھوکھر', place: 'Belgium', country: 'be' },
       { name: 'Lateef Bhatti', nameUr: 'لطیف بھٹی', place: 'Belgium', country: 'be' },

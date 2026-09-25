@@ -150,7 +150,7 @@ export const ur = {
     contact: 'رابطہ',
     sections: 'صفحات',
     follow: 'فالو کریں',
-    office: 'لاہور آفس',
+    office: 'ہیڈ آفس',
     bureau: 'قصور آفس',
     phone: 'فون',
     email: 'ای میل',

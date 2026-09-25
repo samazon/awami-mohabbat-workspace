@@ -145,7 +145,7 @@ export const en: Catalog = {
     contact: 'Contact',
     sections: 'Sections',
     follow: 'Follow',
-    office: 'Lahore office',
+    office: 'Head office',
     bureau: 'Kasur office',
     phone: 'Phone',
     email: 'Email',

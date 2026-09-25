@@ -44,8 +44,9 @@ export const SITE_CONFIG = (now: number): NewConfig => ({
   coverageEn: 'Kasur / Lahore',
   editorUr: 'اقبال کھوکھر',
   editorEn: 'Iqbal Khokhar',
-  officeUr: 'مون مارکیٹ، حمزہ ٹاؤن، فیروزپور روڈ، لاہور',
-  officeEn: 'Moon Market, Hamza Town, Ferozepur Road, Lahore',
+  // Newline-separated: one entry per printed line.
+  officeUr: 'حمزہ ٹاؤن، 19 کلومیٹر فیروزپور روڈ، بالمقابل یوحنا آباد\nلاہور 54600، پاکستان',
+  officeEn: 'Hamza Town, 19-km Ferozepur Road, opposite Youhanabad\nLahore 54600, Pakistan',
   bureauUr: 'کوٹ رادھا کشن، پی او بکس 08، قصور',
   bureauEn: 'Kot Radha Kishan, P.O. Box 08, Kasur',
   // Mobile numbers only — the printed landline is deliberately left out.
