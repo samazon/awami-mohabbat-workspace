@@ -23,6 +23,7 @@ import azharYounas from '@/assets/team/azhar-younas.webp';
 import ashrafMichael from '@/assets/team/ashraf-michael.webp';
 import moazzamGill from '@/assets/team/moazzam-gill.webp';
 import fiazAhmadBhatti from '@/assets/team/fiaz-ahmad-bhatti.webp';
+import sohailHabel from '@/assets/team/sohail-habel.webp';
 
 export const ROLE_UR = {
   'Chief Editor': 'چیف ایڈیٹر',
@@ -106,7 +107,7 @@ export const groups: TeamGroup[] = [
       { name: 'Moazzam Gill', nameUr: 'معظم گل', role: 'Member', photo: moazzamGill },
       { name: 'Fiaz Ahmad Bhatti', nameUr: 'فیاض احمد بھٹی', role: 'Member', photo: fiazAhmadBhatti },
       { name: 'Abid Nawab', nameUr: 'عابد نواب', role: 'Member', photo: abidNawab },
-      { name: 'Sohail Habel', nameUr: 'سہیل ہابل', role: 'Member' },
+      { name: 'Sohail Habel', nameUr: 'سہیل ہابل', role: 'Member', photo: sohailHabel },
       { name: 'Mutbasam Qamar', nameUr: 'متبسم قمر', role: 'Member' },
       { name: 'Sohail Alam', nameUr: 'سہیل عالم', role: 'Member' },
       { name: 'Rashid Masih', nameUr: 'راشد مسیح', role: 'Member' },
