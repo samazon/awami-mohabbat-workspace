@@ -174,7 +174,7 @@ export const groups: TeamGroup[] = [
       { name: 'Lateef Bhatti', nameUr: 'لطیف بھٹی', place: 'Belgium', country: 'be', photo: lateefBhatti },
       { name: 'PS. Lakhan Sardar', nameUr: 'پاسٹر لکھن سردار', place: 'Sweden', country: 'se' },
       { name: 'Sheikh Khalil Ahmad', nameUr: 'شیخ خلیل احمد', place: 'Norway', country: 'no' },
-      { name: 'PS. Amar Masih', nameUr: 'پاسٹر امر مسیح', place: 'UAE', country: 'ae' },
+      { name: 'PS. Amar Masih', nameUr: 'پاسٹر عامر مسیح', place: 'UAE', country: 'ae' },
       { name: 'Khalid Gill', nameUr: 'خالد گل', place: 'Canada', country: 'ca' },
     ],
   },
