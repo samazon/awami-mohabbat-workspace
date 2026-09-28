@@ -7,7 +7,7 @@ export interface ContactView {
   label: string;
   number: string; // as displayed
   tel: string; // for the tel: href — digits and leading + only
-  area: 'qasur' | 'islamabad' | 'both';
+  area: 'kasur' | 'islamabad' | 'both';
 }
 
 export async function getEmergencyContacts(locale: Locale): Promise<ContactView[]> {

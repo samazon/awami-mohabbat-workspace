@@ -44,7 +44,7 @@ const [recent, utility] = await Promise.all([
   getUtilityContent(edition?.date ?? today),
 ]);
 
-const title = locale === 'ur' ? `${s.meta.siteName} — ${s.masthead.daily}` : `${s.meta.siteName} — Daily newspaper, Qasur & Islamabad`;
+const title = locale === 'ur' ? `${s.meta.siteName} — ${s.masthead.daily}` : `${s.meta.siteName} — Daily newspaper, Kasur & Islamabad`;
 const site = Astro.url.origin;
 
 const jsonLd = {

@@ -204,7 +204,7 @@ export const emergencyContacts = sqliteTable('emergency_contacts', {
   labelUr: text('label_ur').notNull(),
   labelEn: text('label_en').notNull(),
   number: text('number').notNull(), // as dialled, e.g. "15" or "049 9250051"
-  area: text('area', { enum: ['qasur', 'islamabad', 'both'] }).notNull().default('both'),
+  area: text('area', { enum: ['kasur', 'islamabad', 'both'] }).notNull().default('both'),
   displayOrder: integer('display_order').notNull().default(0),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
 });
