@@ -30,6 +30,7 @@ import saleemShakir from '@/assets/team/saleem-shakir.webp';
 import aftabBashir from '@/assets/team/aftab-bashir.webp';
 import atifGill from '@/assets/team/atif-gill.webp';
 import asifNazir from '@/assets/team/asif-nazir.webp';
+import maharAttique from '@/assets/team/mahar-attique.webp';
 
 export const ROLE_UR = {
   'Chief Editor': 'چیف ایڈیٹر',
@@ -127,7 +128,7 @@ export const groups: TeamGroup[] = [
     members: [
       { name: 'Atif Gill', nameUr: 'عاطف گل', role: 'Bureau Chief', place: 'Islamabad', photo: atifGill },
       { name: 'Asif Nazir', nameUr: 'آصف نذیر', role: 'Bureau Chief', place: 'Sialkot', photo: asifNazir },
-      { name: 'Dr. Mahar Attique', nameUr: 'ڈاکٹر مہر عتیق', role: 'Bureau Chief', place: 'Kasur' },
+      { name: 'Dr. Mahar Attique', nameUr: 'ڈاکٹر مہر عتیق', role: 'Bureau Chief', place: 'Kasur', photo: maharAttique },
       { name: 'PS. Arshad Victor', nameUr: 'پاسٹر ارشد وکٹر', role: 'In-charge', place: 'Karachi' },
       { name: 'Aneel Ghouri', nameUr: 'انیل غوری', role: 'In-charge', place: 'Quetta' },
       { name: 'Asghar Chann', nameUr: 'اصغر چن', role: 'In-charge', place: 'Kasur' },
