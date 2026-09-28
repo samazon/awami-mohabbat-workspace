@@ -30,6 +30,13 @@ export interface Country {
   name: string;
 }
 
+/**
+ * The head office's exact pin, from the paper's own Google Maps share link
+ * (maps.app.goo.gl/oWrJffjSkNPx5t7c6). The map, the directions button and the
+ * structured data all read it from here.
+ */
+export const HQ_PIN = { lat: 31.4124566, lng: 74.3565963 } as const;
+
 export interface ContactContent {
   intro: string;
   hq: Office;

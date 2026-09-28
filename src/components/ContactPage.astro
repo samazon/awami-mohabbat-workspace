@@ -10,7 +10,7 @@
  */
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { t, type Locale } from '@/i18n';
-import { contact } from '@/content/contact';
+import { HQ_PIN, contact } from '@/content/contact';
 import { internationalPhone } from '@/lib/phone';
 import { getSiteConfig } from '@/lib/services/config';
 import { Icon as Iconify } from 'astro-icon/components';
@@ -35,13 +35,25 @@ const kindOf = (printed: string) => (/^0?3/.test(printed.replace(/\D/g, '').repl
 const hqPhones = (hq.phones ?? []).map((n) => ({ kind: kindOf(n), ...internationalPhone(n) }));
 
 /**
- * Keyless Google Maps embed. It needs no API key and works today; the official
- * Maps Embed API (a key, better terms, no surprise breakage) is a one-line
- * swap here. Note it loads Google's frame — worth a cookie notice for EU
- * visitors if that becomes a concern.
+ * Google's "Embed a map" URL for the exact pin: keyless and allowed in a frame.
+ * (The older `maps?q=…&output=embed` form now redirects through a response that
+ * forbids framing, so the box rendered blank.) `2z` is the marker label —
+ * base64 of the pin's degrees-minutes-seconds string — which is what draws the pin.
+ * Directions use the documented Maps URLs API; on phones they open the Maps app.
  */
-const mapQuery = encodeURIComponent(`${contact.en.hq.lines.join(', ')}`);
-const mapSrc = `https://www.google.com/maps?q=${mapQuery}&output=embed`;
+const dms = (v: number, pos: string, neg: string) => {
+  const a = Math.abs(v);
+  const d = Math.floor(a);
+  const m = Math.floor((a - d) * 60);
+  const sec = ((a - d - m / 60) * 3600).toFixed(1);
+  return `${d}°${String(m).padStart(2, '0')}'${sec}"${v >= 0 ? pos : neg}`;
+};
+const utf8 = new TextEncoder().encode(`${dms(HQ_PIN.lat, 'N', 'S')} ${dms(HQ_PIN.lng, 'E', 'W')}`);
+const pinLabel = btoa(String.fromCharCode(...utf8)).replace(/=+$/, '');
+const mapSrc =
+  `https://www.google.com/maps/embed?pb=!1m17!1m12!1m3!1d1700!2d${HQ_PIN.lng}!3d${HQ_PIN.lat}` +
+  `!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m2!1m1!2z${pinLabel}!5e0!3m2!1s${locale}!2spk`;
+const directionsHref = `https://www.google.com/maps/dir/?api=1&destination=${HQ_PIN.lat},${HQ_PIN.lng}`;
 
 const jumps = [
   { href: '#hq', icon: 'landmark', label: s.contact.jumpHq },
@@ -67,6 +79,7 @@ const jsonLd = {
       postalCode: '54600',
       addressCountry: 'PK',
     },
+    geo: { '@type': 'GeoCoordinates', latitude: HQ_PIN.lat, longitude: HQ_PIN.lng },
     telephone: hqPhones.map((p) => p.tel),
     email: hq.emails ?? [],
   },
@@ -123,6 +136,10 @@ const jsonLd = {
             <address class="address">
               {hq.lines.map((l) => <span>{l}</span>)}
             </address>
+            <a class="directions" href={directionsHref} target="_blank" rel="noopener" aria-label={s.contact.directionsLabel}>
+              <Icon name="navigation" size="sm" flip={false} />
+              <span>{s.contact.directions}</span>
+            </a>
           </div>
         </div>
 
@@ -324,6 +341,28 @@ const jsonLd = {
     padding-block-end: 18px;
     margin-block-end: 18px;
     border-block-end: 1px solid var(--hairline);
+  }
+  .directions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    margin-block-start: 12px;
+    padding: 0 16px;
+    border-radius: var(--radius-sm);
+    background: var(--red);
+    color: var(--on-red);
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-button);
+    font-weight: 700;
+    text-decoration: none;
+    transition: background-color 120ms ease-out;
+  }
+  .directions:hover {
+    background: var(--red-deep);
+    color: var(--on-red);
+    text-decoration: none;
   }
   .row__icon {
     display: grid;

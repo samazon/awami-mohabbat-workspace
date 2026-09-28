@@ -207,6 +207,8 @@ export const en: Catalog = {
     hqBlurb: 'Editorial policy, publication and administration are run from the central secretariat in Lahore.',
     location: 'Location',
     mapLabel: 'Head office location on a map',
+    directions: 'Get directions',
+    directionsLabel: 'Get directions to the head office in Google Maps (opens in a new tab)',
     helplines: 'Helplines',
     landline: 'Landline',
     mobile: 'Mobile',
