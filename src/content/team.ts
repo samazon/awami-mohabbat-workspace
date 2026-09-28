@@ -28,6 +28,7 @@ import mutbasamQamar from '@/assets/team/mutbasam-qamar.webp';
 import sohailAlam from '@/assets/team/sohail-alam.webp';
 import saleemShakir from '@/assets/team/saleem-shakir.webp';
 import aftabBashir from '@/assets/team/aftab-bashir.webp';
+import atifGill from '@/assets/team/atif-gill.webp';
 
 export const ROLE_UR = {
   'Chief Editor': 'چیف ایڈیٹر',
@@ -123,7 +124,7 @@ export const groups: TeamGroup[] = [
     key: 'reporting',
     title: { ur: 'رپورٹنگ', en: 'Reporting' },
     members: [
-      { name: 'Atif Gill', nameUr: 'عاطف گل', role: 'Bureau Chief', place: 'Islamabad' },
+      { name: 'Atif Gill', nameUr: 'عاطف گل', role: 'Bureau Chief', place: 'Islamabad', photo: atifGill },
       { name: 'Asif Nazir', nameUr: 'آصف نذیر', role: 'Bureau Chief', place: 'Sialkot' },
       { name: 'Dr. Mahar Attique', nameUr: 'ڈاکٹر مہر عتیق', role: 'Bureau Chief', place: 'Kasur' },
       { name: 'PS. Arshad Victor', nameUr: 'پاسٹر ارشد وکٹر', role: 'In-charge', place: 'Karachi' },
