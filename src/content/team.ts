@@ -17,6 +17,7 @@ import iqbalDanialKhokhar from '@/assets/team/iqbal-danial-khokhar.webp';
 import pervaizNadeemGill from '@/assets/team/pervaiz-nadeem-gill.webp';
 import zohaibSami from '@/assets/team/zohaib-sami.webp';
 import arshadKhokhar from '@/assets/team/arshad-khokhar.webp';
+import sommerBareen from '@/assets/team/sommer-bareen.webp';
 
 export const ROLE_UR = {
   'Chief Editor': 'چیف ایڈیٹر',
@@ -127,7 +128,7 @@ export const groups: TeamGroup[] = [
     key: 'digital',
     title: { ur: 'آئی ٹی و ڈیجیٹل میڈیا', en: 'IT & Digital Media' },
     members: [
-      { name: 'Sommer Bareen', nameUr: 'سومر برین', role: 'Director IT' },
+      { name: 'Sommer Bareen', nameUr: 'سومر برین', role: 'Director IT', photo: sommerBareen },
       { name: 'Rafyal Iqbal', nameUr: 'رافیل اقبال', role: 'Page Designer' },
       { name: 'Mathew Iqbal', nameUr: 'میتھیو اقبال', role: 'Composer' },
       { name: 'Zaki Mansha', nameUr: 'ذکی منشا', role: 'Social Media' },
