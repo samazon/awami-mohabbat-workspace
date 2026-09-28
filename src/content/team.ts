@@ -44,6 +44,7 @@ import khalidGill from '@/assets/team/khalid-gill.webp';
 import arshadVictor from '@/assets/team/arshad-victor.webp';
 import teresaHizkeal from '@/assets/team/teresa-hizkeal.webp';
 import bilawalKhurshid from '@/assets/team/bilawal-khurshid.webp';
+import mathewIqbal from '@/assets/team/mathew-iqbal.webp';
 
 export const ROLE_UR = {
   'Chief Editor': 'چیف ایڈیٹر',
@@ -158,7 +159,7 @@ export const groups: TeamGroup[] = [
     members: [
       { name: 'Sommer Bareen', nameUr: 'سومر برین', role: 'Director IT', photo: sommerBareen },
       { name: 'Rafyal Iqbal', nameUr: 'رافیل اقبال', role: 'Page Designer' },
-      { name: 'Mathew Iqbal', nameUr: 'میتھیو اقبال', role: 'Composer' },
+      { name: 'Mathew Iqbal', nameUr: 'میتھیو اقبال', role: 'Composer', photo: mathewIqbal },
       { name: 'Zaki Mansha', nameUr: 'ذکی منشا', role: 'Social Media', photo: zakiMansha },
       { name: 'Rozaim Ellahi', nameUr: 'روزیم الٰہی', role: 'Social Media', photo: rozaimElahi },
       { name: 'Azar Daud', nameUr: 'آذر داؤد', role: 'Video Editor', photo: azarDaud },
