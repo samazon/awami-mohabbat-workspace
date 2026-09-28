@@ -196,6 +196,11 @@ const photoLabel = (m: TeamMember) => `${nameFor(m)} — ${s.about.photo}`;
     display: block;
     height: auto;
     object-position: 50% 20%; /* keep faces in frame when a square photo is cropped to 4:5 */
+    /* Hairline + soft lift: photos shot on white otherwise melt into the page. */
+    border-radius: var(--radius-sm);
+    box-shadow:
+      0 0 0 1px rgba(17, 17, 17, 0.08),
+      0 6px 18px rgba(17, 17, 17, 0.12);
   }
   .chief__photo,
   .card__photo {

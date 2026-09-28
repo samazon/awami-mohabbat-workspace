@@ -132,6 +132,10 @@ const [config, edition] = await Promise.all([getSiteConfig(locale), getLatestEdi
     object-fit: cover;
     object-position: 50% 20%;
     background: var(--thumb-ground);
+    border-radius: var(--radius-sm);
+    box-shadow:
+      0 0 0 1px rgba(17, 17, 17, 0.08),
+      0 6px 18px rgba(17, 17, 17, 0.12);
   }
   .editor__text {
     min-width: 0;
