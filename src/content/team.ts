@@ -42,6 +42,7 @@ import basharatASami from '@/assets/team/basharat-a-sami.webp';
 import lateefBhatti from '@/assets/team/lateef-bhatti.webp';
 import khalidGill from '@/assets/team/khalid-gill.webp';
 import arshadVictor from '@/assets/team/arshad-victor.webp';
+import teresaHizkeal from '@/assets/team/teresa-hizkeal.webp';
 
 export const ROLE_UR = {
   'Chief Editor': 'چیف ایڈیٹر',
@@ -147,7 +148,7 @@ export const groups: TeamGroup[] = [
       { name: 'Asghar Chann', nameUr: 'اصغر چن', role: 'In-charge', place: 'Kasur' },
       { name: 'Nawaz Farhat', nameUr: 'نواز فرحت', role: 'In-charge', place: 'Pattoki & Chunian', photo: nawazFarhat },
       { name: 'Bilawal Khurshid', nameUr: 'بلاول خورشید', role: 'Staff Reporter' },
-      { name: 'Teresa Hizkeal', nameUr: 'ٹریسا حزقیل', role: 'Reporter' },
+      { name: 'Teresa Hizkeal', nameUr: 'ٹریسا حزقیل', role: 'Reporter', photo: teresaHizkeal },
     ],
   },
   {
