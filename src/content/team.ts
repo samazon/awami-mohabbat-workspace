@@ -37,6 +37,7 @@ import yabaizAurthur from '@/assets/team/yabaiz-aurthur.webp';
 import azarDaud from '@/assets/team/azar-daud.webp';
 import zakiMansha from '@/assets/team/zaki-mansha.webp';
 import rozaimElahi from '@/assets/team/rozaim-elahi.webp';
+import zebaGill from '@/assets/team/zeba-gill.webp';
 
 export const ROLE_UR = {
   'Chief Editor': 'چیف ایڈیٹر',
@@ -163,7 +164,7 @@ export const groups: TeamGroup[] = [
     key: 'international',
     title: { ur: 'بین الاقوامی نمائندے', en: 'International representatives' },
     members: [
-      { name: 'Zeva James Gill', nameUr: 'زیوا جیمز گل', place: 'United States', country: 'us' },
+      { name: 'Zeba Gill', nameUr: 'زیبا گل', place: 'United States', country: 'us', photo: zebaGill },
       { name: 'Bashir A. Sami', nameUr: 'بشیر اے سامی', place: 'Australia', country: 'au' },
       { name: 'Zohaib Sami', nameUr: 'زوہیب سامی', place: 'Germany', country: 'de', photo: zohaibSami },
       { name: 'Javed Iqbal Gill', nameUr: 'جاوید اقبال گل', place: 'Spain', country: 'es' },
