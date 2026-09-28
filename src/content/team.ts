@@ -107,7 +107,7 @@ export const groups: TeamGroup[] = [
     members: [
       { name: 'Dr. Azhar Younas', nameUr: 'ڈاکٹر اظہر یونس', role: 'Sub-editor', place: 'Kasur', photo: azharYounas },
       { name: 'Ashraf Michael', nameUr: 'اشرف مائیکل', role: 'News Editor', place: 'Kasur', photo: ashrafMichael },
-      { name: 'Yabaiz Aurthur', nameUr: 'یویز آرتھر', photo: yabaizAurthur },
+      { name: 'Yabaiz Aurthur', nameUr: 'یوبیز آرتھر', photo: yabaizAurthur },
     ],
   },
   {
