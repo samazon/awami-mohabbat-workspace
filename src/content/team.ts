@@ -154,7 +154,7 @@ export const groups: TeamGroup[] = [
       { name: 'Rafyal Iqbal', nameUr: 'رافیل اقبال', role: 'Page Designer' },
       { name: 'Mathew Iqbal', nameUr: 'میتھیو اقبال', role: 'Composer' },
       { name: 'Zaki Mansha', nameUr: 'ذکی منشا', role: 'Social Media', photo: zakiMansha },
-      { name: 'Rozaim Elahi', nameUr: 'روزیم الٰہی', role: 'Social Media', photo: rozaimElahi },
+      { name: 'Rozaim Ellahi', nameUr: 'روزیم الٰہی', role: 'Social Media', photo: rozaimElahi },
       { name: 'Azar Daud', nameUr: 'آذر داؤد', role: 'Video Editor', photo: azarDaud },
       { name: 'Ayub Bobi', nameUr: 'ایوب بوبی', role: 'Cameraman' },
       { name: 'Dawood Saleem', nameUr: 'داؤد سلیم', role: 'Cameraman' },
