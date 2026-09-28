@@ -5,8 +5,7 @@
  * copyright and the chief editor, recoloured onto the navigation band's ink.
  * Footer text is Naskh / the body serif, not Nastaliq.
  */
-import { Image } from 'astro:assets';
-import masthead from '@/assets/masthead-print.webp';
+import masthead from '@/assets/masthead-print-600.webp';
 import { t, type Locale } from '@/i18n';
 import { nav as navFor } from '@/lib/links';
 import type { SiteConfigView } from '@/lib/services/config';
@@ -29,7 +28,7 @@ const year = new Date().getFullYear();
       <div class="col col--brand">
         {/* The print masthead, as a clipping: it carries its own white ground. */}
         <a class="logo" href={links.home} aria-label={s.meta.siteName}>
-          <Image src={masthead} alt="" widths={[300, 600]} sizes="300px" format="webp" loading="lazy" />
+          <img src={masthead.src} width={masthead.width} height={masthead.height} alt="" loading="lazy" decoding="async" />
         </a>
         <p class="tagline">{s.footer.tagline}</p>
       </div>

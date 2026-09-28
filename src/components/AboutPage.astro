@@ -3,9 +3,8 @@
  * /about — to design screen 06: title, then mission beside the editor card,
  * then three columns: editorial team, publication details, contact. No ads.
  */
-import { Image } from 'astro:assets';
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import editorPhoto from '@/assets/team/iqbal-danial-khokhar.png';
+import editorPhoto from '@/assets/team/iqbal-danial-khokhar.webp';
 import { t, type Locale } from '@/i18n';
 import { about } from '@/content/about';
 import { getSiteConfig } from '@/lib/services/config';
@@ -36,7 +35,7 @@ const [config, edition] = await Promise.all([getSiteConfig(locale), getLatestEdi
       </section>
 
       <section class="editor" aria-label={c.editor.role}>
-        <Image class="editor__photo" src={editorPhoto} alt={c.editor.name} widths={[176, 352, 528]} sizes="(max-width: 767px) 120px, 176px" format="webp" loading="eager" />
+        <img class="editor__photo" src={editorPhoto.src} width={editorPhoto.width} height={editorPhoto.height} alt={c.editor.name} loading="eager" decoding="async" />
         <div class="editor__text">
           <h2 class="editor__name t-head">{c.editor.name}</h2>
           <p class="editor__role">{c.editor.role}</p>

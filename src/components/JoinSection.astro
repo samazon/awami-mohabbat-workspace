@@ -8,7 +8,6 @@
  * success note or per-field errors. Values are echoed back on failure so
  * nothing has to be retyped.
  */
-import { Image } from 'astro:assets';
 import { actions, isInputError } from 'astro:actions';
 import { join } from '@/content/contact';
 import { JOIN_LIMITS, PHONE_PATTERN_ATTR } from '@/lib/join-rules';
@@ -17,7 +16,7 @@ import Icon from './Icon.astro';
 
 interface Props {
   locale: Locale;
-  /** Drop a real photograph in src/assets and pass it here. */
+  /** A photo from src/assets, already sized with `pnpm optimize-image … --width 800`. */
   image?: ImageMetadata;
 }
 const { locale, image } = Astro.props;
@@ -41,7 +40,7 @@ const fields = [
 <section class="join" id="join" lang="en" dir="ltr" aria-labelledby="join-title">
   <div class="join__media">
     {image ? (
-      <Image src={image} alt={join.imageAlt} widths={[400, 800]} sizes="(max-width: 899px) 100vw, 40vw" format="webp" loading="lazy" />
+      <img src={image.src} width={image.width} height={image.height} alt={join.imageAlt} loading="lazy" decoding="async" />
     ) : (
       <div class="placeholder" role="img" aria-label={join.imageAlt}>
         <Icon name="users" size="xl" />

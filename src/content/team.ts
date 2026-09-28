@@ -7,15 +7,16 @@
  * spelling beneath, for foreign visitors who land there) and in English only
  * on /en/team. Roles and places translate through the two maps below, so a
  * new role or place is added once and a typo is a compile error.
- * Photos live in src/assets/team/ (optimised to WebP at build); a member
+ * Photos live in src/assets/team/, already sized: add one with
+ * `pnpm optimize-image <photo> team/<name>.webp --width 660`. A member
  * without `photo` renders a placeholder.
  */
 import type { ImageMetadata } from 'astro';
 import type { Locale } from '@/i18n';
-import iqbalDanialKhokhar from '@/assets/team/iqbal-danial-khokhar.png';
-import pervaizNadeemGill from '@/assets/team/pervaiz-nadeem-gill.png';
-import zohaibSami from '@/assets/team/zohaib-sami.png';
-import arshadKhokhar from '@/assets/team/arshad-khokhar.png';
+import iqbalDanialKhokhar from '@/assets/team/iqbal-danial-khokhar.webp';
+import pervaizNadeemGill from '@/assets/team/pervaiz-nadeem-gill.webp';
+import zohaibSami from '@/assets/team/zohaib-sami.webp';
+import arshadKhokhar from '@/assets/team/arshad-khokhar.webp';
 
 export const ROLE_UR = {
   'Chief Editor': 'چیف ایڈیٹر',

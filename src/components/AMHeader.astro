@@ -1,6 +1,5 @@
 ---
-import { Image } from 'astro:assets';
-import logo from '@/assets/logo-awami-mohabbat.png';
+import logo from '@/assets/logo-awami-mohabbat.webp';
 import { t, type Locale } from '@/i18n';
 import { todayIso, isoToDate } from '@/lib/dates';
 import { AM_NEWS_URL, nav as navFor } from '@/lib/links';
@@ -117,7 +116,7 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     <div class="center">
       <span class="kicker"><span class="kicker__rule" aria-hidden="true"></span><span class="kicker__text">{s.masthead.daily}</span><span class="kicker__rule" aria-hidden="true"></span></span>
       <a class="logo" href={links.home} aria-label={s.meta.siteName}>
-        <Image src={logo} alt={s.meta.siteName} widths={[250, 340, 500, 680]} sizes="(max-width: 767px) 250px, 340px" format="webp" loading="eager" fetchpriority="high" />
+        <img src={logo.src} width={logo.width} height={logo.height} alt={s.meta.siteName} loading="eager" fetchpriority="high" decoding="async" />
       </a>
       <LtrRun class="lockup">{s.masthead.lockup}</LtrRun>
       <LtrRun class="subline">{s.masthead.subline}</LtrRun>
@@ -184,7 +183,7 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
         <dialog id="mobile-drawer" class="drawer" aria-label={s.nav.menu}>
           <div class="drawer__head">
             <a class="drawer__logo" href={links.home} aria-label={s.meta.siteName}>
-              <Image src={logo} alt="" widths={[150, 300]} sizes="150px" format="webp" loading="lazy" />
+              <img src={logo.src} width={logo.width} height={logo.height} alt="" loading="lazy" decoding="async" />
             </a>
             <button type="button" class="iconbtn" data-close aria-label={s.nav.close} autofocus>
               <Icon name="x" size="lg" />

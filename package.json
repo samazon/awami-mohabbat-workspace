@@ -19,6 +19,7 @@
     "db:migrate:remote": "wrangler d1 migrations apply awami-mohabbat --remote",
     "seed": "tsx scripts/seed.ts",
     "columns": "tsx scripts/columns.ts",
+    "optimize-image": "tsx scripts/optimize-image.ts",
     "deploy": "wrangler types && astro build && wrangler deploy"
   },
   "dependencies": {
