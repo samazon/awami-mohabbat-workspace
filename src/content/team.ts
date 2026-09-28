@@ -33,6 +33,7 @@ import asifNazir from '@/assets/team/asif-nazir.webp';
 import maharAttique from '@/assets/team/mahar-attique.webp';
 import aneelGhouri from '@/assets/team/aneel-ghouri.webp';
 import nawazFarhat from '@/assets/team/nawaz-farhat.webp';
+import yabaizAurthur from '@/assets/team/yabaiz-aurthur.webp';
 
 export const ROLE_UR = {
   'Chief Editor': 'چیف ایڈیٹر',
@@ -106,6 +107,7 @@ export const groups: TeamGroup[] = [
     members: [
       { name: 'Dr. Azhar Younas', nameUr: 'ڈاکٹر اظہر یونس', role: 'Sub-editor', place: 'Kasur', photo: azharYounas },
       { name: 'Ashraf Michael', nameUr: 'اشرف مائیکل', role: 'News Editor', place: 'Kasur', photo: ashrafMichael },
+      { name: 'Yabaiz Aurthur', nameUr: 'یابیز آرتھر', photo: yabaizAurthur },
     ],
   },
   {
