@@ -15,6 +15,7 @@ import type { Locale } from '@/i18n';
 import iqbalDanialKhokhar from '@/assets/team/iqbal-danial-khokhar.png';
 import pervaizNadeemGill from '@/assets/team/pervaiz-nadeem-gill.png';
 import zohaibSami from '@/assets/team/zohaib-sami.png';
+import arshadKhokhar from '@/assets/team/arshad-khokhar.png';
 
 export const ROLE_UR = {
   'Chief Editor': 'چیف ایڈیٹر',
@@ -143,7 +144,7 @@ export const groups: TeamGroup[] = [
       { name: 'Bashir A. Sami', nameUr: 'بشیر اے سامی', place: 'Australia', country: 'au' },
       { name: 'Zohaib Sami', nameUr: 'زوہیب سامی', place: 'Germany', country: 'de', photo: zohaibSami },
       { name: 'Javed Iqbal Gill', nameUr: 'جاوید اقبال گل', place: 'Spain', country: 'es' },
-      { name: 'Bishop Arshad Khokhar', nameUr: 'بشپ ارشد کھوکھر', place: 'Belgium', country: 'be' },
+      { name: 'Bishop Arshad Khokhar', nameUr: 'بشپ ارشد کھوکھر', place: 'Belgium', country: 'be', photo: arshadKhokhar },
       { name: 'Lateef Bhatti', nameUr: 'لطیف بھٹی', place: 'Belgium', country: 'be' },
       { name: 'PS. Lakhan Sardar', nameUr: 'پاسٹر لکھن سردار', place: 'Sweden', country: 'se' },
       { name: 'Sheikh Khalil Ahmad', nameUr: 'شیخ خلیل احمد', place: 'Norway', country: 'no' },
