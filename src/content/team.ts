@@ -40,6 +40,7 @@ import rozaimElahi from '@/assets/team/rozaim-elahi.webp';
 import zebaGill from '@/assets/team/zeba-gill.webp';
 import basharatASami from '@/assets/team/basharat-a-sami.webp';
 import lateefBhatti from '@/assets/team/lateef-bhatti.webp';
+import khalidGill from '@/assets/team/khalid-gill.webp';
 
 export const ROLE_UR = {
   'Chief Editor': 'چیف ایڈیٹر',
@@ -175,7 +176,7 @@ export const groups: TeamGroup[] = [
       { name: 'PS. Lakhan Sardar', nameUr: 'پاسٹر لکھن سردار', place: 'Sweden', country: 'se' },
       { name: 'Sheikh Khalil Ahmad', nameUr: 'شیخ خلیل احمد', place: 'Norway', country: 'no' },
       { name: 'PS. Amar Masih', nameUr: 'پاسٹر عامر مسیح', place: 'UAE', country: 'ae' },
-      { name: 'Khalid Gill', nameUr: 'خالد گل', place: 'Canada', country: 'ca' },
+      { name: 'Khalid Gill', nameUr: 'خالد گل', place: 'Canada', country: 'ca', photo: khalidGill },
     ],
   },
 ];
