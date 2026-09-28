@@ -59,7 +59,7 @@ export const contact: Record<Locale, ContactContent> = {
       key: 'lahore',
       zone: 'صدر دفتر',
       name: 'ہیڈ آفس — لاہور',
-      lines: ['حمزہ ٹاؤن، 19 کلومیٹر فیروزپور روڈ، یوحنا آباد کے سامنے', 'لاہور 54600، پاکستان'],
+      lines: ['حمزہ ٹاؤن، 19 کلومیٹر فیروزپور روڈ، بالمقابل یوحنا آباد', 'لاہور 54600، پاکستان'],
       phones: ['042 35950333', '0304 2198241', '0322 8077033', '0337 3337158'],
       emails: ['awami_mohabbat@yahoo.com', 'info@awamimohabbat.com'],
     },

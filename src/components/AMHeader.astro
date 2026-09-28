@@ -2,8 +2,8 @@
 import { Image } from 'astro:assets';
 import logo from '@/assets/logo-awami-mohabbat.png';
 import { t, type Locale } from '@/i18n';
-import { formatFileSize, todayIso, isoToDate } from '@/lib/dates';
-import { nav as navFor } from '@/lib/links';
+import { todayIso, isoToDate } from '@/lib/dates';
+import { AM_NEWS_URL, nav as navFor } from '@/lib/links';
 import Icon from './Icon.astro';
 import LtrRun from './LtrRun.astro';
 import ReaderControls from './ReaderControls.astro';
@@ -11,8 +11,8 @@ import LanguageSwitcher from './LanguageSwitcher.astro';
 
 interface Props {
   locale: Locale;
-  active?: 'home' | 'archive' | 'columns' | 'articles' | 'about' | 'contact';
-  /** Today's edition, when the page has one: powers the e-paper button and card. */
+  active?: 'home' | 'archive' | 'columns' | 'gallery' | 'media-forum' | 'magazine' | 'team' | 'articles' | 'about' | 'contact';
+  /** Today's edition, when the page has one: powers the e-paper button. */
   epaper?: { href: string; pages: number; pdfUrl: string | null; pdfBytes: number | null } | null;
 }
 const { locale, active = 'home', epaper = null } = Astro.props;
@@ -24,14 +24,30 @@ const pathname = Astro.url.pathname;
 const SHOW_SEARCH = true;
 const SHOW_TAGLINE_ROW = false;
 
-const items = [
+type NavLink = { key: string; href: string; label: string };
+type NavItem = NavLink | { key: string; label: string; children: NavLink[] };
+
+// "Today's paper" is the front page, so it never claims aria-current (Home does).
+const items: NavItem[] = [
   { key: 'home', href: links.home, label: s.nav.home },
-  { key: 'archive', href: links.archive, label: s.nav.archive },
   { key: 'columns', href: links.columns, label: s.nav.columns },
-  { key: 'articles', href: links.articles, label: s.nav.articles },
+  {
+    key: 'paper',
+    label: s.nav.paper,
+    children: [
+      { key: 'today', href: links.home, label: s.nav.paperToday },
+      { key: 'archive', href: links.archive, label: s.nav.paperPast },
+    ],
+  },
+  { key: 'gallery', href: links.gallery, label: s.nav.gallery },
+  { key: 'media-forum', href: links.mediaForum, label: s.nav.mediaForum },
+  { key: 'magazine', href: links.magazine, label: s.nav.magazine },
   { key: 'about', href: links.about, label: s.nav.about },
+  { key: 'team', href: links.team, label: s.nav.team },
   { key: 'contact', href: links.contact, label: s.contact.title },
-] as const;
+];
+const current = (key: string) => (key === active ? 'page' : undefined);
+const groupHasActive = (i: NavItem) => 'children' in i && i.children.some((c) => c.key === active);
 
 // Today, in the paper's home time zone, localised; the inline script swaps in
 // the visitor's own local date (the page is edge-cached and shared).
@@ -84,7 +100,7 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
   </div>
   )}
 
-  {/* ---- masthead: group name + flag | wordmark | globe + e-paper card ---- */}
+  {/* ---- masthead: group name + flag | wordmark | globe + AM News TV card ---- */}
   <div class="container masthead">
     <div class="side side--start">
       <picture class="emblem emblem--flag">
@@ -109,17 +125,18 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
 
     <div class="side side--end">
       <div class="side__text side__text--end">
-        {epaper ? (
-          <a class="epaper-card" href={epaper.href} data-viewer-open>
-            <span class="epaper-card__title">{s.masthead.epaperTitle} <span class="epaper-card__pages">({s.masthead.epaperPages(epaper.pages)})</span></span>
-            {epaper.pdfBytes && <LtrRun class="epaper-card__size">{formatFileSize(epaper.pdfBytes)}</LtrRun>}
-          </a>
-        ) : (
-          <a class="epaper-card" href={epaperHref}>
-            <span class="epaper-card__title">{s.masthead.epaperTitle}</span>
-          </a>
-        )}
-        <span class="side__hint">{s.masthead.epaperHint}</span>
+        <a class="tv" href={AM_NEWS_URL} target="_blank" rel="noopener" aria-label={s.masthead.tvLabel}>
+          <span class="tv__screen" aria-hidden="true">
+            <span class="tv__play"><Icon name="play" size="sm" flip={false} /></span>
+          </span>
+          <span class="tv__text">
+            <span class="tv__top">
+              <span class="tv__brand" dir="ltr" lang="en"><span class="tv__am">AM</span> NEWS</span>
+              <span class="tv__badge" dir="ltr" lang="en" aria-hidden="true"><span class="tv__dot"></span>TV</span>
+            </span>
+            <span class="tv__cta">{s.masthead.tvCta}</span>
+          </span>
+        </a>
       </div>
       <picture class="emblem emblem--globe">
         <source srcset={PIXEL} media="(max-width: 767px)" />
@@ -133,9 +150,23 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
   <div class="navbar">
     <div class="container navbar__row">
       <nav class="nav" aria-label={s.a11y.mainNav}>
-        {items.map((i) => (
-          <a class="nav__link" href={i.href} aria-current={i.key === active ? 'page' : undefined}>{i.label}</a>
-        ))}
+        {items.map((i) =>
+          'children' in i ? (
+            <am-nav-menu class="nav__group">
+              <button type="button" class="nav__link nav__toggle" aria-expanded="false" aria-controls={`nav-menu-${i.key}`} data-current={groupHasActive(i) ? '' : undefined}>
+                {i.label}
+                <Icon name="chevron-down" size="sm" />
+              </button>
+              <ul class="nav__menu" id={`nav-menu-${i.key}`}>
+                {i.children.map((c) => (
+                  <li><a class="nav__sublink" href={c.href} aria-current={current(c.key)}>{c.label}</a></li>
+                ))}
+              </ul>
+            </am-nav-menu>
+          ) : (
+            <a class="nav__link" href={i.href} aria-current={current(i.key)}>{i.label}</a>
+          ),
+        )}
       </nav>
 
       {SHOW_SEARCH && (
@@ -160,9 +191,18 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
             </button>
           </div>
           <nav class="drawer__nav" aria-label={s.a11y.mainNav}>
-            {items.map((i) => (
-              <a class="drawer__link" href={i.href} aria-current={i.key === active ? 'page' : undefined}>{i.label}</a>
-            ))}
+            {items.map((i) =>
+              'children' in i ? (
+                <div class="drawer__group" role="group" aria-labelledby={`drawer-group-${i.key}`}>
+                  <span class="drawer__link drawer__heading" id={`drawer-group-${i.key}`}>{i.label}</span>
+                  {i.children.map((c) => (
+                    <a class="drawer__link drawer__sublink" href={c.href} aria-current={current(c.key)}>{c.label}</a>
+                  ))}
+                </div>
+              ) : (
+                <a class="drawer__link" href={i.href} aria-current={current(i.key)}>{i.label}</a>
+              ),
+            )}
           </nav>
           <div class="drawer__tools">
             <LanguageSwitcher locale={locale} pathname={pathname} class="drawer__wide" />
@@ -231,6 +271,35 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     }
   }
   if (!customElements.get('am-mobile-nav')) customElements.define('am-mobile-nav', MobileNav);
+
+  /**
+   * Desktop dropdown. Hover opens it via CSS (mouse only); the button toggles it
+   * for touch and keyboard. Escape, a click elsewhere, or focus leaving the
+   * group closes it.
+   */
+  class NavMenu extends HTMLElement {
+    connectedCallback() {
+      const toggle = this.querySelector<HTMLButtonElement>('.nav__toggle');
+      if (!toggle) return;
+      const set = (open: boolean) => toggle.setAttribute('aria-expanded', String(open));
+
+      toggle.addEventListener('click', () => set(toggle.getAttribute('aria-expanded') !== 'true'));
+      this.addEventListener('mouseleave', () => set(false));
+      this.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') {
+          set(false);
+          toggle.focus();
+        }
+      });
+      this.addEventListener('focusout', (e) => {
+        if (!this.contains(e.relatedTarget as Node | null)) set(false);
+      });
+      document.addEventListener('click', (e) => {
+        if (!this.contains(e.target as Node)) set(false);
+      });
+    }
+  }
+  if (!customElements.get('am-nav-menu')) customElements.define('am-nav-menu', NavMenu);
 </script>
 
 <style>
@@ -391,15 +460,6 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     letter-spacing: 0.18em;
     color: var(--muted);
   }
-  /* localized hint → label face; never the Latin eyebrow treatment */
-  .side__hint {
-    display: block;
-    margin-block-start: 6px;
-    font-family: var(--font-label);
-    line-height: var(--lh-label);
-    font-size: var(--ui-eyebrow);
-    color: var(--muted);
-  }
   .side__title {
     margin-block-start: 6px;
     font-family: var(--font-naskh);
@@ -414,45 +474,136 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     line-height: 1.3;
   }
 
-  .epaper-card {
+  /* ---- AM News TV card: a small dark "screen" with a play button ---- */
+  .tv {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    min-height: 48px;
-    padding: 8px 14px;
-    border: 1px solid var(--rule-strong);
+    gap: 12px;
+    padding-block: 8px;
+    padding-inline: 8px 14px;
     border-radius: var(--radius-sm);
-    background: var(--tint);
-    color: var(--ink);
+    background: var(--nav-bg);
+    color: var(--on-dark);
     text-decoration: none;
-    transition: border-color 120ms ease-out;
+    box-shadow: inset 0 0 0 1px var(--on-dark-rule);
+    transition: box-shadow 160ms ease-out;
   }
-  .epaper-card:hover {
-    border-color: var(--ink);
-    color: var(--ink);
+  .tv:hover {
+    color: var(--on-dark);
     text-decoration: none;
+    box-shadow: inset 0 0 0 1px var(--strip-bg);
   }
-  .epaper-card__title {
-    font-family: var(--font-naskh);
-    font-size: var(--ui-nav);
-    line-height: 1.7;
-  }
-  :global(html[lang='en']) .epaper-card__title {
-    font-family: var(--font-ui);
-  }
-  .epaper-card__pages {
-    color: var(--secondary);
-  }
-  .epaper-card__size {
+  .tv__screen {
     flex: none;
-    padding: 3px 8px;
-    border-radius: var(--radius-sm);
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 72px;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: 3px;
+    background:
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 3px),
+      radial-gradient(120% 90% at 30% 20%, #3a3a48 0%, #101016 70%);
+  }
+  .tv__play {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
     background: var(--strip-bg);
-    color: var(--on-red);
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.08);
+    transition: scale 160ms ease-out;
+  }
+  .tv__play :global(svg) {
+    width: 12px;
+    height: 12px;
+    translate: 1px 0;
+    fill: currentColor;
+  }
+  .tv:hover .tv__play {
+    scale: 1.12;
+  }
+  .tv__text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: flex-start; /* the page's start edge, so the Latin brand lines up with the Urdu line */
+    gap: 2px;
+    min-width: 0;
+    overflow: hidden;
+    text-align: start;
+    white-space: nowrap;
+  }
+  .tv__top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tv__brand {
     font-family: var(--font-ui);
-    font-size: var(--ui-eyebrow);
-    font-weight: 600;
+    font-size: var(--ui-button-lg);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+  .tv__am {
+    padding: 0 4px;
+    border-radius: 2px;
+    background: var(--strip-bg);
+    color: #fff;
+  }
+  .tv__cta {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-meta);
+    color: var(--on-dark-muted);
+  }
+  .tv__badge {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 7px;
+    border: 1px solid var(--on-dark-rule);
+    border-radius: var(--radius-pill);
+    font-family: var(--font-ui);
+    font-size: var(--ui-eyebrow-sm);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--on-dark);
+  }
+  .tv__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--strip-bg);
+    animation: tv-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes tv-pulse {
+    50% {
+      opacity: 0.25;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tv__dot {
+      animation: none;
+    }
+  }
+  /* Narrow desktops: the side column shrinks, so the card goes compact. */
+  @media (max-width: 1199px) {
+    .tv {
+      gap: 10px;
+    }
+    .tv__screen {
+      width: 56px;
+    }
+    .tv__badge {
+      display: none;
+    }
   }
 
   .center {
@@ -516,16 +667,14 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     gap: 16px;
     min-height: 60px;
   }
+  /* Wraps rather than scrolls: a scroll container would clip the dropdown. */
   .nav {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 4px;
     min-width: 0;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .nav::-webkit-scrollbar {
-    display: none;
+    padding-block: 10px;
   }
   .nav__link {
     display: inline-flex;
@@ -550,9 +699,84 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     color: var(--on-dark);
     text-decoration: none;
   }
-  .nav__link[aria-current='page'] {
+  .nav__link[aria-current='page'],
+  .nav__toggle[data-current] {
     background: var(--red);
     color: var(--on-red);
+  }
+
+  /* ---- dropdown ---- */
+  .nav__group {
+    position: relative;
+    display: inline-flex;
+  }
+  .nav__toggle {
+    gap: 6px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+  .nav__toggle :global(svg) {
+    transition: rotate 160ms ease-out;
+  }
+  .nav__toggle[aria-expanded='true'] :global(svg) {
+    rotate: 180deg;
+  }
+  .nav__menu {
+    position: absolute;
+    inset-block-start: 100%;
+    inset-inline-start: 0;
+    z-index: 20;
+    display: none;
+    min-width: 200px;
+    margin: 0;
+    padding: 6px;
+    list-style: none;
+    border-radius: var(--radius-sm);
+    border-block-start: 3px solid var(--strip-bg);
+    background: var(--nav-bg);
+    box-shadow: 0 10px 24px rgba(17, 17, 17, 0.28);
+  }
+  /* A strip of padding above the menu bridges the pointer from button to menu. */
+  .nav__menu::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 100%;
+    height: 8px;
+  }
+  .nav__toggle[aria-expanded='true'] + .nav__menu {
+    display: block;
+  }
+  @media (hover: hover) {
+    .nav__group:hover .nav__menu {
+      display: block;
+    }
+  }
+  .nav__sublink {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 12px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-naskh);
+    font-size: var(--ui-nav);
+    font-weight: 600;
+    line-height: 1.6;
+    color: var(--on-dark);
+    white-space: nowrap;
+    text-decoration: none;
+  }
+  :global(html[lang='en']) .nav__sublink {
+    font-family: var(--font-ui);
+  }
+  .nav__sublink:hover {
+    background: var(--nav-bg-elev);
+    color: var(--on-dark);
+    text-decoration: none;
+  }
+  .nav__sublink[aria-current='page'] {
+    color: var(--gold);
   }
   .search {
     display: flex;
@@ -719,6 +943,14 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
   }
   .drawer__link[aria-current='page'] {
     color: var(--red);
+  }
+  .drawer__heading {
+    color: var(--muted);
+  }
+  .drawer__sublink {
+    min-height: 48px;
+    padding-inline-start: 16px;
+    font-weight: 600;
   }
   .drawer__tools {
     display: flex;

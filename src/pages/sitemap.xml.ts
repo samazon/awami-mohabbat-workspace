@@ -3,7 +3,11 @@ import { LOCALES, localePath } from '@/i18n';
 import { getRecentEditions } from '@/lib/services/editions';
 import { listPublishedColumnSlugs } from '@/lib/services/columns';
 
-/** Static routes plus every published edition and column, each in both locales with hreflang alternates. */
+/**
+ * Static routes plus every published edition and column, each in both locales with hreflang alternates.
+ * Every new indexable page belongs here. The under-construction sections (/gallery,
+ * /media-forum, /magazine) are noindex, so they join the list once built.
+ */
 export const GET: APIRoute = async ({ url }) => {
   const base = new URL(url.origin);
   const [editions, columns] = await Promise.all([getRecentEditions('ur', { limit: 5000 }), listPublishedColumnSlugs()]);
@@ -12,6 +16,7 @@ export const GET: APIRoute = async ({ url }) => {
     { path: '/archive', changefreq: 'daily' },
     { path: '/columns', changefreq: 'daily' },
     { path: '/about', changefreq: 'monthly' },
+    { path: '/team', changefreq: 'monthly' },
     { path: '/contact', changefreq: 'monthly' },
     ...editions.map((e) => ({ path: `/edition/${e.date}`, changefreq: 'yearly' })),
     ...columns.map((c) => ({ path: `/columns/${c.slug}`, changefreq: 'monthly' })),

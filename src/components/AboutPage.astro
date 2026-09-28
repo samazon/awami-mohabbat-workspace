@@ -3,7 +3,9 @@
  * /about — to design screen 06: title, then mission beside the editor card,
  * then three columns: editorial team, publication details, contact. No ads.
  */
+import { Image } from 'astro:assets';
 import BaseLayout from '@/layouts/BaseLayout.astro';
+import editorPhoto from '@/assets/team/iqbal-danial-khokhar.png';
 import { t, type Locale } from '@/i18n';
 import { about } from '@/content/about';
 import { getSiteConfig } from '@/lib/services/config';
@@ -34,9 +36,7 @@ const [config, edition] = await Promise.all([getSiteConfig(locale), getLatestEdi
       </section>
 
       <section class="editor" aria-label={c.editor.role}>
-        <div class="editor__photo" role="img" aria-label={`${c.editor.name} — ${s.about.photo}`}>
-          <span>{s.about.photo}</span>
-        </div>
+        <Image class="editor__photo" src={editorPhoto} alt={c.editor.name} widths={[176, 352, 528]} sizes="(max-width: 767px) 120px, 176px" format="webp" loading="eager" />
         <div class="editor__text">
           <h2 class="editor__name t-head">{c.editor.name}</h2>
           <p class="editor__role">{c.editor.role}</p>
@@ -73,7 +73,7 @@ const [config, edition] = await Promise.all([getSiteConfig(locale), getLatestEdi
         <section aria-labelledby="contact-h">
           <h2 id="contact-h" class="h2">{s.about.contact}</h2>
           <ul class="contact t-body">
-            <li><span class="k">{s.footer.office}:</span> {config.office}</li>
+            <li><span class="k">{s.footer.office}:</span> {config.officeLines.map((l, i) => <>{i > 0 && <br />}{l}</>)}</li>
             {config.bureau && <li><span class="k">{s.footer.bureau}:</span> {config.bureau}</li>}
             {config.phones.map((p) => (
               <li><LtrRun tabular><a class="plain" href={`tel:${p.tel}`}>{p.display}</a></LtrRun></li>
@@ -126,16 +126,13 @@ const [config, edition] = await Promise.all([getSiteConfig(locale), getLatestEdi
   }
   .editor__photo {
     flex: none;
-    display: grid;
-    place-items: center;
+    display: block;
     width: 176px;
+    height: auto;
     aspect-ratio: 1 / 1.2;
+    object-fit: cover;
+    object-position: 50% 20%;
     background: var(--thumb-ground);
-    border: 1px solid var(--rule-strong);
-    color: var(--placeholder);
-    font-family: var(--font-label);
-    line-height: var(--lh-label);
-    font-size: var(--ui-meta);
   }
   .editor__text {
     min-width: 0;

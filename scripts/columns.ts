@@ -11,8 +11,8 @@
  *   --remote   write to production D1 + R2 (default: the local state `astro dev` reads)
  *
  * R2 first, then D1, so a failure leaves orphaned objects rather than rows
- * pointing at files that don't exist. Remote needs CLOUDFLARE_ACCOUNT_ID and
- * CLOUDFLARE_API_TOKEN in the environment. Nothing is logged but the plan.
+ * pointing at files that don't exist. Remote uses the `wrangler login` session
+ * (see remoteCreds in ./d1). Nothing is logged but the plan.
  */
 import { readFile, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -22,7 +22,7 @@ import { ArticleRuleError } from '../src/lib/columns/rules';
 import { listHomepageSlots, setHomepageSlot, upsertColumn, upsertColumnist } from '../src/lib/columns/write';
 import { columnistBannerKey, contentTypeFor } from '../src/lib/media';
 import { parseColumnFile } from './column-file';
-import { localDb, remoteCredsFromEnv, remoteDb, type SeedDb, type Target } from './d1';
+import { localDb, remoteCreds, remoteDb, type SeedDb, type Target } from './d1';
 import { BANNER_MAX_BYTES, deriveBanner, kb } from './ingest';
 import { R2Uploader } from './r2';
 import { readWranglerConfig } from './wrangler-config';
@@ -47,7 +47,7 @@ const target: Target = values.remote ? 'remote' : 'local';
 
 async function open(): Promise<{ db: SeedDb; bucket: string }> {
   const { bucket, databaseId } = await readWranglerConfig(ROOT);
-  const db = target === 'local' ? localDb(ROOT).db : remoteDb(remoteCredsFromEnv(databaseId));
+  const db = target === 'local' ? localDb(ROOT).db : remoteDb(await remoteCreds(ROOT, databaseId));
   console.log(`Target: ${target === 'local' ? 'LOCAL (.wrangler state)' : 'PRODUCTION (remote D1 + R2)'}`);
   return { db, bucket };
 }

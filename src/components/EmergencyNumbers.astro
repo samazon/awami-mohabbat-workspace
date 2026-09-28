@@ -2,6 +2,7 @@
 /** Rule 06: tel: links, never collapsed, never beside advertising. */
 import { t, type Locale } from '@/i18n';
 import type { ContactView } from '@/lib/services/contacts';
+import Icon from './Icon.astro';
 import LtrRun from './LtrRun.astro';
 
 interface Props {
@@ -10,6 +11,18 @@ interface Props {
 }
 const { contacts, locale } = Astro.props;
 const s = t(locale);
+
+/** Keyed by the dialled number (stable, unlike labels); anything new falls back to a phone. */
+const ICONS: Record<string, string> = {
+  '15': 'siren',
+  '1122': 'ambulance',
+  '16': 'fire-extinguisher',
+  '115': 'heart-pulse',
+  '130': 'car',
+  '1043': 'hand-heart',
+  '1199': 'flame',
+  '1991': 'shield-alert',
+};
 ---
 
 {contacts.length > 0 && (
@@ -20,10 +33,13 @@ const s = t(locale);
         <ul class="grid">
           {contacts.map((c) => (
             <li class="item">
-              <span class="item__label t-label">{c.label}</span>
-              <a class="item__tel" href={`tel:${c.tel}`} aria-label={s.emergency.call(c.label)}>
-                <LtrRun tabular>{c.number}</LtrRun>
-              </a>
+              <span class="item__icon" aria-hidden="true"><Icon name={ICONS[c.tel] ?? 'phone'} size="md" flip={false} /></span>
+              <span class="item__text">
+                <span class="item__label t-label">{c.label}</span>
+                <a class="item__tel" href={`tel:${c.tel}`} aria-label={s.emergency.call(c.label)}>
+                  <LtrRun tabular>{c.number}</LtrRun>
+                </a>
+              </span>
             </li>
           ))}
         </ul>
@@ -49,15 +65,60 @@ const s = t(locale);
     margin-block-end: 14px;
     border-block-end: 1px solid var(--rule);
   }
+  /* Fixed columns, not auto-fit: eight numbers make two even rows of four
+     (two columns on phones) instead of seven and a straggler. */
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: 14px 24px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px 0;
   }
   .item {
     display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding-inline: 20px;
+    border-inline-start: 1px solid var(--rule);
+  }
+  .item:nth-child(4n + 1) {
+    padding-inline-start: 0;
+    border-inline-start: 0;
+  }
+  @media (max-width: 767px) {
+    .grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .item {
+      padding-inline: 16px;
+      border-inline-start: 1px solid var(--rule);
+    }
+    .item:nth-child(2n + 1) {
+      padding-inline-start: 0;
+      border-inline-start: 0;
+    }
+    .item {
+      gap: 10px;
+    }
+    .item__icon {
+      width: 32px;
+      height: 32px;
+    }
+  }
+  .item__icon {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--red) 9%, transparent);
+    color: var(--red);
+  }
+  .item__text {
+    display: flex;
     flex-direction: column;
     gap: 2px;
+    min-width: 0;
   }
   .item__label {
     font-size: var(--ui-meta);

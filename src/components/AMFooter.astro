@@ -39,7 +39,7 @@ const year = new Date().getFullYear();
           <h2 class="label">{s.footer.contact}</h2>
           <ul class="list">
             <li class="row">
-              <span class="row__text"><span class="row__k">{s.footer.office}:</span> {config.office}</span>
+              <span class="row__text"><span class="row__k">{s.footer.office}:</span> {config.officeLines.map((l, i) => <>{i > 0 && <br />}{l}</>)}</span>
             </li>
             {config.bureau && (
               <li class="row">
