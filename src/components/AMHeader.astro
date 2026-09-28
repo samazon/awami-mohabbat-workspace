@@ -1005,11 +1005,16 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     .search {
       display: none;
     }
+    /* Nine links wrap into four rows on a phone; the drawer carries them all. */
+    .nav {
+      display: none;
+    }
     .mobile {
       display: flex;
       flex: none;
     }
     .navbar__row {
+      justify-content: flex-start;
       min-height: 56px;
     }
   }
