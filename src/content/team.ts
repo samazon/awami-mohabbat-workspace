@@ -20,6 +20,7 @@ import arshadKhokhar from '@/assets/team/arshad-khokhar.webp';
 import sommerBareen from '@/assets/team/sommer-bareen.webp';
 import abidNawab from '@/assets/team/abid-nawab.webp';
 import azharYounas from '@/assets/team/azhar-younas.webp';
+import ashrafMichael from '@/assets/team/ashraf-michael.webp';
 
 export const ROLE_UR = {
   'Chief Editor': 'چیف ایڈیٹر',
@@ -92,7 +93,7 @@ export const groups: TeamGroup[] = [
     title: { ur: 'ایگزیکٹو بورڈ', en: 'Executive board' },
     members: [
       { name: 'Dr. Azhar Younas', nameUr: 'ڈاکٹر اظہر یونس', role: 'Sub-editor', place: 'Kasur', photo: azharYounas },
-      { name: 'Ashraf Michael', nameUr: 'اشرف مائیکل', role: 'News Editor', place: 'Kasur' },
+      { name: 'Ashraf Michael', nameUr: 'اشرف مائیکل', role: 'News Editor', place: 'Kasur', photo: ashrafMichael },
     ],
   },
   {
