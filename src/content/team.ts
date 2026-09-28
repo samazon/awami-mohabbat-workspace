@@ -39,6 +39,7 @@ export const ROLE_UR = {
   'Chief Editor': 'چیف ایڈیٹر',
   'Sub-editor': 'سب ایڈیٹر',
   'News Editor': 'نیوز ایڈیٹر',
+  'Youth Director': 'یوتھ ڈائریکٹر',
   Chairman: 'چیئرمین',
   Member: 'رکن',
   'Bureau Chief': 'بیورو چیف',
@@ -107,7 +108,7 @@ export const groups: TeamGroup[] = [
     members: [
       { name: 'Dr. Azhar Younas', nameUr: 'ڈاکٹر اظہر یونس', role: 'Sub-editor', place: 'Kasur', photo: azharYounas },
       { name: 'Ashraf Michael', nameUr: 'اشرف مائیکل', role: 'News Editor', place: 'Kasur', photo: ashrafMichael },
-      { name: 'Yabaiz Aurthur', nameUr: 'یوبیض آرتھر', photo: yabaizAurthur },
+      { name: 'Yabaiz Aurthur', nameUr: 'یوبیض آرتھر', role: 'Youth Director', photo: yabaizAurthur },
     ],
   },
   {
