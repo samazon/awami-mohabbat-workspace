@@ -5,8 +5,11 @@
  *
  * The form posts to the `join` action, so it works with JavaScript disabled:
  * the browser POSTs, the action validates, the page re-renders with either the
- * success note or per-field errors. Values are echoed back on failure so
- * nothing has to be retyped.
+ * success note or per-field errors, and `#join` brings the reader back to the
+ * form rather than the top of the page. With JavaScript, the script below sends
+ * it in the background instead: a busy button, the result shown in place.
+ * Results are built from the <template>s here, never from HTML strings, so the
+ * scoped styles apply and no submitted text is ever parsed as markup (CWE-79).
  */
 import { actions, isInputError } from 'astro:actions';
 import { join } from '@/content/contact';
@@ -60,7 +63,7 @@ const fields = [
         <span>{join.success}</span>
       </p>
     ) : (
-      <form method="POST" action={actions.join} class="form">
+      <form method="POST" action={`${actions.join}#join`} class="form" data-join-form>
         {formError && (
           <p class="alert alert--bad" role="alert">
             <Icon name="triangle-alert" size="sm" />
@@ -106,16 +109,107 @@ const fields = [
         })}
 
         <div class="actions">
-          <button type="submit" class="submit">
-            <Icon name="send" size="sm" />
-            <span>{join.submit}</span>
+          <button type="submit" class="submit" data-busy-label={join.sending}>
+            <span class="submit__icon"><Icon name="send" size="sm" /></span>
+            <span class="submit__spin" aria-hidden="true"></span>
+            <span data-label>{join.submit}</span>
           </button>
           <span class="note">{join.note}</span>
         </div>
       </form>
     )}
+
+    {/* Clones for the in-place result: server-rendered, so they carry the scoped styles. */}
+    <template data-tpl="ok">
+      <p class="alert alert--ok" role="status" tabindex="-1">
+        <Icon name="check" size="sm" />
+        <span data-text>{join.success}</span>
+      </p>
+    </template>
+    <template data-tpl="bad">
+      <p class="alert alert--bad" role="alert">
+        <Icon name="triangle-alert" size="sm" />
+        <span data-text>{join.failed}</span>
+      </p>
+    </template>
+    <template data-tpl="field-error">
+      <span class="field__error"></span>
+    </template>
   </div>
 </section>
+
+<script>
+  import { actions, isInputError } from 'astro:actions';
+
+  for (const form of document.querySelectorAll<HTMLFormElement>('form[data-join-form]')) {
+    const panel = form.closest('.join__panel')!;
+    const tpl = (name: string) =>
+      (panel.querySelector<HTMLTemplateElement>(`template[data-tpl="${name}"]`)!.content.firstElementChild!.cloneNode(true) as HTMLElement);
+    const button = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+    const label = button.querySelector<HTMLElement>('[data-label]')!;
+    const idleLabel = label.textContent ?? '';
+
+    const clearErrors = () => {
+      form.querySelectorAll('.alert--bad, .field__error').forEach((el) => el.remove());
+      form.querySelectorAll('[aria-invalid="true"]').forEach((el) => {
+        el.removeAttribute('aria-invalid');
+        el.removeAttribute('aria-describedby');
+        el.classList.remove('field__input--bad');
+      });
+    };
+    const setBusy = (busy: boolean) => {
+      button.disabled = busy;
+      button.toggleAttribute('aria-busy', busy);
+      label.textContent = busy ? (button.dataset.busyLabel ?? idleLabel) : idleLabel;
+    };
+    const formAlert = (message?: string) => {
+      const el = tpl('bad');
+      if (message) el.querySelector('[data-text]')!.textContent = message;
+      form.insertBefore(el, form.firstChild);
+      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    };
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (button.disabled) return;
+      clearErrors();
+      setBusy(true);
+      try {
+        const { error } = await actions.join(new FormData(form));
+        if (!error) {
+          const ok = tpl('ok');
+          form.replaceWith(ok);
+          ok.focus({ preventScroll: true });
+          ok.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          return;
+        }
+        if (isInputError(error)) {
+          let first: HTMLInputElement | null = null;
+          for (const [name, messages] of Object.entries(error.fields)) {
+            const input = form.querySelector<HTMLInputElement>(`[name="${CSS.escape(name)}"]`);
+            if (!input || !messages?.[0]) continue;
+            const note = tpl('field-error');
+            note.id = `${input.id}-error`;
+            note.textContent = messages[0];
+            input.parentNode!.insertBefore(note, input.nextSibling);
+            input.classList.add('field__input--bad');
+            input.setAttribute('aria-invalid', 'true');
+            input.setAttribute('aria-describedby', note.id);
+            first ??= input;
+          }
+          if (first) first.focus();
+          else formAlert(error.message);
+        } else {
+          formAlert(error.message);
+        }
+      } catch {
+        formAlert();
+      } finally {
+        if (form.isConnected) setBusy(false);
+      }
+    });
+  }
+</script>
 
 <style>
   .join {
@@ -269,12 +363,47 @@ const fields = [
   .submit:hover {
     background: #e6c15e;
   }
+  .submit[aria-busy] {
+    cursor: progress;
+    opacity: 0.85;
+  }
+  .submit__spin {
+    display: none;
+    width: 14px;
+    height: 14px;
+    border: 2px solid currentcolor;
+    border-inline-end-color: transparent;
+    border-radius: 50%;
+    animation: join-spin 700ms linear infinite;
+  }
+  .submit[aria-busy] .submit__spin {
+    display: inline-block;
+  }
+  .submit[aria-busy] .submit__icon {
+    display: none;
+  }
+  .submit__icon {
+    display: inline-flex;
+  }
+  @keyframes join-spin {
+    to {
+      rotate: 360deg;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .submit__spin {
+      animation-duration: 2s;
+    }
+  }
   .note {
     font-family: var(--font-ui);
     font-size: var(--ui-caption);
     color: var(--on-dark-muted);
   }
 
+  .join {
+    scroll-margin-block-start: 16px;
+  }
   .alert {
     grid-column: 1 / -1;
     display: flex;

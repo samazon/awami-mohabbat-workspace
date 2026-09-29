@@ -31,9 +31,16 @@
     }
   ],
 
+  // "Join us" applications are emailed through Cloudflare Email Routing.
+  // Every address in JOIN_NOTIFY_TO must be a verified destination address in
+  // Email Routing for awamimohabbat.com, or Cloudflare refuses the send.
+  "send_email": [{ "name": "JOIN_MAIL" }],
+
   "vars": {
     // Dev + first deploy: serve R2 objects through the Worker's /media route.
     // Once the R2 custom domain exists, set this to https://cdn.<domain>.
-    "CDN_BASE": "/media"
+    "CDN_BASE": "/media",
+    // Comma-separated inboxes for new "Join us" applications.
+    "JOIN_NOTIFY_TO": "awami_mohabbat@yahoo.com,sommerbareen1@gmail.com"
   }
 }

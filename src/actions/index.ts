@@ -2,7 +2,8 @@ import { ActionError, defineAction } from 'astro:actions';
 import { z } from 'zod';
 import { JOIN_IP_SALT } from 'astro:env/server';
 import { isLocale, DEFAULT_LOCALE } from '@/i18n';
-import { createJoinRequest, hashIp, isRateLimited } from '@/lib/services/join';
+import { createJoinRequest, hashIp, isRateLimited, type NewJoinRequest } from '@/lib/services/join';
+import { notifyJoinRequest } from '@/lib/services/join-mail';
 import { JOIN_LIMITS, PHONE_CHARS } from '@/lib/join-rules';
 
 /**
@@ -50,7 +51,7 @@ export const server = {
         });
       }
 
-      await createJoinRequest({
+      const application: NewJoinRequest = {
         name,
         address,
         profession,
@@ -58,7 +59,14 @@ export const server = {
         phone,
         locale: isLocale(locale) ? locale : DEFAULT_LOCALE,
         ipHash,
-      });
+      };
+      const id = await createJoinRequest(application);
+      // Saved first; the email is best effort and never fails the submission.
+      try {
+        await notifyJoinRequest(application, id);
+      } catch {
+        console.error(`join-mail: #${id} threw while sending`);
+      }
       // Never log the submitted details: they are personal data (rule 09).
       return { ok: true as const };
     },

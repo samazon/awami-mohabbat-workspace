@@ -131,6 +131,8 @@ export const join = {
   },
   requiredNote: 'All fields are required.',
   submit: 'Send application',
+  sending: 'Sending…',
+  failed: 'Your application could not be sent. Please check your connection and try again.',
   success: 'Thank you — your application has reached us. We will be in touch.',
   imageAlt: 'Join the Awami Mohabbat team',
 } as const;
