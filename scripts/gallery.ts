@@ -1,7 +1,7 @@
 /**
  * Gallery photos until the admin panel exists.
  *
- *   pnpm gallery add <folder | file…> [--dry-run]    upload JPEG/PNG/WebP photos
+ *   pnpm gallery add <folder | file…> [--dry-run] [--reverse]   upload JPEG/PNG/WebP photos
  *   pnpm gallery list                                 every photo, hidden included
  *   pnpm gallery caption <id> [--ur "…"] [--en "…"] [--clear-ur] [--clear-en]
  *   pnpm gallery hide <id> | show <id>
@@ -15,7 +15,8 @@
  *     en: The ceremony
  *
  * A batch appears above earlier batches; within a batch, folder (name) order is
- * kept. A file already in the gallery is not uploaded again (its captions, if
+ * kept — or reversed with --reverse (e.g. Facebook downloads, whose numeric names
+ * grow over time, so --reverse puts the most recent first). A file already in the gallery is not uploaded again (its captions, if
  * given, are updated). Only resized WebPs are uploaded — never the original,
  * which may carry the phone's GPS location. R2 first, then D1.
  */
@@ -35,7 +36,7 @@ import { readWranglerConfig } from './wrangler-config';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const USAGE =
-  'Usage: pnpm gallery add <folder|file…> [--dry-run] | list | caption <id> [--ur …] [--en …] [--clear-ur] [--clear-en] | hide <id> | show <id>  [--remote]';
+  'Usage: pnpm gallery add <folder|file…> [--dry-run] [--reverse] | list | caption <id> [--ur …] [--en …] [--clear-ur] [--clear-en] | hide <id> | show <id>  [--remote]';
 const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 
 const { values, positionals } = parseArgs({
@@ -43,6 +44,7 @@ const { values, positionals } = parseArgs({
   options: {
     remote: { type: 'boolean', default: false },
     'dry-run': { type: 'boolean', default: false },
+    reverse: { type: 'boolean', default: false },
     ur: { type: 'string' },
     en: { type: 'string' },
     'clear-ur': { type: 'boolean', default: false },
@@ -89,7 +91,9 @@ async function collect(args: string[]): Promise<{ files: string[]; captions: z.i
 
 async function add(args: string[]) {
   if (!args.length) throw new Error(USAGE);
-  const { files, captions } = await collect(args);
+  const collected = await collect(args);
+  const { captions } = collected;
+  const files = values.reverse ? [...collected.files].reverse() : collected.files;
   console.log(`\nGallery add  ·  ${files.length} photo(s)  ·  target: ${target}${values['dry-run'] ? '  ·  DRY RUN' : ''}`);
 
   // Derive everything first, so a bad file stops the batch before anything is written.
