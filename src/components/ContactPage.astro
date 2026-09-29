@@ -18,6 +18,7 @@ import AMHeader from './AMHeader.astro';
 import AMFooter from './AMFooter.astro';
 import Icon from './Icon.astro';
 import JoinSection from './JoinSection.astro';
+import joinImage from '@/assets/join-hands.webp';
 import LtrRun from './LtrRun.astro';
 
 interface Props {
@@ -227,7 +228,7 @@ const jsonLd = {
     </section>
 
     {/* ---- join us: English in both locales, form posts to the join action ---- */}
-    <JoinSection locale={locale} />
+    <JoinSection locale={locale} image={joinImage} />
   </div>
 
   <AMFooter slot="footer" locale={locale} config={config} />
