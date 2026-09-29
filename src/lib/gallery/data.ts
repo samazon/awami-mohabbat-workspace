@@ -42,12 +42,15 @@ export interface PhotoPage {
 
 /**
  * Add a photo, or — if this exact file is already there — update its captions
- * (only the ones given). Returns the row id and whether it was new.
+ * (only the ones given). With `moveExisting`, an existing photo also takes the
+ * new `sortKey`, so re-running a batch (e.g. after a failure part-way) keeps the
+ * whole batch in order instead of leaving the first attempt's photos below it.
+ * Returns the row id and whether it was new.
  */
 export async function addPhoto(
   db: AnyDb,
   raw: z.input<typeof PhotoInput>,
-  { now = Date.now(), sortKey = now }: { now?: number; sortKey?: number } = {},
+  { now = Date.now(), sortKey = now, moveExisting = false }: { now?: number; sortKey?: number; moveExisting?: boolean } = {},
 ): Promise<{ id: number; created: boolean }> {
   const p = PhotoInput.parse(raw);
   const [existing] = await db.select({ id: galleryPhotos.id }).from(galleryPhotos).where(eq(galleryPhotos.hash, p.hash)).limit(1);
@@ -55,6 +58,7 @@ export async function addPhoto(
     const set: Partial<typeof galleryPhotos.$inferInsert> = {};
     if (p.captionUr) set.captionUr = p.captionUr;
     if (p.captionEn) set.captionEn = p.captionEn;
+    if (moveExisting) set.sortKey = sortKey;
     if (Object.keys(set).length) await db.update(galleryPhotos).set(set).where(eq(galleryPhotos.id, existing.id));
     return { id: existing.id, created: false };
   }

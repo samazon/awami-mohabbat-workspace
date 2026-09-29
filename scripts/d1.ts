@@ -67,6 +67,12 @@ export interface RemoteCreds {
   accountId: string;
   apiToken: string;
   databaseId: string;
+  /**
+   * Only for the `wrangler login` path: re-read the current OAuth token. A long
+   * run spawns wrangler (R2 uploads) that may rotate the token mid-batch, so the
+   * one read at start stops working; remoteDb calls this once on an auth refusal.
+   */
+  refresh?: () => Promise<string>;
 }
 
 /**
@@ -89,10 +95,14 @@ export async function remoteCreds(root: string, databaseId: string): Promise<Rem
   const run = async (args: string[]) => (await execFileP(wrangler, args, { cwd: root, maxBuffer: 1024 * 1024 })).stdout;
 
   // `auth token` prints a version banner, then the token alone on the last line.
-  const tokenLine = (await run(['auth', 'token'])).trim().split('\n').pop()?.trim() ?? '';
-  if (!/^[A-Za-z0-9._~+/=-]{20,}$/.test(tokenLine)) {
-    throw new Error('Remote seeding needs `wrangler login` (or CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID).');
-  }
+  const readToken = async () => {
+    const line = (await run(['auth', 'token'])).trim().split('\n').pop()?.trim() ?? '';
+    if (!/^[A-Za-z0-9._~+/=-]{20,}$/.test(line)) {
+      throw new Error('Remote seeding needs `wrangler login` (or CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID).');
+    }
+    return line;
+  };
+  const tokenLine = await readToken();
 
   let accountId = envAccount;
   if (!accountId) {
@@ -103,27 +113,36 @@ export async function remoteCreds(root: string, databaseId: string): Promise<Rem
     }
     accountId = ids[0]!;
   }
-  return { accountId, apiToken: tokenLine, databaseId };
+  return { accountId, apiToken: tokenLine, databaseId, refresh: readToken };
 }
 
 export function remoteDb(creds: RemoteCreds): SeedDb {
   const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(creds.accountId)}/d1/database/${encodeURIComponent(creds.databaseId)}/raw`;
 
+  type D1Json = {
+    success: boolean;
+    errors?: { code: number; message: string }[];
+    result?: { success: boolean; results?: { columns: string[]; rows: unknown[][] } }[];
+  };
+  // Refusals that happen before the statement runs, so a retry can't apply it twice.
+  const AUTH_CODES = new Set([7403, 9109, 10000]);
+  const call = async (sql: string, params: unknown[]) => {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${creds.apiToken}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ sql, params }),
+    });
+    return { res, json: (await res.json()) as D1Json };
+  };
+
   return drizzle(
     async (sql, params, method) => {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          authorization: `Bearer ${creds.apiToken}`,
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({ sql, params }),
-      });
-      const json = (await res.json()) as {
-        success: boolean;
-        errors?: { code: number; message: string }[];
-        result?: { success: boolean; results?: { columns: string[]; rows: unknown[][] } }[];
-      };
+      let { res, json } = await call(sql, params);
+      const authRefused = res.status === 401 || res.status === 403 || json.errors?.some((e) => AUTH_CODES.has(e.code));
+      if (!json.success && authRefused && creds.refresh) {
+        creds.apiToken = await creds.refresh();
+        ({ res, json } = await call(sql, params));
+      }
       if (!res.ok || !json.success) {
         const msg = json.errors?.map((e) => `${e.code}: ${e.message}`).join('; ') ?? `HTTP ${res.status}`;
         throw new Error(`D1 request failed — ${msg}`);

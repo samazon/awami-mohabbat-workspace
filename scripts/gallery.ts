@@ -16,8 +16,10 @@
  *
  * A batch appears above earlier batches; within a batch, folder (name) order is
  * kept — or reversed with --reverse (e.g. Facebook downloads, whose numeric names
- * grow over time, so --reverse puts the most recent first). A file already in the gallery is not uploaded again (its captions, if
- * given, are updated). Only resized WebPs are uploaded — never the original,
+ * grow over time, so --reverse puts the most recent first). A file already in
+ * the gallery is not uploaded again; its captions, if given, are updated, and it
+ * takes its place in this batch's order (so a re-run after a failure stays in
+ * order). Only resized WebPs are uploaded — never the original,
  * which may carry the phone's GPS location. R2 first, then D1.
  */
 import { readFile, readdir, stat } from 'node:fs/promises';
@@ -124,7 +126,7 @@ async function add(args: string[]) {
       const res = await addPhoto(
         db,
         { hash: d.hash, width: d.width, height: d.height, captionUr: cap?.ur, captionEn: cap?.en },
-        { now: base, sortKey: base - i },
+        { now: base, sortKey: base - i, moveExisting: true },
       );
       if (res.created) added++;
       else skipped++;

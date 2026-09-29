@@ -101,3 +101,26 @@ describe('gallery data', () => {
     await expect(addPhoto(db, { hash: hash(1), width: 10, height: 10, captionUr: 'x'.repeat(301) })).rejects.toThrow();
   });
 });
+
+describe('re-running a batch', () => {
+  it('keeps the batch in order when earlier photos already exist', async () => {
+    const { db } = testDb();
+    // First attempt stopped after 2 of 4 photos.
+    await addPhoto(db, { hash: hash(1), width: 10, height: 10 }, { sortKey: 100, moveExisting: true });
+    await addPhoto(db, { hash: hash(2), width: 10, height: 10 }, { sortKey: 99, moveExisting: true });
+    // Re-run of the whole batch, later.
+    for (const [i, h] of [1, 2, 3, 4].entries()) {
+      await addPhoto(db, { hash: hash(h), width: 10, height: 10 }, { sortKey: 500 - i, moveExisting: true });
+    }
+    const page = await listPhotos(db, { locale: 'ur', page: 1 });
+    expect(page.items.map((p) => p.hash)).toEqual([hash(1), hash(2), hash(3), hash(4)]);
+  });
+
+  it('leaves existing positions alone without moveExisting', async () => {
+    const { db } = testDb();
+    await addPhoto(db, { hash: hash(1), width: 10, height: 10 }, { sortKey: 100 });
+    await addPhoto(db, { hash: hash(2), width: 10, height: 10 }, { sortKey: 200 });
+    await addPhoto(db, { hash: hash(1), width: 10, height: 10 }, { sortKey: 999 });
+    expect((await listPhotos(db, { locale: 'ur', page: 1 })).items.map((p) => p.hash)).toEqual([hash(2), hash(1)]);
+  });
+});
