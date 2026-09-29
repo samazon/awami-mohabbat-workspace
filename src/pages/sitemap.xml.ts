@@ -5,8 +5,8 @@ import { listPublishedColumnSlugs } from '@/lib/services/columns';
 
 /**
  * Static routes plus every published edition and column, each in both locales with hreflang alternates.
- * Every new indexable page belongs here. The under-construction sections (/gallery,
- * /media-forum, /magazine) are noindex, so they join the list once built.
+ * Every new indexable page belongs here. The under-construction sections
+ * (/media-forum, /magazine) are noindex, so they join the list once built.
  */
 export const GET: APIRoute = async ({ url }) => {
   const base = new URL(url.origin);
@@ -15,6 +15,7 @@ export const GET: APIRoute = async ({ url }) => {
     { path: '/', changefreq: 'daily' },
     { path: '/archive', changefreq: 'daily' },
     { path: '/columns', changefreq: 'daily' },
+    { path: '/gallery', changefreq: 'weekly' },
     { path: '/about', changefreq: 'monthly' },
     { path: '/team', changefreq: 'monthly' },
     { path: '/contact', changefreq: 'monthly' },

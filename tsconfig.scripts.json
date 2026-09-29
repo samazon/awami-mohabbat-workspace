@@ -23,6 +23,7 @@
     "drizzle.config.ts",
     "tests/**/*",
     "vitest.config.ts",
-    "src/lib/columns/**/*"
+    "src/lib/columns/**/*",
+    "src/lib/gallery/**/*"
   ]
 }

@@ -12,7 +12,14 @@
  */
 import { createHash } from 'node:crypto';
 import sharp from 'sharp';
-import { BANNER_VARIANTS, PAGE_VARIANTS, type BannerVariant, type PageVariant } from '../src/lib/media';
+import {
+  BANNER_VARIANTS,
+  GALLERY_VARIANTS,
+  PAGE_VARIANTS,
+  type BannerVariant,
+  type GalleryVariant,
+  type PageVariant,
+} from '../src/lib/media';
 
 export interface DerivedVariant {
   variant: PageVariant;
@@ -130,4 +137,50 @@ export async function deriveBanner(input: Buffer): Promise<DerivedBanner> {
     origExt: meta.format === 'png' ? 'png' : 'jpg',
     variants,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Gallery photos
+// ---------------------------------------------------------------------------
+export const GALLERY_MAX_BYTES = 25 * 1024 * 1024;
+
+export interface DerivedPhoto {
+  hash: string;
+  /** Size after EXIF rotation, i.e. as the viewer shows it. */
+  width: number;
+  height: number;
+  variants: { variant: GalleryVariant; buffer: Buffer; width: number; height: number }[];
+}
+
+/**
+ * Validate a gallery photo and derive its WebP sizes. Honours EXIF orientation,
+ * never upscales, and writes no metadata (sharp drops EXIF unless asked), so a
+ * phone's GPS location never reaches the bucket.
+ */
+export async function deriveGalleryPhoto(input: Buffer, label = 'photo'): Promise<DerivedPhoto> {
+  if (input.byteLength > GALLERY_MAX_BYTES) {
+    throw new Error(`${label} is ${kb(input.byteLength)}; the limit is 25 MB.`);
+  }
+  let meta: Awaited<ReturnType<ReturnType<typeof sharp>['metadata']>>;
+  try {
+    meta = await sharp(input, { failOn: 'error' }).metadata();
+  } catch {
+    throw new Error(`${label} could not be read as an image. Use JPEG, PNG or WebP.`);
+  }
+  if (meta.format !== 'jpeg' && meta.format !== 'png' && meta.format !== 'webp') {
+    throw new Error(`${label} must be JPEG, PNG or WebP, got ${meta.format ?? 'an unknown format'}. (iPhone HEIC photos: export as JPEG first.)`);
+  }
+
+  const { info } = await sharp(input, { failOn: 'error' }).rotate().toBuffer({ resolveWithObject: true });
+  const variants: DerivedPhoto['variants'] = [];
+  for (const variant of Object.keys(GALLERY_VARIANTS) as GalleryVariant[]) {
+    const spec = GALLERY_VARIANTS[variant];
+    const { data, info: v } = await sharp(input, { failOn: 'error' })
+      .rotate()
+      .resize({ width: spec.width, withoutEnlargement: true })
+      .webp({ quality: spec.quality })
+      .toBuffer({ resolveWithObject: true });
+    variants.push({ variant, buffer: data, width: v.width, height: v.height });
+  }
+  return { hash: contentHash(input), width: info.width, height: info.height, variants };
 }

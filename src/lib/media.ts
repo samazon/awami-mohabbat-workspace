@@ -80,6 +80,24 @@ export const columnistBannerKey = (
 ): string =>
   `columnists/${assertSlug(slug)}/banner-${variant}.${assertHash(hash)}.${variant === 'orig' ? origExt : 'webp'}`;
 
+/**
+ * Gallery photos. No original is stored: phone photos carry EXIF (often GPS),
+ * and the WebP derivatives are written without metadata.
+ *
+ *   gallery/a3f91c2e…/photo-thumb.webp   640w   grid
+ *   gallery/a3f91c2e…/photo-view.webp   2000w   full-screen viewer
+ */
+export const GALLERY_VARIANTS = {
+  thumb: { width: 640, quality: 80 },
+  view: { width: 2000, quality: 80 },
+} as const;
+export type GalleryVariant = keyof typeof GALLERY_VARIANTS;
+
+export const galleryPhotoKey = (hash: string, variant: GalleryVariant): string => {
+  if (!(variant in GALLERY_VARIANTS)) throw new RangeError(`Invalid gallery variant: ${JSON.stringify(variant)}`);
+  return `gallery/${assertHash(hash)}/photo-${variant}.webp`;
+};
+
 export const editionPageKey = (
   date: string,
   page: number,

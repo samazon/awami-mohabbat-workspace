@@ -1,0 +1,326 @@
+---
+/**
+ * /gallery: a bento grid of photos, newest first, 48 a page, with the shared
+ * PhotoSwipe viewer. Every tile is a real link to the full-size image, so the
+ * page works without JS; with JS a click opens the viewer instead.
+ *
+ * Bento: tiles take a size from their position and shape — the first of every
+ * ten is big (2×2), landscape photos go wide, portraits go tall, the rest are
+ * squares. `grid-auto-flow: dense` packs them with no holes. Tiles crop to fill
+ * (object-fit: cover, weighted up so faces survive); the viewer shows the whole photo.
+ */
+import 'photoswipe/style.css';
+import '@/styles/viewer.css';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { dirFor, localePath, t, type Locale } from '@/i18n';
+import type { GalleryPageView, PhotoView } from '@/lib/services/gallery';
+import { getSiteConfig } from '@/lib/services/config';
+import AMFooter from './AMFooter.astro';
+import AMHeader from './AMHeader.astro';
+import Pagination from './Pagination.astro';
+
+interface Props {
+  locale: Locale;
+  result: GalleryPageView;
+}
+const { locale, result } = Astro.props;
+const s = t(locale);
+const config = await getSiteConfig(locale);
+
+const base = localePath(locale, '/gallery');
+const href = (p: number) => (p > 1 ? `${base}?page=${p}` : base);
+const from = result.total === 0 ? 0 : (result.page - 1) * result.perPage + 1;
+const to = Math.min(result.total, result.page * result.perPage);
+const title =
+  result.page > 1 ? `${s.gallery.title} (${result.page}) — ${s.meta.siteName}` : `${s.gallery.title} — ${s.meta.siteName}`;
+
+const shape = (p: PhotoView, i: number): 'big' | 'wide' | 'tall' | 'square' => {
+  if (i % 10 === 0) return 'big';
+  const ratio = p.width / p.height;
+  if (ratio >= 1.35) return 'wide';
+  if (ratio <= 0.8) return 'tall';
+  return 'square';
+};
+const label = (p: PhotoView, i: number) => p.caption ?? s.gallery.photo(from + i);
+
+const labels = {
+  close: s.nav.close,
+  zoom: s.viewer.zoom,
+  prev: s.gallery.prev,
+  next: s.gallery.next,
+  error: s.gallery.error,
+};
+---
+
+<BaseLayout title={title} description={s.gallery.description}>
+  <AMHeader slot="header" locale={locale} active="gallery" />
+
+  <div class="container">
+    <header class="head">
+      <h1 class="title t-head">{s.gallery.title}</h1>
+      <p class="sub">{s.gallery.subtitle}</p>
+    </header>
+
+    {result.items.length > 0 ? (
+      <am-gallery
+        class="bento"
+        data-labels={JSON.stringify(labels)}
+        data-rtl={locale === 'ur' ? '1' : undefined}
+        data-count-template={s.gallery.count(1111111, 2222222)}
+        data-total={String(result.total)}
+        data-offset={String(from - 1)}
+      >
+        {result.items.map((p, i) => (
+          <a
+            class:list={['tile', `tile--${shape(p, i)}`]}
+            href={p.view}
+            data-pswp-width={p.viewWidth}
+            data-pswp-height={p.viewHeight}
+            data-caption={p.caption ?? undefined}
+            data-caption-lang={p.captionLang ?? undefined}
+            aria-label={s.gallery.open(label(p, i))}
+          >
+            <img
+              src={p.thumb}
+              width={p.width}
+              height={p.height}
+              alt={p.caption ?? ''}
+              lang={p.captionLang ?? undefined}
+              dir={p.captionLang ? dirFor(p.captionLang) : undefined}
+              loading={i < 6 ? 'eager' : 'lazy'}
+              decoding="async"
+            />
+            {p.caption && (
+              <span class="tile__caption" lang={p.captionLang ?? undefined} dir={p.captionLang ? dirFor(p.captionLang) : undefined}>
+                {p.caption}
+              </span>
+            )}
+          </a>
+        ))}
+      </am-gallery>
+    ) : (
+      <p class="empty t-body">{s.gallery.empty}</p>
+    )}
+
+    <Pagination
+      page={result.page}
+      pageCount={result.pageCount}
+      href={href}
+      label={s.gallery.pagination}
+      prevLabel={s.gallery.prevPage}
+      nextLabel={s.gallery.nextPage}
+      meta={s.gallery.showing(from, to, result.total)}
+    />
+  </div>
+
+  <AMFooter slot="footer" locale={locale} config={config} />
+</BaseLayout>
+
+<script>
+  import PhotoSwipeLightbox from 'photoswipe/lightbox';
+  import type PhotoSwipe from 'photoswipe';
+
+  interface Labels {
+    close: string;
+    zoom: string;
+    prev: string;
+    next: string;
+    error: string;
+  }
+
+  // Same Lucide bodies as the edition viewer; PhotoSwipe takes icons as strings.
+  const ICON = (body: string) =>
+    `<svg aria-hidden="true" class="pswp__icn" viewBox="0 0 24 24" width="24" height="24">${body}</svg>`;
+  const S = 'fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"';
+  const LUCIDE = {
+    x: `<path ${S} d="M18 6L6 18M6 6l12 12"/>`,
+    zoomIn: `<g ${S}><circle cx="11" cy="11" r="8"/><path d="m21 21l-4.35-4.35M11 8v6m-3-3h6"/></g>`,
+    chevronLeft: `<path ${S} d="m15 18l-6-6l6-6"/>`,
+    chevronRight: `<path ${S} d="m9 18l6-6l-6-6"/>`,
+  };
+
+  class Gallery extends HTMLElement {
+    connectedCallback() {
+      const labels = JSON.parse(this.dataset.labels ?? '{}') as Labels;
+      const rtl = this.dataset.rtl === '1';
+      const total = Number(this.dataset.total ?? '0');
+      const offset = Number(this.dataset.offset ?? '0');
+      // The page-language counter with placeholder numbers; word order differs by language.
+      const countTemplate = this.dataset.countTemplate ?? '';
+      const count = (n: number) => countTemplate.replace('1111111', String(n)).replace('2222222', String(total));
+
+      const lightbox = new PhotoSwipeLightbox({
+        gallery: this,
+        children: 'a.tile',
+        pswpModule: () => import('photoswipe'),
+        mainClass: `am-viewer${rtl ? ' am-viewer--rtl' : ''}`,
+        bgOpacity: 1,
+        showHideAnimationType: 'zoom',
+        counter: false,
+        wheelToZoom: true,
+        preloaderDelay: 400,
+        arrowKeys: !rtl,
+        closeTitle: labels.close,
+        zoomTitle: labels.zoom,
+        arrowPrevTitle: labels.prev,
+        arrowNextTitle: labels.next,
+        errorMsg: labels.error,
+        closeSVG: ICON(LUCIDE.x),
+        zoomSVG: ICON(LUCIDE.zoomIn),
+        arrowPrevSVG: ICON(LUCIDE.chevronLeft),
+        arrowNextSVG: ICON(LUCIDE.chevronRight),
+      });
+
+      lightbox.on('uiRegister', () => {
+        lightbox.pswp?.ui?.registerElement({
+          name: 'caption',
+          appendTo: 'root',
+          onInit: (el, pswp) => {
+            el.setAttribute('aria-live', 'polite');
+            const render = () => {
+              const tile = pswp.currSlide?.data.element as HTMLElement | undefined;
+              el.replaceChildren();
+              const n = document.createElement('span');
+              n.className = 'am-viewer__page';
+              n.textContent = count(offset + pswp.currIndex + 1);
+              el.appendChild(n);
+              const caption = tile?.dataset.caption;
+              if (caption) {
+                const c = document.createElement('span');
+                c.className = 'am-viewer__headline';
+                c.textContent = caption; // text only: captions are never parsed as HTML
+                if (tile?.dataset.captionLang) c.lang = tile.dataset.captionLang;
+                el.appendChild(c);
+              }
+            };
+            pswp.on('change', render);
+            render();
+          },
+        });
+      });
+
+      if (rtl) {
+        lightbox.on('bindEvents', () => {
+          const pswp = lightbox.pswp as PhotoSwipe;
+          pswp.events.add(document, 'keydown', (e) => {
+            const ev = e as KeyboardEvent;
+            if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+            const slide = pswp.currSlide;
+            if (slide && slide.currZoomLevel > slide.zoomLevels.fit) return;
+            ev.preventDefault();
+            if (ev.key === 'ArrowLeft') pswp.next();
+            else pswp.prev();
+          });
+        });
+      }
+
+      lightbox.init();
+    }
+  }
+  if (!customElements.get('am-gallery')) customElements.define('am-gallery', Gallery);
+</script>
+
+<style>
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 20px;
+    padding: 34px 0 14px;
+    border-block-end: 1px solid var(--ink);
+  }
+  .title {
+    font-size: var(--fs-h1);
+  }
+  .sub {
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
+    font-size: var(--fs-card);
+    color: var(--secondary);
+  }
+
+  /* ---- bento ---- */
+  .bento {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-rows: 200px;
+    grid-auto-flow: dense;
+    gap: 12px;
+    padding-block: 24px 8px;
+  }
+  .tile {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    background: var(--thumb-ground);
+    box-shadow:
+      0 0 0 1px rgba(17, 17, 17, 0.08),
+      0 6px 18px rgba(17, 17, 17, 0.1);
+  }
+  .tile--big {
+    grid-column: span 2;
+    grid-row: span 2;
+  }
+  .tile--wide {
+    grid-column: span 2;
+  }
+  .tile--tall {
+    grid-row: span 2;
+  }
+  .tile img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 30%;
+    transition: scale 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .tile:hover img,
+  .tile:focus-visible img {
+    scale: 1.04;
+  }
+  .tile:focus-visible {
+    outline: 3px solid var(--gold);
+    outline-offset: 2px;
+  }
+  .tile__caption {
+    position: absolute;
+    inset: auto 0 0;
+    padding: 28px 12px 10px;
+    background: linear-gradient(to top, rgba(17, 17, 17, 0.78), transparent);
+    color: #ffffff;
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-meta);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tile img {
+      transition: none;
+    }
+  }
+
+  .empty {
+    padding: 30px 0 40px;
+    font-size: var(--fs-body);
+    color: var(--secondary);
+  }
+
+  @media (max-width: 1023px) {
+    .bento {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-auto-rows: 180px;
+    }
+  }
+  @media (max-width: 767px) {
+    .bento {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-auto-rows: 150px;
+      gap: 8px;
+    }
+  }
+</style>

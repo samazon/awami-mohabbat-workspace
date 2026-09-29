@@ -7,10 +7,10 @@ import { IMMUTABLE_CACHE_CONTROL, contentTypeFor } from '@/lib/media';
  * custom domain (cdn.<domain>) is configured — after that CDN_BASE points
  * there and this route simply stops receiving traffic.
  *
- * Keys are allow-listed to our four prefixes and a conservative charset;
+ * Keys are allow-listed to our prefixes and a conservative charset;
  * anything else is a 404, never a bucket listing or a traversal.
  */
-const KEY = /^(editions|articles|ads|columnists)\/[A-Za-z0-9][A-Za-z0-9._-]*(\/[A-Za-z0-9][A-Za-z0-9._-]*)+$/;
+const KEY = /^(editions|articles|ads|columnists|gallery)\/[A-Za-z0-9][A-Za-z0-9._-]*(\/[A-Za-z0-9][A-Za-z0-9._-]*)+$/;
 
 export const GET: APIRoute = async ({ params, request }) => {
   const key = params.key ?? '';

@@ -94,6 +94,33 @@ export const columnists = sqliteTable('columnists', {
 export type Columnist = typeof columnists.$inferSelect;
 
 // ---------------------------------------------------------------------------
+// Gallery — photos shown on /gallery, newest first. Only derivatives are
+// stored in R2 (keys derive from `hash`, src/lib/media.ts); no original, so no
+// EXIF/GPS. `category` is reserved for filtering later; nothing sets it yet.
+// ---------------------------------------------------------------------------
+export const galleryPhotos = sqliteTable(
+  'gallery_photos',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    /** Content hash of the uploaded file: the same photo can't be added twice. */
+    hash: text('hash').notNull().unique(),
+    width: integer('width').notNull(),
+    height: integer('height').notNull(),
+    captionUr: text('caption_ur'),
+    captionEn: text('caption_en'),
+    category: text('category'),
+    /** Hidden photos stay in the table and bucket but leave the page. */
+    hidden: integer('hidden', { mode: 'boolean' }).notNull().default(false),
+    /** Display order: higher first. Newer uploads get higher values. */
+    sortKey: integer('sort_key').notNull(),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [index('gallery_photos_visible_sort_idx').on(t.hidden, t.sortKey)],
+);
+
+export type GalleryPhoto = typeof galleryPhotos.$inferSelect;
+
+// ---------------------------------------------------------------------------
 // Articles — optional long-form text; the only indexable prose on the site
 // ---------------------------------------------------------------------------
 export const articles = sqliteTable(

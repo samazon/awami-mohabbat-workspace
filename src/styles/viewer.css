@@ -1,0 +1,138 @@
+/* Shared PhotoSwipe skin (.am-viewer): the edition viewer and the gallery. */
+  /* PhotoSwipe, in the site's world: ink background, white 1px-bordered
+     square controls, no radius, no shadow. All selectors are PhotoSwipe's. */
+  .am-viewer {
+    --pswp-bg: #111111;
+    --pswp-placeholder-bg: #1c1c1c;
+    --pswp-icon-color: #ffffff;
+    --pswp-icon-color-secondary: #ffffff;
+    --pswp-icon-stroke-color: transparent;
+    --pswp-icon-stroke-width: 0;
+    --pswp-preloader-color: rgba(255, 255, 255, 0.35);
+    --pswp-preloader-color-secondary: #ffffff;
+    --pswp-error-text-color: #ffffff;
+    font-family: var(--font-ui);
+  }
+  .am-viewer .pswp__button {
+    width: var(--touch);
+    height: var(--touch);
+    margin: 8px 0 0 8px;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    color: #ffffff;
+    opacity: 1;
+    transition: background-color 120ms ease-out, border-color 120ms ease-out;
+  }
+  .am-viewer .pswp__button:hover,
+  .am-viewer .pswp__button:focus-visible {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: #ffffff;
+    outline: none;
+  }
+  .am-viewer .pswp__button .pswp__icn {
+    position: static;
+    width: 22px;
+    height: 22px;
+    margin: 10px auto;
+    display: block;
+  }
+  .am-viewer .pswp__top-bar {
+    height: auto;
+    padding: 0 8px 8px 0;
+    background: linear-gradient(rgba(17, 17, 17, 0.75), rgba(17, 17, 17, 0));
+  }
+  .am-viewer .pswp__button--arrow {
+    width: var(--touch);
+    height: var(--touch);
+    margin: -22px 0 0;
+    top: 50%;
+    background: rgba(17, 17, 17, 0.6);
+  }
+  .am-viewer .pswp__button--arrow .pswp__icn {
+    margin: 10px auto;
+    transform: none;
+  }
+  .am-viewer .pswp__button--arrow--prev {
+    left: 12px;
+  }
+  .am-viewer .pswp__button--arrow--next {
+    right: 12px;
+  }
+  /* RTL: the previous page is on the right, and the chevrons flip */
+  .am-viewer--rtl .pswp__button--arrow--prev {
+    left: auto;
+    right: 12px;
+  }
+  .am-viewer--rtl .pswp__button--arrow--next {
+    right: auto;
+    left: 12px;
+  }
+  .am-viewer--rtl .pswp__button--arrow .pswp__icn {
+    transform: scale(-1, 1);
+  }
+  /* touch devices hide the arrows by default; keep them — swiping is not discoverable for a document */
+  .am-viewer.pswp--touch .pswp__button--arrow {
+    visibility: visible;
+  }
+  /* Phones: side arrows would sit on top of the page text. Move them into the
+     caption bar so the bottom reads as a pager: [‹] Page 1 of 4 [›] */
+  @media (max-width: 767px) {
+    .am-viewer .pswp__button--arrow {
+      top: auto;
+      bottom: calc(8px + env(safe-area-inset-bottom));
+      margin: 0;
+      background: transparent;
+    }
+    .am-viewer .pswp__caption {
+      padding-inline: calc(var(--touch) + 24px);
+      padding-block-end: calc(14px + env(safe-area-inset-bottom));
+      justify-content: center;
+      text-align: center;
+    }
+    .am-viewer__headline {
+      display: none; /* the page counter is what matters on a small screen */
+    }
+  }
+
+  .am-viewer .pswp__caption {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 16px;
+    padding: 28px 16px calc(12px + env(safe-area-inset-bottom));
+    background: linear-gradient(rgba(17, 17, 17, 0), rgba(17, 17, 17, 0.8));
+    color: #ffffff;
+    pointer-events: none;
+  }
+  .am-viewer--rtl .pswp__caption {
+    direction: rtl;
+  }
+  .am-viewer__page {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-nav);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .am-viewer__headline {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-nav);
+    color: rgba(255, 255, 255, 0.75);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+  .am-viewer.pswp--ui-visible .pswp__hide-on-close {
+    opacity: 1;
+  }
+  .am-viewer .pswp__img {
+    background: #ffffff; /* newsprint edge against the ink, while decoding */
+  }
+  .am-viewer .pswp__error-msg {
+    font-family: var(--font-ui);
+    font-size: var(--ui-nav);
+  }

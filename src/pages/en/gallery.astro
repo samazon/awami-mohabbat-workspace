@@ -1,0 +1,9 @@
+---
+import GalleryPage from '@/components/GalleryPage.astro';
+import { resolveGallery } from '@/lib/services/gallery';
+
+const result = await resolveGallery(Astro.url.searchParams, 'en');
+if (!result) return Astro.rewrite('/en/404');
+---
+
+<GalleryPage locale="en" result={result} />
