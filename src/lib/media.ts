@@ -98,6 +98,23 @@ export const galleryPhotoKey = (hash: string, variant: GalleryVariant): string =
   return `gallery/${assertHash(hash)}/photo-${variant}.webp`;
 };
 
+/**
+ * Special editions (اشاعتِ خاص): one full newspaper page each, read by zooming.
+ *
+ *   special/a3f91c2e…/page-thumb.webp    480w   list
+ *   special/a3f91c2e…/page-view.webp    2400w   viewer (never upscaled)
+ */
+export const SPECIAL_VARIANTS = {
+  thumb: { width: 480, quality: 80 },
+  view: { width: 2400, quality: 82 },
+} as const;
+export type SpecialVariant = keyof typeof SPECIAL_VARIANTS;
+
+export const specialEditionKey = (hash: string, variant: SpecialVariant): string => {
+  if (!(variant in SPECIAL_VARIANTS)) throw new RangeError(`Invalid special-edition variant: ${JSON.stringify(variant)}`);
+  return `special/${assertHash(hash)}/page-${variant}.webp`;
+};
+
 export const editionPageKey = (
   date: string,
   page: number,

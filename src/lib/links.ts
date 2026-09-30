@@ -17,6 +17,7 @@ export const nav = (locale: Locale) => ({
   archive: localePath(locale, '/archive'),
   columns: localePath(locale, '/columns'),
   gallery: localePath(locale, '/gallery'),
+  special: localePath(locale, '/special-editions'),
   mediaForum: localePath(locale, '/media-forum'),
   magazine: localePath(locale, '/magazine'),
   team: localePath(locale, '/team'),

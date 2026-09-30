@@ -10,7 +10,7 @@ import LanguageSwitcher from './LanguageSwitcher.astro';
 
 interface Props {
   locale: Locale;
-  active?: 'home' | 'archive' | 'columns' | 'gallery' | 'media-forum' | 'magazine' | 'team' | 'articles' | 'about' | 'contact';
+  active?: 'home' | 'archive' | 'columns' | 'gallery' | 'special' | 'media-forum' | 'magazine' | 'team' | 'articles' | 'about' | 'contact';
   /** Today's edition, when the page has one: powers the e-paper button. */
   epaper?: { href: string; pages: number; pdfUrl: string | null; pdfBytes: number | null } | null;
 }
@@ -39,7 +39,9 @@ const items: NavItem[] = [
     ],
   },
   { key: 'gallery', href: links.gallery, label: s.nav.gallery },
-  { key: 'media-forum', href: links.mediaForum, label: s.nav.mediaForum },
+  { key: 'special', href: links.special, label: s.nav.special },
+  // Hidden until the forum page is ready (the /media-forum route still exists) — uncomment to show again:
+  // { key: 'media-forum', href: links.mediaForum, label: s.nav.mediaForum },
   { key: 'magazine', href: links.magazine, label: s.nav.magazine },
   { key: 'about', href: links.about, label: s.nav.about },
   { key: 'team', href: links.team, label: s.nav.team },

@@ -9,8 +9,6 @@
  * squares. `grid-auto-flow: dense` packs them with no holes. Tiles crop to fill
  * (object-fit: cover, weighted up so faces survive); the viewer shows the whole photo.
  */
-import 'photoswipe/style.css';
-import '@/styles/viewer.css';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { dirFor, localePath, t, type Locale } from '@/i18n';
 import type { GalleryPageView, PhotoView } from '@/lib/services/gallery';
@@ -18,6 +16,7 @@ import { getSiteConfig } from '@/lib/services/config';
 import AMFooter from './AMFooter.astro';
 import AMHeader from './AMHeader.astro';
 import Pagination from './Pagination.astro';
+import Lightbox from './Lightbox.astro';
 
 interface Props {
   locale: Locale;
@@ -116,109 +115,7 @@ const labels = {
   <AMFooter slot="footer" locale={locale} config={config} />
 </BaseLayout>
 
-<script>
-  import PhotoSwipeLightbox from 'photoswipe/lightbox';
-  import type PhotoSwipe from 'photoswipe';
-
-  interface Labels {
-    close: string;
-    zoom: string;
-    prev: string;
-    next: string;
-    error: string;
-  }
-
-  // Same Lucide bodies as the edition viewer; PhotoSwipe takes icons as strings.
-  const ICON = (body: string) =>
-    `<svg aria-hidden="true" class="pswp__icn" viewBox="0 0 24 24" width="24" height="24">${body}</svg>`;
-  const S = 'fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"';
-  const LUCIDE = {
-    x: `<path ${S} d="M18 6L6 18M6 6l12 12"/>`,
-    zoomIn: `<g ${S}><circle cx="11" cy="11" r="8"/><path d="m21 21l-4.35-4.35M11 8v6m-3-3h6"/></g>`,
-    chevronLeft: `<path ${S} d="m15 18l-6-6l6-6"/>`,
-    chevronRight: `<path ${S} d="m9 18l6-6l-6-6"/>`,
-  };
-
-  class Gallery extends HTMLElement {
-    connectedCallback() {
-      const labels = JSON.parse(this.dataset.labels ?? '{}') as Labels;
-      const rtl = this.dataset.rtl === '1';
-      const total = Number(this.dataset.total ?? '0');
-      const offset = Number(this.dataset.offset ?? '0');
-      // The page-language counter with placeholder numbers; word order differs by language.
-      const countTemplate = this.dataset.countTemplate ?? '';
-      const count = (n: number) => countTemplate.replace('1111111', String(n)).replace('2222222', String(total));
-
-      const lightbox = new PhotoSwipeLightbox({
-        gallery: this,
-        children: 'a.tile',
-        pswpModule: () => import('photoswipe'),
-        mainClass: `am-viewer${rtl ? ' am-viewer--rtl' : ''}`,
-        bgOpacity: 1,
-        showHideAnimationType: 'zoom',
-        counter: false,
-        wheelToZoom: true,
-        preloaderDelay: 400,
-        arrowKeys: !rtl,
-        closeTitle: labels.close,
-        zoomTitle: labels.zoom,
-        arrowPrevTitle: labels.prev,
-        arrowNextTitle: labels.next,
-        errorMsg: labels.error,
-        closeSVG: ICON(LUCIDE.x),
-        zoomSVG: ICON(LUCIDE.zoomIn),
-        arrowPrevSVG: ICON(LUCIDE.chevronLeft),
-        arrowNextSVG: ICON(LUCIDE.chevronRight),
-      });
-
-      lightbox.on('uiRegister', () => {
-        lightbox.pswp?.ui?.registerElement({
-          name: 'caption',
-          appendTo: 'root',
-          onInit: (el, pswp) => {
-            el.setAttribute('aria-live', 'polite');
-            const render = () => {
-              const tile = pswp.currSlide?.data.element as HTMLElement | undefined;
-              el.replaceChildren();
-              const n = document.createElement('span');
-              n.className = 'am-viewer__page';
-              n.textContent = count(offset + pswp.currIndex + 1);
-              el.appendChild(n);
-              const caption = tile?.dataset.caption;
-              if (caption) {
-                const c = document.createElement('span');
-                c.className = 'am-viewer__headline';
-                c.textContent = caption; // text only: captions are never parsed as HTML
-                if (tile?.dataset.captionLang) c.lang = tile.dataset.captionLang;
-                el.appendChild(c);
-              }
-            };
-            pswp.on('change', render);
-            render();
-          },
-        });
-      });
-
-      if (rtl) {
-        lightbox.on('bindEvents', () => {
-          const pswp = lightbox.pswp as PhotoSwipe;
-          pswp.events.add(document, 'keydown', (e) => {
-            const ev = e as KeyboardEvent;
-            if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
-            const slide = pswp.currSlide;
-            if (slide && slide.currZoomLevel > slide.zoomLevels.fit) return;
-            ev.preventDefault();
-            if (ev.key === 'ArrowLeft') pswp.next();
-            else pswp.prev();
-          });
-        });
-      }
-
-      lightbox.init();
-    }
-  }
-  if (!customElements.get('am-gallery')) customElements.define('am-gallery', Gallery);
-</script>
+<Lightbox />
 
 <style>
   .head {

@@ -1,0 +1,201 @@
+---
+/**
+ * /special-editions (اشاعتِ خاص): full-page features, newest first, 24 a page.
+ * Each card is a real link to the full-size page, so it works without JS; with
+ * JS it opens the shared viewer with print zoom, so the small text is readable.
+ */
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { dirFor, localePath, t, type Locale } from '@/i18n';
+import { formatLong } from '@/lib/dates';
+import type { SpecialPageView } from '@/lib/services/special';
+import { getSiteConfig } from '@/lib/services/config';
+import AMFooter from './AMFooter.astro';
+import AMHeader from './AMHeader.astro';
+import Lightbox from './Lightbox.astro';
+import LtrRun from './LtrRun.astro';
+import Pagination from './Pagination.astro';
+
+interface Props {
+  locale: Locale;
+  result: SpecialPageView;
+}
+const { locale, result } = Astro.props;
+const s = t(locale);
+const config = await getSiteConfig(locale);
+
+const base = localePath(locale, '/special-editions');
+const href = (p: number) => (p > 1 ? `${base}?page=${p}` : base);
+const from = result.total === 0 ? 0 : (result.page - 1) * result.perPage + 1;
+const to = Math.min(result.total, result.page * result.perPage);
+const title =
+  result.page > 1 ? `${s.special.title} (${result.page}) — ${s.meta.siteName}` : `${s.special.title} — ${s.meta.siteName}`;
+const dateText = (d: string | null) => (d ? formatLong(d) : s.special.undated);
+
+const labels = { close: s.nav.close, zoom: s.viewer.zoom, prev: s.special.prev, next: s.special.next, error: s.special.error };
+---
+
+<BaseLayout title={title} description={s.special.description}>
+  <AMHeader slot="header" locale={locale} active="special" />
+
+  <div class="container">
+    <header class="head">
+      <h1 class="title t-head">{s.special.title}</h1>
+      <p class="sub">{s.special.subtitle}</p>
+    </header>
+
+    {result.items.length > 0 ? (
+      <am-gallery
+        class="grid"
+        data-zoom="print"
+        data-labels={JSON.stringify(labels)}
+        data-rtl={locale === 'ur' ? '1' : undefined}
+        data-count-template={s.special.count(1111111, 2222222)}
+        data-total={String(result.total)}
+        data-offset={String(from - 1)}
+      >
+        {result.items.map((p, i) => (
+          <article class="card">
+            <a
+              class="card__page"
+              href={p.view}
+              data-pswp-width={p.viewWidth}
+              data-pswp-height={p.viewHeight}
+              data-caption={`${p.title} · ${dateText(p.publishedDate)}`}
+              data-caption-lang={p.titleLang}
+              aria-label={s.special.open(p.title)}
+            >
+              <img
+                src={p.thumb}
+                width={p.width}
+                height={p.height}
+                alt={p.title}
+                lang={p.titleLang}
+                dir={dirFor(p.titleLang)}
+                loading={i < 4 ? 'eager' : 'lazy'}
+                decoding="async"
+              />
+            </a>
+            <p class="card__date"><LtrRun>{dateText(p.publishedDate)}</LtrRun></p>
+            <h2 class="card__title" lang={p.titleLang} dir={dirFor(p.titleLang)}>{p.title}</h2>
+          </article>
+        ))}
+      </am-gallery>
+    ) : (
+      <p class="empty t-body">{s.special.empty}</p>
+    )}
+
+    <Pagination
+      page={result.page}
+      pageCount={result.pageCount}
+      href={href}
+      label={s.special.pagination}
+      prevLabel={s.special.prev}
+      nextLabel={s.special.next}
+      meta={s.special.showing(from, to, result.total)}
+    />
+  </div>
+
+  <AMFooter slot="footer" locale={locale} config={config} />
+</BaseLayout>
+
+<Lightbox />
+
+<style>
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 20px;
+    padding: 34px 0 14px;
+    border-block-end: 1px solid var(--ink);
+  }
+  .title {
+    font-size: var(--fs-h1);
+  }
+  .sub {
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
+    font-size: var(--fs-card);
+    color: var(--secondary);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 32px 24px;
+    padding-block: 28px 8px;
+  }
+  .card {
+    min-width: 0;
+  }
+  .card__page {
+    display: block;
+    aspect-ratio: 5 / 8;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    background: var(--thumb-ground);
+    box-shadow:
+      0 0 0 1px rgba(17, 17, 17, 0.1),
+      0 8px 22px rgba(17, 17, 17, 0.12);
+    transition: box-shadow 160ms ease-out, translate 160ms ease-out;
+  }
+  .card__page img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 0; /* the masthead and headline are at the top */
+  }
+  .card__page:hover,
+  .card__page:focus-visible {
+    translate: 0 -3px;
+    box-shadow:
+      0 0 0 1px rgba(17, 17, 17, 0.14),
+      0 14px 30px rgba(17, 17, 17, 0.18);
+  }
+  .card__page:focus-visible {
+    outline: 3px solid var(--gold);
+    outline-offset: 3px;
+  }
+  .card__date {
+    margin-block-start: 12px;
+    font-family: var(--font-ui);
+    font-size: var(--ui-meta);
+    color: var(--red);
+  }
+  .card__title {
+    margin-block-start: 4px;
+    font-family: var(--font-head);
+    line-height: var(--lh-head);
+    font-size: var(--fs-summary);
+    font-weight: 700;
+    color: var(--ink);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .card__page {
+      transition: none;
+    }
+  }
+
+  .empty {
+    padding: 30px 0 40px;
+    font-size: var(--fs-body);
+    color: var(--secondary);
+  }
+
+  @media (max-width: 1023px) {
+    .grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 767px) {
+    .grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px 14px;
+    }
+  }
+</style>

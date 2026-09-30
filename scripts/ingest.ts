@@ -15,9 +15,11 @@ import sharp from 'sharp';
 import {
   BANNER_VARIANTS,
   GALLERY_VARIANTS,
+  SPECIAL_VARIANTS,
   PAGE_VARIANTS,
   type BannerVariant,
   type GalleryVariant,
+  type SpecialVariant,
   type PageVariant,
 } from '../src/lib/media';
 
@@ -158,6 +160,26 @@ export interface DerivedPhoto {
  * phone's GPS location never reaches the bucket.
  */
 export async function deriveGalleryPhoto(input: Buffer, label = 'photo'): Promise<DerivedPhoto> {
+  return deriveWebpSet(input, label, GALLERY_VARIANTS);
+}
+
+/** A special-edition page: same validation and privacy as a gallery photo, larger sizes. */
+export async function deriveSpecialEdition(input: Buffer, label = 'page'): Promise<DerivedWebpSet<SpecialVariant>> {
+  return deriveWebpSet(input, label, SPECIAL_VARIANTS);
+}
+
+export interface DerivedWebpSet<V extends string> {
+  hash: string;
+  width: number;
+  height: number;
+  variants: { variant: V; buffer: Buffer; width: number; height: number }[];
+}
+
+async function deriveWebpSet<V extends string>(
+  input: Buffer,
+  label: string,
+  specs: Record<V, { width: number; quality: number }>,
+): Promise<DerivedWebpSet<V>> {
   if (input.byteLength > GALLERY_MAX_BYTES) {
     throw new Error(`${label} is ${kb(input.byteLength)}; the limit is 25 MB.`);
   }
@@ -172,9 +194,9 @@ export async function deriveGalleryPhoto(input: Buffer, label = 'photo'): Promis
   }
 
   const { info } = await sharp(input, { failOn: 'error' }).rotate().toBuffer({ resolveWithObject: true });
-  const variants: DerivedPhoto['variants'] = [];
-  for (const variant of Object.keys(GALLERY_VARIANTS) as GalleryVariant[]) {
-    const spec = GALLERY_VARIANTS[variant];
+  const variants: DerivedWebpSet<V>['variants'] = [];
+  for (const variant of Object.keys(specs) as V[]) {
+    const spec = specs[variant];
     const { data, info: v } = await sharp(input, { failOn: 'error' })
       .rotate()
       .resize({ width: spec.width, withoutEnlargement: true })

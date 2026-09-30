@@ -121,6 +121,31 @@ export const galleryPhotos = sqliteTable(
 export type GalleryPhoto = typeof galleryPhotos.$inferSelect;
 
 // ---------------------------------------------------------------------------
+// Special editions (اشاعتِ خاص) — single full-page features, shown on
+// /special-editions newest first. Like the gallery, only WebP derivatives are
+// stored (keys derive from `hash`). `publishedDate` is optional: some pages
+// carry no date; those sort after the dated ones.
+// ---------------------------------------------------------------------------
+export const specialEditions = sqliteTable(
+  'special_editions',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    hash: text('hash').notNull().unique(),
+    width: integer('width').notNull(),
+    height: integer('height').notNull(),
+    titleUr: text('title_ur').notNull(),
+    titleEn: text('title_en'),
+    /** YYYY-MM-DD as printed on the page, or null. */
+    publishedDate: text('published_date'),
+    hidden: integer('hidden', { mode: 'boolean' }).notNull().default(false),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [index('special_editions_visible_date_idx').on(t.hidden, t.publishedDate)],
+);
+
+export type SpecialEdition = typeof specialEditions.$inferSelect;
+
+// ---------------------------------------------------------------------------
 // Articles — optional long-form text; the only indexable prose on the site
 // ---------------------------------------------------------------------------
 export const articles = sqliteTable(
