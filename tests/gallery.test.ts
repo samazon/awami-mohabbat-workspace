@@ -1,7 +1,7 @@
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 import { GALLERY_MAX_BYTES, deriveGalleryPhoto } from '../scripts/ingest';
-import { PER_PAGE, addPhoto, listAllPhotos, listPhotos, setCaption, setHidden } from '../src/lib/gallery/data';
+import { PER_PAGE, addPhoto, listAllPhotos, listPhotos, lowestSortKey, setCaption, setHidden } from '../src/lib/gallery/data';
 import { galleryPhotoKey } from '../src/lib/media';
 import { testDb } from './helpers/db';
 
@@ -122,5 +122,17 @@ describe('re-running a batch', () => {
     await addPhoto(db, { hash: hash(2), width: 10, height: 10 }, { sortKey: 200 });
     await addPhoto(db, { hash: hash(1), width: 10, height: 10 }, { sortKey: 999 });
     expect((await listPhotos(db, { locale: 'ur', page: 1 })).items.map((p) => p.hash)).toEqual([hash(2), hash(1)]);
+  });
+});
+
+describe('adding a batch at the bottom', () => {
+  it('places it below every existing photo, keeping its own order', async () => {
+    const { db } = testDb();
+    expect(await lowestSortKey(db, 777)).toBe(777); // empty gallery
+    await addPhoto(db, { hash: hash(1), width: 10, height: 10 }, { sortKey: 1000 });
+    await addPhoto(db, { hash: hash(2), width: 10, height: 10 }, { sortKey: 999 });
+    const base = (await lowestSortKey(db)) - 1;
+    for (const [i, h] of [3, 4].entries()) await addPhoto(db, { hash: hash(h), width: 10, height: 10 }, { sortKey: base - i });
+    expect((await listPhotos(db, { locale: 'ur', page: 1 })).items.map((p) => p.hash)).toEqual([hash(1), hash(2), hash(3), hash(4)]);
   });
 });

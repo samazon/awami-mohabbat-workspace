@@ -1,7 +1,7 @@
 /**
  * Gallery photos until the admin panel exists.
  *
- *   pnpm gallery add <folder | file…> [--dry-run] [--reverse]   upload JPEG/PNG/WebP photos
+ *   pnpm gallery add <folder | file…> [--dry-run] [--reverse] [--bottom]   upload JPEG/PNG/WebP photos
  *   pnpm gallery list                                 every photo, hidden included
  *   pnpm gallery caption <id> [--ur "…"] [--en "…"] [--clear-ur] [--clear-en]
  *   pnpm gallery hide <id> | show <id>
@@ -14,7 +14,8 @@
  *     ur: تقریب کا منظر
  *     en: The ceremony
  *
- * A batch appears above earlier batches; within a batch, folder (name) order is
+ * A batch appears above earlier batches (or below all of them with --bottom, for
+ * older photos); within a batch, folder (name) order is
  * kept — or reversed with --reverse (e.g. Facebook downloads, whose numeric names
  * grow over time, so --reverse puts the most recent first). A file already in
  * the gallery is not uploaded again; its captions, if given, are updated, and it
@@ -29,7 +30,7 @@ import { parse as parseYaml } from 'yaml';
 import { ZodError, z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { galleryPhotos } from '../src/lib/db/schema';
-import { addPhoto, listAllPhotos, setCaption, setHidden } from '../src/lib/gallery/data';
+import { addPhoto, listAllPhotos, lowestSortKey, setCaption, setHidden } from '../src/lib/gallery/data';
 import { galleryPhotoKey } from '../src/lib/media';
 import { localDb, remoteCreds, remoteDb, type SeedDb, type Target } from './d1';
 import { deriveGalleryPhoto, kb } from './ingest';
@@ -38,7 +39,7 @@ import { readWranglerConfig } from './wrangler-config';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const USAGE =
-  'Usage: pnpm gallery add <folder|file…> [--dry-run] [--reverse] | list | caption <id> [--ur …] [--en …] [--clear-ur] [--clear-en] | hide <id> | show <id>  [--remote]';
+  'Usage: pnpm gallery add <folder|file…> [--dry-run] [--reverse] [--bottom] | list | caption <id> [--ur …] [--en …] [--clear-ur] [--clear-en] | hide <id> | show <id>  [--remote]';
 const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 
 const { values, positionals } = parseArgs({
@@ -47,6 +48,7 @@ const { values, positionals } = parseArgs({
     remote: { type: 'boolean', default: false },
     'dry-run': { type: 'boolean', default: false },
     reverse: { type: 'boolean', default: false },
+    bottom: { type: 'boolean', default: false },
     ur: { type: 'string' },
     en: { type: 'string' },
     'clear-ur': { type: 'boolean', default: false },
@@ -111,7 +113,9 @@ async function add(args: string[]) {
 
   const { db, bucket } = await open();
   const r2 = new R2Uploader(ROOT, bucket, target);
-  const base = Date.now();
+  const now = Date.now();
+  // Top: keys just under now (newer than every earlier batch). Bottom: just under the current lowest.
+  const base = values.bottom ? (await lowestSortKey(db)) - 1 : now;
   let added = 0;
   let skipped = 0;
   try {
@@ -126,7 +130,7 @@ async function add(args: string[]) {
       const res = await addPhoto(
         db,
         { hash: d.hash, width: d.width, height: d.height, captionUr: cap?.ur, captionEn: cap?.en },
-        { now: base, sortKey: base - i, moveExisting: true },
+        { now, sortKey: base - i, moveExisting: true },
       );
       if (res.created) added++;
       else skipped++;

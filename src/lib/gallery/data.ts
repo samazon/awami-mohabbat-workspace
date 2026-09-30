@@ -144,3 +144,9 @@ export async function listVisibleHashes(db: AnyDb): Promise<string[]> {
     .orderBy(desc(galleryPhotos.sortKey), desc(galleryPhotos.id));
   return rows.map((r) => r.hash);
 }
+
+/** The lowest sort key in the gallery (hidden included), or now if it's empty. */
+export async function lowestSortKey(db: AnyDb, now = Date.now()): Promise<number> {
+  const [row] = await db.select({ min: sql<number | null>`min(${galleryPhotos.sortKey})` }).from(galleryPhotos);
+  return row?.min == null ? now : Number(row.min);
+}
