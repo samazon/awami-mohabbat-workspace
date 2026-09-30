@@ -94,7 +94,6 @@ export const en: Catalog = {
     description: 'Daily Awami Mohabbat special editions: full pages on people, events and major topics.',
     subtitle: 'Full pages on people, events and major topics',
     empty: 'No special editions have been published yet.',
-    undated: 'Undated',
     open: (title: string) => `${title} — open to read`,
     count: (n: number, total: number) => `${n} of ${total}`,
     prev: 'Previous page',

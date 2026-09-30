@@ -29,7 +29,6 @@ const from = result.total === 0 ? 0 : (result.page - 1) * result.perPage + 1;
 const to = Math.min(result.total, result.page * result.perPage);
 const title =
   result.page > 1 ? `${s.special.title} (${result.page}) — ${s.meta.siteName}` : `${s.special.title} — ${s.meta.siteName}`;
-const dateText = (d: string | null) => (d ? formatLong(d) : s.special.undated);
 
 const labels = { close: s.nav.close, zoom: s.viewer.zoom, prev: s.special.prev, next: s.special.next, error: s.special.error };
 ---
@@ -60,7 +59,7 @@ const labels = { close: s.nav.close, zoom: s.viewer.zoom, prev: s.special.prev, 
               href={p.view}
               data-pswp-width={p.viewWidth}
               data-pswp-height={p.viewHeight}
-              data-caption={`${p.title} · ${dateText(p.publishedDate)}`}
+              data-caption={p.publishedDate ? `${p.title} · ${formatLong(p.publishedDate)}` : p.title}
               data-caption-lang={p.titleLang}
               aria-label={s.special.open(p.title)}
             >
@@ -75,7 +74,7 @@ const labels = { close: s.nav.close, zoom: s.viewer.zoom, prev: s.special.prev, 
                 decoding="async"
               />
             </a>
-            <p class="card__date"><LtrRun>{dateText(p.publishedDate)}</LtrRun></p>
+            {p.publishedDate && <p class="card__date"><LtrRun>{formatLong(p.publishedDate)}</LtrRun></p>}
             <h2 class="card__title" lang={p.titleLang} dir={dirFor(p.titleLang)}>{p.title}</h2>
           </article>
         ))}
@@ -159,12 +158,13 @@ const labels = { close: s.nav.close, zoom: s.viewer.zoom, prev: s.special.prev, 
   }
   .card__date {
     margin-block-start: 12px;
+    margin-block-end: -8px; /* title keeps its 4px gap when a date is shown */
     font-family: var(--font-ui);
     font-size: var(--ui-meta);
     color: var(--red);
   }
   .card__title {
-    margin-block-start: 4px;
+    margin-block-start: 12px;
     font-family: var(--font-head);
     line-height: var(--lh-head);
     font-size: var(--fs-summary);
