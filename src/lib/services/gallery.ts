@@ -2,7 +2,7 @@ import { CDN_BASE } from 'astro:env/server';
 import type { Locale } from '@/i18n';
 import { db } from '@/lib/db/client';
 import { galleryPhotoKey, mediaUrl } from '@/lib/media';
-import { listPhotos, type PhotoPage, type PhotoRef } from '@/lib/gallery/data';
+import { PER_PAGE, listPhotos, listVisibleHashes, type PhotoPage, type PhotoRef } from '@/lib/gallery/data';
 
 export interface PhotoView extends Omit<PhotoRef, 'hash'> {
   thumb: string;
@@ -37,4 +37,21 @@ export async function resolveGallery(params: URLSearchParams, locale: Locale): P
   const r = await listPhotos(db(), { locale, page });
   if (page > 1 && page > r.pageCount) return null;
   return { ...r, items: r.items.map(toView) };
+}
+
+/**
+ * Sitemap image entries: for each gallery page, its path and the full-size
+ * image URLs shown on it (absolute against `origin` when CDN_BASE is a path).
+ */
+export async function gallerySitemapPages(origin: URL): Promise<{ path: string; images: string[] }[]> {
+  const hashes = await listVisibleHashes(db());
+  const pages: { path: string; images: string[] }[] = [];
+  for (let i = 0; i < hashes.length; i += PER_PAGE) {
+    const n = i / PER_PAGE + 1;
+    pages.push({
+      path: n === 1 ? '/gallery' : `/gallery?page=${n}`,
+      images: hashes.slice(i, i + PER_PAGE).map((h) => new URL(mediaUrl(CDN_BASE, galleryPhotoKey(h, 'view')), origin).toString()),
+    });
+  }
+  return pages;
 }

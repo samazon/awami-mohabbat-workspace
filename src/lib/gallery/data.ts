@@ -135,3 +135,12 @@ export async function listAllPhotos(db: AnyDb) {
   return db.select().from(galleryPhotos).orderBy(desc(galleryPhotos.sortKey), desc(galleryPhotos.id));
 }
 
+/** Visible photo hashes in display order, for the sitemap's image entries. */
+export async function listVisibleHashes(db: AnyDb): Promise<string[]> {
+  const rows = await db
+    .select({ hash: galleryPhotos.hash })
+    .from(galleryPhotos)
+    .where(eq(galleryPhotos.hidden, false))
+    .orderBy(desc(galleryPhotos.sortKey), desc(galleryPhotos.id));
+  return rows.map((r) => r.hash);
+}
