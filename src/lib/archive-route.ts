@@ -1,45 +1,47 @@
 import type { APIContext } from 'astro';
 import { localePath, type Locale } from '@/i18n';
-import { editionExists, getArchiveMonths, type ArchiveMonth } from '@/lib/services/editions';
+import { todayIso } from '@/lib/dates';
+import { editionExists, getArchiveMonths, getFirstEditionDate } from '@/lib/services/editions';
 
 export interface ArchiveState {
   year: number;
   month: number;
-  page: number;
-  months: ArchiveMonth[];
+  /** A picked date with no edition — the page says so above the month. */
   missingDate: string | null;
+  /** Bounds for the date picker: first edition … today (Pakistan time). */
+  minDate: string;
+  maxDate: string;
 }
 
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+const isRealDate = (v: string) => {
+  const d = new Date(`${v}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+};
+
 /**
- * Resolve /archive's query string into a validated view, or a redirect.
+ * /archive shows one month: the current one (Pakistan time), or — when nothing
+ * has been uploaded yet this month (say, on the 1st) — the latest month that
+ * has editions. Past months are reached by date, not browsed:
  *
- *   ?date=YYYY-MM-DD  → redirect to that edition if it exists, else that month + notice
- *   ?y=&m=&p=         → that month/page; anything malformed falls back to the newest month
+ *   ?date=YYYY-MM-DD  → redirect to that edition if it exists, else the notice
+ *                       "not available online" above the default month.
+ *
+ * Old ?y=&m=&p= links are ignored and land on the default month.
  */
 export async function resolveArchive(ctx: APIContext, locale: Locale): Promise<ArchiveState | Response> {
-  const q = ctx.url.searchParams;
-  const months = await getArchiveMonths();
-  const newest = months[0] ?? { year: new Date().getFullYear(), month: new Date().getMonth() + 1, count: 0 };
+  const today = todayIso();
+  const [months, first] = await Promise.all([getArchiveMonths(), getFirstEditionDate()]);
+  const current = { year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) };
+  const hasCurrent = months.some((m) => m.year === current.year && m.month === current.month);
+  const shown = hasCurrent || !months[0] ? current : { year: months[0].year, month: months[0].month };
 
-  const picked = q.get('date');
   let missingDate: string | null = null;
-  let year = newest.year;
-  let month = newest.month;
-
-  if (picked && /^\d{4}-\d{2}-\d{2}$/.test(picked) && !Number.isNaN(Date.parse(`${picked}T00:00:00Z`))) {
+  const picked = ctx.url.searchParams.get('date');
+  if (picked && ISO.test(picked) && isRealDate(picked)) {
     if (await editionExists(picked)) return ctx.redirect(localePath(locale, `/edition/${picked}`), 302);
     missingDate = picked;
-    year = Number(picked.slice(0, 4));
-    month = Number(picked.slice(5, 7));
-  } else {
-    const y = Number(q.get('y'));
-    const m = Number(q.get('m'));
-    if (Number.isInteger(y) && y >= 1900 && y <= 2100) year = y;
-    if (Number.isInteger(m) && m >= 1 && m <= 12) month = m;
   }
 
-  const p = Number(q.get('p'));
-  const page = Number.isInteger(p) && p >= 1 && p <= 10000 ? p : 1;
-
-  return { year, month, page, months, missingDate };
+  return { ...shown, missingDate, minDate: first ?? today, maxDate: today };
 }

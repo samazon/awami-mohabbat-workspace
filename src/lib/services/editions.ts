@@ -203,6 +203,12 @@ export async function getEditionsInMonth(
   };
 }
 
+/** The oldest published edition's date, or null when there are none. */
+export async function getFirstEditionDate(): Promise<string | null> {
+  const [row] = await db().select({ date: editions.date }).from(editions).where(publishedOnly).orderBy(asc(editions.date)).limit(1);
+  return row?.date ?? null;
+}
+
 /** True when a published edition exists for `date`. */
 export async function editionExists(date: string): Promise<boolean> {
   const [row] = await db().select({ id: editions.id }).from(editions).where(and(publishedOnly, eq(editions.date, date))).limit(1);
