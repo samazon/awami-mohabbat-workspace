@@ -158,13 +158,18 @@ const labels = { close: s.nav.close, zoom: s.viewer.zoom, prev: s.special.prev, 
   }
   .card__date {
     margin-block-start: 12px;
-    margin-block-end: -8px; /* title keeps its 4px gap when a date is shown */
     font-family: var(--font-ui);
     font-size: var(--ui-meta);
     color: var(--red);
   }
+  .card__date + .card__title {
+    margin-block-start: 0;
+  }
   .card__title {
-    margin-block-start: 12px;
+    margin-block-start: 6px;
+    /* Nastaliq rises well above its line box; the clamp's overflow:hidden would
+       clip the tops without this room inside the box. */
+    padding-block-start: 0.45em;
     font-family: var(--font-head);
     line-height: var(--lh-head);
     font-size: var(--fs-summary);
@@ -172,6 +177,7 @@ const labels = { close: s.nav.close, zoom: s.viewer.zoom, prev: s.special.prev, 
     color: var(--ink);
     display: -webkit-box;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
