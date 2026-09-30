@@ -18,7 +18,7 @@ export default defineConfig({
   }),
   // Lucide, inlined at build time: only the icons actually used reach the HTML,
   // so there is no icon font, no extra request and no runtime JS.
-  integrations: [react(), icon({ include: { lucide: ['*'], 'circle-flags': ['*'] } })],
+  integrations: [react(), icon({ include: { lucide: ['*'], 'circle-flags': ['*'], 'simple-icons': ['whatsapp', 'facebook', 'x'] } })],
 
   i18n: {
     defaultLocale: 'ur',

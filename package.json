@@ -40,6 +40,7 @@
     "@astrojs/check": "^0.9.10",
     "@iconify-json/circle-flags": "^1.2.11",
     "@iconify-json/lucide": "^1.2.136",
+    "@iconify-json/simple-icons": "1.2.98",
     "@types/markdown-it": "14.2.0",
     "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",

@@ -4,6 +4,7 @@
  * byline, then the columnist's banner (whole, natural shape), then the body.
  * The body HTML comes only from renderMarkdown (raw HTML off, links allow-listed).
  */
+import ShareBar from './ShareBar.astro';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { dirFor, t, type Locale } from '@/i18n';
 import { formatLong } from '@/lib/dates';
@@ -76,6 +77,7 @@ const jsonLdText = JSON.stringify(jsonLd).replace(/</g, '\\u003c');
         <span aria-hidden="true">·</span>
         <span>{s.columns.readingTime(c.readingMinutes)}</span>
       </p>
+      <ShareBar locale={locale} title={c.title} />
     </header>
 
     <img class="read__banner" src={c.banner.view} width={viewW} height={viewH} alt={alt} decoding="async" fetchpriority="high" />

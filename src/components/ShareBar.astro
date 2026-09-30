@@ -1,0 +1,215 @@
+---
+/**
+ * Share this page: WhatsApp, Facebook, X, copy link, and — where the browser
+ * has one — the phone's own share sheet. On wide screens it floats at the
+ * side opposite the reading start (left on Urdu pages, right on English), so
+ * it never sits over the start of a line; below that it is a row in the page.
+ *
+ * Links are built here from the page's own canonical URL and title, URL-encoded;
+ * nothing from the query string reaches them. They open in a new tab.
+ */
+import { Icon as Iconify } from 'astro-icon/components';
+import { t, type Locale } from '@/i18n';
+import Icon from './Icon.astro';
+
+interface Props {
+  locale: Locale;
+  /** What is being shared, e.g. the column title or the edition headline. */
+  title: string;
+}
+const { locale, title } = Astro.props;
+const s = t(locale);
+
+const url = new URL(Astro.url.pathname, Astro.url.origin).toString();
+const u = encodeURIComponent(url);
+const text = encodeURIComponent(`${title} — ${s.meta.siteName}`);
+
+const targets = [
+  { key: 'whatsapp', name: 'WhatsApp', icon: 'simple-icons:whatsapp', href: `https://wa.me/?text=${text}%20${u}` },
+  { key: 'facebook', name: 'Facebook', icon: 'simple-icons:facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${u}` },
+  { key: 'x', name: 'X', icon: 'simple-icons:x', href: `https://x.com/intent/post?text=${text}&url=${u}` },
+];
+---
+
+<am-share class="share" data-url={url} data-title={title} data-copied={s.edition.copied}>
+  <span class="share__label">{s.edition.shareLabel}</span>
+  <ul class="share__list">
+    {targets.map((x) => (
+      <li>
+        <a class:list={['share__btn', `share__btn--${x.key}`]} href={x.href} target="_blank" rel="noopener noreferrer" aria-label={s.edition.shareOn(x.name)} title={s.edition.shareOn(x.name)}>
+          <Iconify name={x.icon} class="share__icon" aria-hidden="true" />
+        </a>
+      </li>
+    ))}
+    <li>
+      <button type="button" class="share__btn share__btn--copy" data-copy aria-label={s.edition.copyLink} title={s.edition.copyLink}>
+        <span class="share__swap" data-idle><Icon name="link" size="md" /></span>
+        <span class="share__swap" data-done hidden><Icon name="check" size="md" /></span>
+      </button>
+    </li>
+    <li data-native hidden>
+      <button type="button" class="share__btn share__btn--native" aria-label={s.edition.moreShare} title={s.edition.moreShare}>
+        <Icon name="share-2" size="md" />
+      </button>
+    </li>
+  </ul>
+  <span class="share__status" role="status" aria-live="polite"></span>
+</am-share>
+
+<script>
+  class ShareBar extends HTMLElement {
+    connectedCallback() {
+      const url = this.dataset.url ?? location.href;
+      const title = this.dataset.title ?? document.title;
+      const status = this.querySelector<HTMLElement>('.share__status')!;
+      const copy = this.querySelector<HTMLButtonElement>('[data-copy]');
+      const idle = copy?.querySelector<HTMLElement>('[data-idle]');
+      const done = copy?.querySelector<HTMLElement>('[data-done]');
+
+      copy?.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(url);
+        } catch {
+          return; // no clipboard access (old browser, insecure context): nothing to confirm
+        }
+        if (idle && done) {
+          idle.hidden = true;
+          done.hidden = false;
+          setTimeout(() => {
+            idle.hidden = false;
+            done.hidden = true;
+          }, 1800);
+        }
+        status.textContent = this.dataset.copied ?? '';
+        setTimeout(() => (status.textContent = ''), 1800);
+      });
+
+      // The phone's own share sheet (WhatsApp groups, Messenger, email …) when the browser offers one.
+      const native = this.querySelector<HTMLElement>('[data-native]');
+      if (native && typeof navigator.share === 'function') {
+        native.hidden = false;
+        native.querySelector('button')?.addEventListener('click', () => {
+          navigator.share({ title, url }).catch(() => {}); // dismissed: fine
+        });
+      }
+    }
+  }
+  if (!customElements.get('am-share')) customElements.define('am-share', ShareBar);
+</script>
+
+<style>
+  .share {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    margin-block: 18px 6px;
+  }
+  .share__label {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-meta);
+    color: var(--muted);
+  }
+  .share__list {
+    display: flex;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .share__btn {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 50%;
+    color: #ffffff;
+    cursor: pointer;
+    transition: translate 140ms ease-out, filter 140ms ease-out;
+  }
+  .share__btn:hover {
+    translate: 0 -2px;
+    filter: brightness(1.08);
+    color: #ffffff;
+    text-decoration: none;
+  }
+  .share__btn:focus-visible {
+    outline: 3px solid var(--gold);
+    outline-offset: 2px;
+  }
+  .share__btn--whatsapp {
+    background: #25d366;
+  }
+  .share__btn--facebook {
+    background: #1877f2;
+  }
+  .share__btn--x {
+    background: #111111;
+  }
+  .share__btn--copy,
+  .share__btn--native {
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: inset 0 0 0 1px var(--rule-strong);
+  }
+  .share__btn--copy:hover,
+  .share__btn--native:hover {
+    color: var(--red);
+  }
+  .share .share__btn :global(.share__icon) {
+    width: 18px;
+    height: 18px;
+  }
+  .share__swap {
+    display: inline-flex;
+  }
+  .share__swap[hidden] {
+    display: none;
+  }
+  .share__status {
+    font-family: var(--font-label);
+    font-size: var(--ui-meta);
+    color: var(--red);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .share__btn {
+      transition: none;
+    }
+  }
+
+  /* Wide screens: a slim bar floating at the side, vertically centred. It sits
+     in the margin beside the 1180px container, so it never covers the text. */
+  @media (min-width: 1360px) {
+    .share {
+      position: fixed;
+      inset-block-start: 50%;
+      inset-inline-end: 20px;
+      z-index: 15;
+      flex-direction: column;
+      gap: 8px;
+      margin: 0;
+      padding: 10px 8px;
+      translate: 0 -50%;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+      box-shadow:
+        0 0 0 1px rgba(17, 17, 17, 0.08),
+        0 10px 28px rgba(17, 17, 17, 0.14);
+    }
+    .share__label {
+      font-size: var(--ui-caption);
+    }
+    .share__list {
+      flex-direction: column;
+    }
+    .share__status {
+      position: absolute;
+      inset-inline-end: calc(100% + 10px);
+      inset-block-start: 50%;
+      translate: 0 -50%;
+      white-space: nowrap;
+    }
+  }
+</style>
