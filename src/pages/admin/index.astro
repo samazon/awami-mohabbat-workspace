@@ -1,0 +1,75 @@
+---
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Icon from '@/components/Icon.astro';
+import { adminListMembers } from '@/lib/services/team-admin';
+
+const admin = Astro.locals.admin!;
+const members = await adminListMembers();
+const withPhoto = members.filter((m) => m.photoHash).length;
+const hidden = members.filter((m) => m.hidden).length;
+---
+
+<AdminLayout title="Dashboard" section="dashboard">
+  <div class="a-page-head">
+    <div>
+      <h1 class="a-title">Welcome{admin.name ? `, ${admin.name}` : ''}</h1>
+      <p class="a-sub">Manage the website's content. Changes go live as soon as you save.</p>
+    </div>
+  </div>
+
+  <div class="tiles">
+    <a class="tile a-card" href="/admin/team">
+      <span class="tile__icon"><Icon name="users" size="lg" /></span>
+      <span class="tile__body">
+        <span class="tile__title">Team</span>
+        <span class="tile__meta">{members.length} people · {withPhoto} with photos{hidden ? ` · ${hidden} hidden` : ''}</span>
+      </span>
+      <Icon name="arrow-right" size="md" flip={false} />
+    </a>
+  </div>
+</AdminLayout>
+
+<style>
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .tile {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px;
+    color: var(--ink);
+    text-decoration: none;
+    transition: border-color 120ms ease-out, box-shadow 120ms ease-out;
+  }
+  .tile:hover {
+    border-color: var(--ink);
+    box-shadow: 0 6px 18px rgba(17, 17, 17, 0.08);
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .tile__icon {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--red) 10%, transparent);
+    color: var(--red);
+  }
+  .tile__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+  }
+  .tile__title {
+    font-size: var(--ui-a-lg);
+    font-weight: 700;
+  }
+  .tile__meta {
+    color: var(--a-ink-2);
+    font-size: var(--ui-a-md);
+  }
+</style>

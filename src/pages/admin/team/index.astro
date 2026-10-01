@@ -1,0 +1,196 @@
+---
+import { actions } from 'astro:actions';
+import { Icon as Iconify } from 'astro-icon/components';
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Icon from '@/components/Icon.astro';
+import { TEAM_GROUPS } from '@/lib/db/schema';
+import { GROUP_TITLES } from '@/lib/team/data';
+import { photoUrl } from '@/lib/services/team';
+import { adminListMembers } from '@/lib/services/team-admin';
+
+// Post-redirect-get: a reorder or delete comes back here and is shown once.
+const moved = Astro.getActionResult(actions.admin.teamMove);
+const removed = Astro.getActionResult(actions.admin.teamDelete);
+if ((moved && !moved.error) || (removed && !removed.error)) {
+  return Astro.redirect(`/admin/team${removed && !removed.error ? '?deleted=1' : ''}#${moved && !moved.error ? 'list' : 'top'}`);
+}
+const error = moved?.error?.message ?? removed?.error?.message ?? null;
+const saved = Astro.url.searchParams.get('saved');
+const deleted = Astro.url.searchParams.has('deleted');
+
+const members = await adminListMembers();
+const groups = TEAM_GROUPS.map((key) => ({ key, title: GROUP_TITLES[key].en, members: members.filter((m) => m.groupKey === key) }));
+---
+
+<AdminLayout title="Team" section="team">
+  <div class="a-page-head" id="top">
+    <div>
+      <h1 class="a-title">Team</h1>
+      <p class="a-sub">{members.length} people on <a href="/team" target="_blank" rel="noopener">the Team page</a>. Order here is the order on the site.</p>
+    </div>
+    <a class="a-btn" href="/admin/team/new"><Icon name="plus" size="sm" /> Add a person</a>
+  </div>
+
+  {saved && <p class="a-alert a-alert--ok" role="status"><Icon name="check" size="sm" /> Saved. The Team page shows the change within a few minutes.</p>}
+  {deleted && <p class="a-alert a-alert--ok" role="status"><Icon name="check" size="sm" /> Removed from the team.</p>}
+  {error && <p class="a-alert a-alert--bad" role="alert"><Icon name="triangle-alert" size="sm" /> {error}</p>}
+
+  <div id="list" class="groups">
+    {groups.map((g) => (
+      <section class="group a-card" aria-labelledby={`g-${g.key}`}>
+        <header class="group__head">
+          <h2 id={`g-${g.key}`} class="group__title">{g.title}</h2>
+          <span class="a-badge">{g.members.length}</span>
+        </header>
+        {g.members.length === 0 ? (
+          <p class="group__empty">Nobody in this group yet.</p>
+        ) : (
+          <ol class="rows">
+            {g.members.map((m, i) => {
+              const src = photoUrl(m);
+              return (
+                <li class:list={['row', { 'row--hidden': m.hidden }]}>
+                  {src ? <img class="row__photo" src={src} alt="" loading="lazy" width="44" height="55" /> : <span class="row__photo row__photo--empty"><Icon name="user" size="md" /></span>}
+                  <a class="row__main" href={`/admin/team/${m.id}`}>
+                    <span class="row__name">
+                      {m.nameEn}
+                      {m.featured && <span class="a-badge a-badge--gold">Featured</span>}
+                      {m.hidden && <span class="a-badge"><Icon name="eye-off" size="sm" /> Hidden</span>}
+                    </span>
+                    <span class="row__ur" lang="ur" dir="rtl">{m.nameUr}</span>
+                    <span class="row__role">
+                      {[m.roleEn, m.placeEn].filter(Boolean).join(' · ') || '—'}
+                      {m.country && <Iconify name={`circle-flags:${m.country}`} class="row__flag" aria-hidden="true" />}
+                    </span>
+                  </a>
+                  <div class="row__actions">
+                    <form method="POST" action={`${actions.admin.teamMove}`}>
+                      <input type="hidden" name="id" value={m.id} />
+                      <input type="hidden" name="dir" value="up" />
+                      <button class="a-btn a-btn--ghost a-btn--icon" type="submit" aria-label={`Move ${m.nameEn} up`} title="Move up" disabled={i === 0}><Icon name="arrow-up" size="sm" /></button>
+                    </form>
+                    <form method="POST" action={`${actions.admin.teamMove}`}>
+                      <input type="hidden" name="id" value={m.id} />
+                      <input type="hidden" name="dir" value="down" />
+                      <button class="a-btn a-btn--ghost a-btn--icon" type="submit" aria-label={`Move ${m.nameEn} down`} title="Move down" disabled={i === g.members.length - 1}><Icon name="arrow-down" size="sm" /></button>
+                    </form>
+                    <a class="a-btn a-btn--ghost" href={`/admin/team/${m.id}`}><Icon name="pencil" size="sm" /> Edit</a>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </section>
+    ))}
+  </div>
+</AdminLayout>
+
+<style>
+  .groups {
+    display: grid;
+    gap: 18px;
+  }
+  .group__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    border-block-end: 1px solid var(--a-line);
+  }
+  .group__title {
+    font-size: var(--ui-a-group);
+    font-weight: 700;
+  }
+  .group__empty {
+    padding: 16px 18px;
+    color: var(--muted);
+  }
+  .rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 18px;
+    border-block-end: 1px solid var(--a-line);
+  }
+  .row:last-child {
+    border-block-end: 0;
+  }
+  .row--hidden {
+    background: #fafaf8;
+  }
+  .row--hidden .row__photo {
+    opacity: 0.45;
+  }
+  .row__photo {
+    flex: none;
+    width: 44px;
+    height: 55px;
+    border-radius: 6px;
+    object-fit: cover;
+    object-position: 50% 20%;
+    background: var(--a-bg);
+    box-shadow: 0 0 0 1px var(--a-line);
+  }
+  .row__photo--empty {
+    display: grid;
+    place-items: center;
+    color: #b2b0aa;
+  }
+  .row__main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .row__main:hover .row__name {
+    color: var(--red);
+  }
+  .row__name {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+  }
+  .row__ur {
+    align-self: flex-start;
+    font-family: var(--font-naskh);
+    font-size: var(--ui-a-base);
+    line-height: 1.7;
+    color: var(--a-ink-2);
+  }
+  .row__role {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--ui-a-sm);
+    color: var(--muted);
+  }
+  .row :global(.row__flag) {
+    width: 14px;
+    height: 14px;
+  }
+  .row__actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+  }
+  @media (max-width: 640px) {
+    .row {
+      flex-wrap: wrap;
+    }
+    .row__actions {
+      width: 100%;
+      justify-content: flex-end;
+    }
+  }
+</style>

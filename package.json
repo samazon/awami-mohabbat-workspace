@@ -22,6 +22,7 @@
     "gallery": "tsx scripts/gallery.ts",
     "special": "tsx scripts/special.ts",
     "magazine": "tsx scripts/magazine.ts",
+    "team:import": "tsx scripts/team-import.ts",
     "optimize-image": "tsx scripts/optimize-image.ts",
     "deploy": "wrangler types && astro build && wrangler deploy"
   },
@@ -31,6 +32,7 @@
     "astro": "7.3.3",
     "astro-icon": "1.2.0",
     "drizzle-orm": "0.45.3",
+    "jose": "6.2.12",
     "markdown-it": "15.0.2",
     "photoswipe": "^5.4.4",
     "react": "^19.3.0",

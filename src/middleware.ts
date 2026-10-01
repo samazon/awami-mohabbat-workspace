@@ -1,4 +1,5 @@
 import { defineMiddleware } from 'astro:middleware';
+import { authenticateRequest } from '@/lib/services/admin';
 
 /**
  * Cache policy + baseline security headers for every response.
@@ -22,6 +23,15 @@ const NO_STORE = 'private, no-store';
 /** Workers' shared edge cache. The DOM lib types `caches` without `.default`. */
 const edgeCache = (): Cache => (caches as unknown as { default: Cache }).default;
 
+/** The admin panel and its actions (form posts land on /admin/*; JS calls on /_actions/admin.*). */
+const isAdminPath = (p: string) => p === '/admin' || p.startsWith('/admin/') || p.startsWith('/_actions/admin.');
+
+const denied = () =>
+  new Response('Not authorised.', {
+    status: 403,
+    headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': NO_STORE, 'x-robots-tag': 'noindex, nofollow' },
+  });
+
 export const onRequest = defineMiddleware(async (context, next) => {
   const { request } = context;
   const url = new URL(request.url);
@@ -33,7 +43,20 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   const isMedia = url.pathname.startsWith('/media/');
-  const cacheable = request.method === 'GET' && !isMedia && import.meta.env.PROD;
+  const admin = isAdminPath(url.pathname);
+
+  // Admin: authenticate every request, never touch the shared edge cache (deny by default).
+  if (admin) {
+    const auth = await authenticateRequest(request.headers);
+    if (!auth.ok) {
+      // Outcome only: no email, no token (rule 09).
+      console.warn(JSON.stringify({ event: 'admin_denied', reason: auth.reason, path: url.pathname, method: request.method }));
+      return denied();
+    }
+    context.locals.admin = auth.admin;
+  }
+
+  const cacheable = request.method === 'GET' && !isMedia && !admin && import.meta.env.PROD;
 
   if (cacheable) {
     const hit = await edgeCache().match(request);
@@ -51,7 +74,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const response = await next();
   const h = new Headers(response.headers);
 
-  if (!isMedia && !h.has('cache-control')) {
+  if (admin) {
+    h.set('cache-control', NO_STORE);
+    h.set('x-robots-tag', 'noindex, nofollow');
+  } else if (!isMedia && !h.has('cache-control')) {
     h.set('cache-control', request.method === 'GET' && response.status === 200 ? PUBLIC_PAGE : NO_STORE);
   }
   h.set('x-content-type-options', 'nosniff');

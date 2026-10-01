@@ -1,0 +1,404 @@
+---
+/**
+ * The admin panel's shell: its own layout (no public header, no hreflang, no
+ * share cards), English UI, noindex. The middleware has already verified the
+ * admin; `Astro.locals.admin` is always set here.
+ */
+import '@/styles/tokens.css';
+import '@/styles/base.css';
+import Icon from '@/components/Icon.astro';
+
+interface Props {
+  title: string;
+  /** Which nav entry is current. */
+  section?: 'dashboard' | 'team';
+}
+const { title, section } = Astro.props;
+const admin = Astro.locals.admin!;
+
+const nav = [
+  { key: 'dashboard', href: '/admin', label: 'Dashboard', icon: 'layout-dashboard' },
+  { key: 'team', href: '/admin/team', label: 'Team', icon: 'users' },
+] as const;
+const later = [
+  { label: 'Editions', icon: 'newspaper' },
+  { label: 'Columns', icon: 'pen-line' },
+  { label: 'Gallery', icon: 'images' },
+  { label: 'Special editions', icon: 'star' },
+  { label: 'Magazine', icon: 'book-open' },
+];
+---
+
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{title} — Awami Mohabbat admin</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/ibm-plex-sans-latin.woff2" crossorigin />
+  </head>
+  <body class="admin">
+    <header class="bar">
+      <a class="bar__brand" href="/admin"><span class="bar__dot" aria-hidden="true"></span>Awami Mohabbat <span class="bar__tag">Admin</span></a>
+      <div class="bar__end">
+        <a class="bar__link" href="/" target="_blank" rel="noopener">View site <Icon name="external-link" size="sm" /></a>
+        <span class="bar__who" title={admin.email}>{admin.name ?? admin.email}</span>
+      </div>
+    </header>
+
+    <div class="shell">
+      <nav class="side" aria-label="Admin">
+        <ul>
+          {nav.map((n) => (
+            <li>
+              <a class="side__link" href={n.href} aria-current={section === n.key ? 'page' : undefined}>
+                <Icon name={n.icon} size="md" />
+                {n.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+        <p class="side__heading">Coming next</p>
+        <ul>
+          {later.map((n) => (
+            <li>
+              <span class="side__link side__link--off" aria-disabled="true"><Icon name={n.icon} size="md" />{n.label}</span>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <main class="main" id="main">
+        <slot />
+      </main>
+    </div>
+  </body>
+</html>
+
+<style is:global>
+  /* Admin-wide primitives: buttons, fields, cards. Same tokens as the site. */
+  .admin {
+    /* Admin chrome type scale: fixed, like the site's other --ui-* tokens. */
+    --ui-a-xs: 11px;
+    --ui-a-sm: 12px;
+    --ui-a-md: 13px;
+    --ui-a-base: 14px;
+    --ui-a-group: 15px;
+    --ui-a-lg: 16px;
+    --ui-a-xl: 22px;
+    --a-bg: #f6f6f4;
+    --a-panel: #ffffff;
+    --a-line: #e6e5e1;
+    --a-ink-2: #55534e;
+    min-height: 100vh;
+    background: var(--a-bg);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: var(--ui-a-base);
+    line-height: 1.5;
+  }
+  .admin :is(h1, h2, h3) {
+    font-family: var(--font-ui);
+    color: var(--ink);
+  }
+  .a-page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 20px;
+    margin-block-end: 20px;
+  }
+  .a-title {
+    font-size: var(--ui-a-xl);
+    font-weight: 700;
+  }
+  .a-sub {
+    color: var(--a-ink-2);
+  }
+  .a-card {
+    background: var(--a-panel);
+    border: 1px solid var(--a-line);
+    border-radius: 10px;
+  }
+  .a-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 14px;
+    border: 1px solid var(--ink);
+    border-radius: 8px;
+    background: var(--ink);
+    color: #ffffff;
+    font-family: var(--font-ui);
+    font-size: var(--ui-a-md);
+    font-weight: 600;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 120ms ease-out, border-color 120ms ease-out;
+  }
+  .a-btn:hover {
+    background: var(--red);
+    border-color: var(--red);
+    color: #ffffff;
+    text-decoration: none;
+  }
+  .a-btn--ghost {
+    background: var(--a-panel);
+    color: var(--ink);
+    border-color: var(--a-line);
+  }
+  .a-btn--ghost:hover {
+    background: var(--a-bg);
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+  .a-btn--danger {
+    background: var(--a-panel);
+    color: var(--red);
+    border-color: color-mix(in srgb, var(--red) 40%, transparent);
+  }
+  .a-btn--danger:hover {
+    background: var(--red);
+    color: #ffffff;
+  }
+  .a-btn--icon {
+    width: 32px;
+    min-height: 32px;
+    padding: 0;
+  }
+  .a-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+    pointer-events: none;
+  }
+  .a-btn:focus-visible,
+  .a-input:focus-visible {
+    outline: 3px solid var(--gold);
+    outline-offset: 2px;
+  }
+  .a-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--a-bg);
+    border: 1px solid var(--a-line);
+    color: var(--a-ink-2);
+    font-size: var(--ui-a-xs);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .a-badge--gold {
+    background: #fbf3dc;
+    border-color: #ead9a4;
+    color: #6b5310;
+  }
+  .a-alert {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-block-end: 18px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid;
+    font-weight: 500;
+  }
+  .a-alert--ok {
+    background: #edf7f0;
+    border-color: #b9dfc4;
+    color: #1d5a31;
+  }
+  .a-alert--bad {
+    background: #fdeeee;
+    border-color: #f1c0c0;
+    color: #8a1a1a;
+  }
+  .a-label {
+    display: block;
+    margin-block-end: 6px;
+    font-size: var(--ui-a-sm);
+    font-weight: 600;
+    color: var(--a-ink-2);
+  }
+  .a-hint {
+    margin-block-start: 5px;
+    font-size: var(--ui-a-sm);
+    color: var(--muted);
+  }
+  .a-input {
+    width: 100%;
+    min-height: 38px;
+    padding: 0 11px;
+    border: 1px solid var(--a-line);
+    border-radius: 8px;
+    background: var(--a-panel);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: var(--ui-a-base);
+    line-height: 1.4;
+  }
+  .a-input:hover {
+    border-color: #cfcdc7;
+  }
+  .a-input:focus {
+    border-color: var(--ink);
+    outline: none;
+  }
+  /* Urdu fields: right-to-left, in the site's Naskh face. */
+  .a-input[lang='ur'] {
+    font-family: var(--font-naskh);
+    font-size: var(--ui-a-lg);
+    line-height: 1.9;
+  }
+  select.a-input {
+    padding-inline-end: 28px;
+  }
+</style>
+
+<style>
+  .bar {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 56px;
+    padding: 0 20px;
+    background: var(--nav-bg);
+    color: #ffffff;
+  }
+  .bar__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: #ffffff;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .bar__dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 0 3px rgba(168, 22, 30, 0.35);
+  }
+  .bar__tag {
+    padding: 1px 7px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.12);
+    font-size: var(--ui-a-xs);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .bar__end {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .bar__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: var(--ui-a-md);
+    text-decoration: none;
+  }
+  .bar__link:hover {
+    color: #ffffff;
+  }
+  .bar__who {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.65);
+    font-size: var(--ui-a-md);
+  }
+
+  .shell {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    min-height: calc(100vh - 56px);
+  }
+  .side {
+    padding: 18px 12px;
+    border-inline-end: 1px solid var(--a-line);
+    background: var(--a-panel);
+  }
+  .side ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .side__link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 38px;
+    padding: 0 10px;
+    border-radius: 8px;
+    color: var(--a-ink-2);
+    font-weight: 500;
+    text-decoration: none;
+  }
+  a.side__link:hover {
+    background: var(--a-bg);
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .side__link[aria-current='page'] {
+    background: var(--ink);
+    color: #ffffff;
+  }
+  .side__link--off {
+    color: #b2b0aa;
+    cursor: default;
+  }
+  .side__heading {
+    margin: 22px 10px 6px;
+    font-size: var(--ui-a-xs);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .main {
+    min-width: 0;
+    padding: 28px 32px 60px;
+  }
+
+  @media (max-width: 860px) {
+    .shell {
+      grid-template-columns: 1fr;
+    }
+    .side {
+      padding: 8px 12px;
+      border-inline-end: 0;
+      border-block-end: 1px solid var(--a-line);
+    }
+    .side ul {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .side__heading,
+    .side ul:last-of-type {
+      display: none;
+    }
+    .main {
+      padding: 20px 16px 48px;
+    }
+    .bar__who {
+      display: none;
+    }
+  }
+</style>

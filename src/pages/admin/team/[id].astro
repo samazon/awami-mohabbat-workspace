@@ -1,0 +1,459 @@
+---
+/**
+ * /admin/team/new and /admin/team/<id>: one team member's profile.
+ * Saving posts to the admin.teamSave action; on success it redirects to the
+ * list (post-redirect-get), on failure it re-renders with what was typed.
+ */
+import { actions, isInputError } from 'astro:actions';
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Icon from '@/components/Icon.astro';
+import { TEAM_GROUPS } from '@/lib/db/schema';
+import { GROUP_TITLES } from '@/lib/team/data';
+import { photoUrl } from '@/lib/services/team';
+import { adminGetMember } from '@/lib/services/team-admin';
+
+const param = Astro.params.id ?? '';
+const isNew = param === 'new';
+if (!isNew && !/^[1-9]\d{0,8}$/.test(param)) return new Response('Not found', { status: 404 });
+const member = isNew ? null : await adminGetMember(Number(param));
+if (!isNew && !member) return new Response('Not found', { status: 404 });
+
+const result = Astro.getActionResult(actions.admin.teamSave);
+if (result && !result.error) return Astro.redirect(`/admin/team?saved=${result.data.id}#list`);
+const deleteResult = Astro.getActionResult(actions.admin.teamDelete);
+if (deleteResult && !deleteResult.error) return Astro.redirect('/admin/team?deleted=1');
+
+const error = result?.error ?? deleteResult?.error ?? null;
+const fieldErrors = result?.error && isInputError(result.error) ? result.error.fields : {};
+const typed = (result?.error as { inputValue?: Record<string, unknown> } | undefined)?.inputValue ?? null;
+const val = (k: string, fallback: string | null | undefined) => (typed && typeof typed[k] === 'string' ? (typed[k] as string) : (fallback ?? ''));
+const checked = (k: string, fallback: boolean) => (typed ? typed[k] === true || typed[k] === 'on' : fallback);
+
+const current = member ? photoUrl(member) : null;
+const title = isNew ? 'Add a person' : member!.nameEn;
+const COUNTRIES = ['ae', 'au', 'be', 'ca', 'de', 'es', 'fr', 'gb', 'it', 'lk', 'my', 'nl', 'no', 'pk', 'ru', 'se', 'th', 'us'];
+---
+
+<AdminLayout title={title} section="team">
+  <a class="back" href="/admin/team"><Icon name="arrow-left" size="sm" flip={false} /> Team</a>
+  <div class="a-page-head">
+    <h1 class="a-title">{title}</h1>
+  </div>
+
+  {error && (
+    <p class="a-alert a-alert--bad" role="alert">
+      <Icon name="triangle-alert" size="sm" />
+      {isInputError(error) ? 'Some fields need attention.' : error.message}
+    </p>
+  )}
+
+  <form class="form" method="POST" action={actions.admin.teamSave} enctype="multipart/form-data" data-member-form>
+    {member && <input type="hidden" name="id" value={member.id} />}
+
+    <section class="a-card panel">
+      <h2 class="panel__title">Photo</h2>
+      <am-photo-crop class="crop" data-current={current ?? undefined}>
+        <div class="crop__frame">
+          <canvas class="crop__canvas" width="660" height="825" data-canvas hidden></canvas>
+          {current ? (
+            <img class="crop__current" src={current} alt="" data-current-img />
+          ) : (
+            <span class="crop__empty" data-empty><Icon name="user" size="xl" /></span>
+          )}
+        </div>
+        <div class="crop__tools">
+          <label class="a-btn a-btn--ghost">
+            <Icon name="upload" size="sm" /> {current ? 'Replace photo' : 'Choose photo'}
+            <input class="crop__pick" type="file" accept="image/jpeg,image/png,image/webp,image/heic" data-pick />
+          </label>
+          <div class="crop__zoom" data-zoom-row hidden>
+            <Icon name="zoom-out" size="sm" />
+            <input type="range" min="1" max="3" step="0.01" value="1" aria-label="Zoom" data-zoom />
+            <Icon name="zoom-in" size="sm" />
+          </div>
+          <p class="a-hint" data-hint>{current ? 'Choose a new photo to replace this one.' : 'JPEG, PNG or WebP. You can crop it after choosing.'}</p>
+          <p class="a-hint" data-drag-hint hidden>Drag the photo to position the face; use the slider to zoom.</p>
+          {current && (
+            <label class="check">
+              <input type="checkbox" name="removePhoto" />
+              Remove photo (show a placeholder)
+            </label>
+          )}
+        </div>
+        {/* The cropped result is placed here before the form is sent. */}
+        <input type="file" name="photo" hidden data-out />
+      </am-photo-crop>
+    </section>
+
+    <section class="a-card panel">
+      <h2 class="panel__title">Name</h2>
+      <div class="grid2">
+        <div>
+          <label class="a-label" for="nameEn">Name (English)</label>
+          <input class="a-input" id="nameEn" name="nameEn" required maxlength="120" value={val('nameEn', member?.nameEn)} />
+          {fieldErrors.nameEn && <p class="err">{fieldErrors.nameEn[0]}</p>}
+        </div>
+        <div>
+          <label class="a-label" for="nameUr">Name (Urdu)</label>
+          <input class="a-input" id="nameUr" name="nameUr" required maxlength="120" lang="ur" dir="rtl" value={val('nameUr', member?.nameUr)} />
+          {fieldErrors.nameUr && <p class="err">{fieldErrors.nameUr[0]}</p>}
+        </div>
+      </div>
+    </section>
+
+    <section class="a-card panel">
+      <h2 class="panel__title">Role and place</h2>
+      <div class="grid2">
+        <div>
+          <label class="a-label" for="roleEn">Role (English)</label>
+          <input class="a-input" id="roleEn" name="roleEn" maxlength="80" placeholder="e.g. Bureau Chief" value={val('roleEn', member?.roleEn)} />
+        </div>
+        <div>
+          <label class="a-label" for="roleUr">Role (Urdu)</label>
+          <input class="a-input" id="roleUr" name="roleUr" maxlength="80" lang="ur" dir="rtl" placeholder="مثلاً بیورو چیف" value={val('roleUr', member?.roleUr)} />
+        </div>
+        <div>
+          <label class="a-label" for="placeEn">Place / country (English)</label>
+          <input class="a-input" id="placeEn" name="placeEn" maxlength="80" placeholder="e.g. Kasur" value={val('placeEn', member?.placeEn)} />
+        </div>
+        <div>
+          <label class="a-label" for="placeUr">Place / country (Urdu)</label>
+          <input class="a-input" id="placeUr" name="placeUr" maxlength="80" lang="ur" dir="rtl" placeholder="مثلاً قصور" value={val('placeUr', member?.placeUr)} />
+        </div>
+        <div>
+          <label class="a-label" for="country">Flag (country code)</label>
+          <input class="a-input" id="country" name="country" maxlength="2" list="countries" placeholder="e.g. be" pattern="[A-Za-z]{2}" value={val('country', member?.country)} />
+          <datalist id="countries">{COUNTRIES.map((c) => <option value={c} />)}</datalist>
+          <p class="a-hint">Two letters, for international representatives. Leave empty for none.</p>
+          {fieldErrors.country && <p class="err">{fieldErrors.country[0]}</p>}
+        </div>
+      </div>
+      <p class="a-hint">Leave a field empty to hide it. If only one language is filled in, the site shows it on both pages.</p>
+    </section>
+
+    <section class="a-card panel">
+      <h2 class="panel__title">Placement</h2>
+      <div class="grid2">
+        <div>
+          <label class="a-label" for="groupKey">Group</label>
+          <select class="a-input" id="groupKey" name="groupKey">
+            {TEAM_GROUPS.map((g) => <option value={g} selected={val('groupKey', member?.groupKey ?? 'reporting') === g}>{GROUP_TITLES[g].en}</option>)}
+          </select>
+          <p class="a-hint">Moving someone to another group puts them at the end of it.</p>
+        </div>
+        <div class="checks">
+          <label class="check">
+            <input type="checkbox" name="featured" checked={checked('featured', member?.featured ?? false)} />
+            <span><strong>Featured</strong> — the large card at the top (the chief editor). Only one person.</span>
+          </label>
+          <label class="check">
+            <input type="checkbox" name="hidden" checked={checked('hidden', member?.hidden ?? false)} />
+            <span><strong>Hidden</strong> — keep the profile but don't show it on the site.</span>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <div class="actions">
+      <button class="a-btn" type="submit" data-save><Icon name="check" size="sm" /> {isNew ? 'Add to team' : 'Save changes'}</button>
+      <a class="a-btn a-btn--ghost" href="/admin/team">Cancel</a>
+    </div>
+  </form>
+
+  {member && (
+    <form class="danger a-card" method="POST" action={actions.admin.teamDelete} data-confirm={`Remove ${member.nameEn} from the team? This cannot be undone.`}>
+      <div>
+        <h2 class="panel__title">Remove from the team</h2>
+        <p class="a-hint">To keep the profile but take it off the site, use "Hidden" instead.</p>
+      </div>
+      <input type="hidden" name="id" value={member.id} />
+      <button class="a-btn a-btn--danger" type="submit"><Icon name="trash-2" size="sm" /> Remove</button>
+    </form>
+  )}
+</AdminLayout>
+
+<script>
+  // Confirm destructive forms.
+  document.querySelectorAll<HTMLFormElement>('form[data-confirm]').forEach((f) =>
+    f.addEventListener('submit', (e) => {
+      if (!confirm(f.dataset.confirm ?? 'Are you sure?')) e.preventDefault();
+    }),
+  );
+
+  /**
+   * Crop to the card's 4:5 portrait in the browser and send a 660×825 image
+   * (WebP where the browser can encode it, else JPEG). The server re-checks the
+   * result by its bytes, so this is convenience, not the security boundary.
+   */
+  const OUT_W = 660;
+  const OUT_H = 825;
+
+  class PhotoCrop extends HTMLElement {
+    connectedCallback() {
+      const canvas = this.querySelector<HTMLCanvasElement>('[data-canvas]')!;
+      const ctx = canvas.getContext('2d')!;
+      const pick = this.querySelector<HTMLInputElement>('[data-pick]')!;
+      const out = this.querySelector<HTMLInputElement>('[data-out]')!;
+      const zoom = this.querySelector<HTMLInputElement>('[data-zoom]')!;
+      const zoomRow = this.querySelector<HTMLElement>('[data-zoom-row]')!;
+      const hint = this.querySelector<HTMLElement>('[data-hint]')!;
+      const dragHint = this.querySelector<HTMLElement>('[data-drag-hint]')!;
+      const form = this.closest('form')!;
+      let img: HTMLImageElement | null = null;
+      let z = 1;
+      let cx = 0; // image centre offset from frame centre, in output pixels
+      let cy = 0;
+      let ready = false;
+
+      const cover = () => (img ? Math.max(OUT_W / img.naturalWidth, OUT_H / img.naturalHeight) : 1);
+      const clamp = () => {
+        if (!img) return;
+        const w = img.naturalWidth * cover() * z;
+        const h = img.naturalHeight * cover() * z;
+        const mx = Math.max(0, (w - OUT_W) / 2);
+        const my = Math.max(0, (h - OUT_H) / 2);
+        cx = Math.min(mx, Math.max(-mx, cx));
+        cy = Math.min(my, Math.max(-my, cy));
+      };
+      const draw = () => {
+        if (!img) return;
+        clamp();
+        const w = img.naturalWidth * cover() * z;
+        const h = img.naturalHeight * cover() * z;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, OUT_W, OUT_H);
+        ctx.drawImage(img, (OUT_W - w) / 2 + cx, (OUT_H - h) / 2 + cy, w, h);
+      };
+
+      pick.addEventListener('change', () => {
+        const file = pick.files?.[0];
+        if (!file) return;
+        const url = URL.createObjectURL(file);
+        const next = new Image();
+        next.onload = () => {
+          img = next;
+          z = 1;
+          cx = 0;
+          cy = -(img.naturalHeight * cover() - OUT_H) * 0.25; // start a little above centre, where faces usually are
+          zoom.value = '1';
+          ready = false;
+          out.value = '';
+          canvas.hidden = false;
+          this.querySelector('[data-current-img]')?.setAttribute('hidden', '');
+          this.querySelector('[data-empty]')?.setAttribute('hidden', '');
+          zoomRow.hidden = false;
+          dragHint.hidden = false;
+          hint.textContent = `${file.name} — not saved yet.`;
+          draw();
+        };
+        next.onerror = () => {
+          hint.textContent = "That file couldn't be opened as an image. iPhone photos: choose “Most Compatible” or export as JPEG.";
+          URL.revokeObjectURL(url);
+        };
+        next.src = url;
+      });
+
+      zoom.addEventListener('input', () => {
+        z = Number(zoom.value);
+        draw();
+      });
+
+      // Drag to pan (mouse, pen and touch alike).
+      let last: { x: number; y: number } | null = null;
+      canvas.addEventListener('pointerdown', (e) => {
+        if (!img) return;
+        canvas.setPointerCapture(e.pointerId);
+        last = { x: e.clientX, y: e.clientY };
+      });
+      canvas.addEventListener('pointermove', (e) => {
+        if (!last) return;
+        const k = OUT_W / canvas.getBoundingClientRect().width;
+        cx += (e.clientX - last.x) * k;
+        cy += (e.clientY - last.y) * k;
+        last = { x: e.clientX, y: e.clientY };
+        draw();
+      });
+      const end = () => (last = null);
+      canvas.addEventListener('pointerup', end);
+      canvas.addEventListener('pointercancel', end);
+
+      const encode = (type: string, q: number) => new Promise<Blob | null>((r) => canvas.toBlob(r, type, q));
+
+      form.addEventListener('submit', async (e) => {
+        if (!img || ready) return;
+        e.preventDefault();
+        const submitter = (e as SubmitEvent).submitter as HTMLElement | null;
+        draw();
+        let blob = await encode('image/webp', 0.86);
+        if (!blob || blob.type !== 'image/webp') blob = await encode('image/jpeg', 0.88); // Safari can't encode WebP
+        if (!blob) {
+          hint.textContent = 'The photo could not be prepared. Try another image.';
+          return;
+        }
+        const ext = blob.type === 'image/webp' ? 'webp' : 'jpg';
+        const dt = new DataTransfer();
+        dt.items.add(new File([blob], `photo.${ext}`, { type: blob.type }));
+        out.files = dt.files;
+        ready = true;
+        form.requestSubmit(submitter instanceof HTMLButtonElement ? submitter : undefined);
+      });
+    }
+  }
+  if (!customElements.get('am-photo-crop')) customElements.define('am-photo-crop', PhotoCrop);
+</script>
+
+<style>
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-block-end: 10px;
+    color: var(--a-ink-2);
+    font-size: var(--ui-a-md);
+    text-decoration: none;
+  }
+  .back:hover {
+    color: var(--ink);
+  }
+  .form {
+    display: grid;
+    gap: 16px;
+    max-width: 860px;
+  }
+  .panel {
+    padding: 18px 20px 20px;
+  }
+  .panel__title {
+    margin-block-end: 14px;
+    font-size: var(--ui-a-base);
+    font-weight: 700;
+  }
+  .grid2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 18px;
+  }
+  .err {
+    margin-block-start: 5px;
+    font-size: var(--ui-a-sm);
+    color: var(--red);
+  }
+  .checks {
+    display: grid;
+    gap: 12px;
+    align-content: start;
+    padding-block-start: 22px;
+  }
+  .check {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    color: var(--a-ink-2);
+    cursor: pointer;
+  }
+  .check input {
+    margin-block-start: 3px;
+    accent-color: var(--ink);
+  }
+  .check strong {
+    color: var(--ink);
+  }
+
+  /* ---- cropper ---- */
+  .crop {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  .crop__frame {
+    position: relative;
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 220px;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    border-radius: 8px;
+    background: var(--a-bg);
+    box-shadow: inset 0 0 0 1px var(--a-line);
+  }
+  .crop__canvas,
+  .crop__current {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .crop__canvas {
+    cursor: grab;
+    touch-action: none;
+  }
+  .crop__canvas:active {
+    cursor: grabbing;
+  }
+  .crop__empty {
+    color: #c3c1bb;
+  }
+  .crop__tools {
+    display: grid;
+    gap: 12px;
+    align-content: start;
+    min-width: 220px;
+    flex: 1;
+  }
+  .crop__tools .a-btn {
+    justify-self: start;
+    position: relative;
+  }
+  .crop__pick {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .crop__zoom {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 280px;
+    color: var(--a-ink-2);
+  }
+  .crop__zoom input {
+    flex: 1;
+    accent-color: var(--ink);
+  }
+  .crop__zoom[hidden],
+  .crop__canvas[hidden],
+  .crop__current[hidden],
+  .crop__empty[hidden] {
+    display: none;
+  }
+
+  .actions {
+    display: flex;
+    gap: 10px;
+  }
+  .danger {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    max-width: 860px;
+    margin-block-start: 28px;
+    padding: 16px 20px;
+    border-color: color-mix(in srgb, var(--red) 25%, var(--a-line));
+  }
+  .danger .panel__title {
+    margin-block-end: 2px;
+  }
+
+  @media (max-width: 640px) {
+    .grid2 {
+      grid-template-columns: 1fr;
+    }
+    .checks {
+      padding-block-start: 0;
+    }
+  }
+</style>

@@ -37,6 +37,12 @@ export default defineConfig({
       // Salts the IP hash used to rate-limit the join form. Set a real secret
       // in production: `wrangler secret put JOIN_IP_SALT`.
       JOIN_IP_SALT: envField.string({ context: 'server', access: 'secret', default: 'awami-mohabbat-dev-salt' }),
+      // Cloudflare Access, which signs admins in (see src/lib/admin/access.ts). Not secret:
+      // the team name and the application's audience tag. Unset → /admin refuses everyone.
+      ACCESS_TEAM_DOMAIN: envField.string({ context: 'server', access: 'public', optional: true }),
+      ACCESS_AUD: envField.string({ context: 'server', access: 'public', optional: true }),
+      // Local dev only (astro dev): who you are signed in as. Ignored in production builds.
+      DEV_ADMIN_EMAIL: envField.string({ context: 'server', access: 'public', default: 'sommerbareen1@gmail.com' }),
     },
   },
 

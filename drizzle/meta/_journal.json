@@ -64,6 +64,13 @@
       "when": 1790851520359,
       "tag": "0008_magazine",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1790895162034,
+      "tag": "0009_admin_team",
+      "breakpoints": true
     }
   ]
 }

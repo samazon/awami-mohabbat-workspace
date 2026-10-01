@@ -407,3 +407,70 @@ export const joinRequests = sqliteTable(
 );
 
 export type JoinRequest = typeof joinRequests.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Admin panel. Sign-in is Cloudflare Access; this table is the second gate:
+// an Access identity whose email isn't here (or is inactive) is refused.
+// ---------------------------------------------------------------------------
+export const adminUsers = sqliteTable('admin_users', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  /** Lower-case; matched against the verified Access token's email claim. */
+  email: text('email').notNull().unique(),
+  name: text('name'),
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at').notNull(),
+  lastSeenAt: integer('last_seen_at'),
+});
+
+/** Who changed what, when. Never holds field values or personal data beyond the admin's id. */
+export const adminAudit = sqliteTable(
+  'admin_audit',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    adminId: integer('admin_id')
+      .notNull()
+      .references(() => adminUsers.id),
+    action: text('action').notNull(),
+    target: text('target'),
+    at: integer('at').notNull(),
+  },
+  (t) => [index('admin_audit_at_idx').on(t.at)],
+);
+
+// ---------------------------------------------------------------------------
+// Team — the /team page, edited in the admin panel. Names are always shown in
+// both scripts on the Urdu page; roles and places carry an Urdu and an English
+// form. Photos are pre-sized in the browser and stored in R2 under team/<hash>.
+// ---------------------------------------------------------------------------
+export const TEAM_GROUPS = ['executive', 'advisory', 'reporting', 'digital', 'international'] as const;
+export type TeamGroupKey = (typeof TEAM_GROUPS)[number];
+
+export const teamMembers = sqliteTable(
+  'team_members',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    groupKey: text('group_key', { enum: TEAM_GROUPS }).notNull(),
+    /** Position within the group, ascending. */
+    sortOrder: integer('sort_order').notNull(),
+    /** The large card at the top of the executive board (the chief editor). */
+    featured: integer('featured', { mode: 'boolean' }).notNull().default(false),
+    nameEn: text('name_en').notNull(),
+    nameUr: text('name_ur').notNull(),
+    roleEn: text('role_en'),
+    roleUr: text('role_ur'),
+    placeEn: text('place_en'),
+    placeUr: text('place_ur'),
+    /** ISO 3166-1 alpha-2, for the flag. International members. */
+    country: text('country'),
+    photoHash: text('photo_hash'),
+    photoExt: text('photo_ext', { enum: ['webp', 'jpg'] }),
+    photoWidth: integer('photo_width'),
+    photoHeight: integer('photo_height'),
+    hidden: integer('hidden', { mode: 'boolean' }).notNull().default(false),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (t) => [index('team_members_group_order_idx').on(t.groupKey, t.sortOrder)],
+);
+
+export type TeamMemberRow = typeof teamMembers.$inferSelect;
+

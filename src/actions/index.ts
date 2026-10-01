@@ -4,6 +4,10 @@ import { JOIN_IP_SALT } from 'astro:env/server';
 import { isLocale, DEFAULT_LOCALE } from '@/i18n';
 import { createJoinRequest, hashIp, isRateLimited, type NewJoinRequest } from '@/lib/services/join';
 import { notifyJoinRequest } from '@/lib/services/join-mail';
+import { audit } from '@/lib/services/admin';
+import { PhotoError, adminDeleteMember, adminMoveMember, adminSaveMember } from '@/lib/services/team-admin';
+import { TEAM_GROUPS } from '@/lib/db/schema';
+import type { ActionAPIContext } from 'astro:actions';
 import { JOIN_LIMITS, PHONE_CHARS } from '@/lib/join-rules';
 
 /**
@@ -17,7 +21,89 @@ import { JOIN_LIMITS, PHONE_CHARS } from '@/lib/join-rules';
  */
 const nonEmpty = (min: number, max: number) => z.string().trim().min(min).max(max);
 
+/**
+ * Admin actions are reached only through the middleware's Access check, and
+ * each one checks again here: no identity, no action (deny by default, CWE-862).
+ */
+const requireAdmin = (ctx: ActionAPIContext) => {
+  const admin = ctx.locals.admin;
+  if (!admin) throw new ActionError({ code: 'FORBIDDEN', message: 'Not authorised.' });
+  return admin;
+};
+const memberId = z.coerce.number().int().positive();
+
 export const server = {
+  admin: {
+    teamSave: defineAction({
+      accept: 'form',
+      input: z.object({
+        id: z.string().optional(),
+        groupKey: z.enum(TEAM_GROUPS),
+        nameEn: z.string(),
+        nameUr: z.string(),
+        roleEn: z.string().optional(),
+        roleUr: z.string().optional(),
+        placeEn: z.string().optional(),
+        placeUr: z.string().optional(),
+        country: z.string().optional(),
+        featured: z.boolean().optional(),
+        hidden: z.boolean().optional(),
+        photo: z.instanceof(File).optional(),
+        removePhoto: z.boolean().optional(),
+      }),
+      handler: async (input, ctx) => {
+        const admin = requireAdmin(ctx);
+        const id = input.id ? memberId.parse(input.id) : null;
+        try {
+          const res = await adminSaveMember(
+            id,
+            {
+              groupKey: input.groupKey,
+              nameEn: input.nameEn,
+              nameUr: input.nameUr,
+              roleEn: input.roleEn ?? '',
+              roleUr: input.roleUr ?? '',
+              placeEn: input.placeEn ?? '',
+              placeUr: input.placeUr ?? '',
+              country: input.country ?? '',
+              featured: input.featured ?? false,
+              hidden: input.hidden ?? false,
+            },
+            { file: input.photo ?? null, remove: input.removePhoto ?? false },
+          );
+          if (!res) throw new ActionError({ code: 'NOT_FOUND', message: 'That team member no longer exists.' });
+          await audit(admin.id, res.created ? 'team.create' : 'team.update', `team_members:${res.id}`);
+          return res;
+        } catch (err) {
+          if (err instanceof PhotoError) throw new ActionError({ code: 'BAD_REQUEST', message: err.message });
+          if (err instanceof z.ZodError) {
+            throw new ActionError({ code: 'BAD_REQUEST', message: err.issues.map((i) => `${i.path.join('.') || 'value'}: ${i.message}`).join('; ') });
+          }
+          throw err;
+        }
+      },
+    }),
+    teamDelete: defineAction({
+      accept: 'form',
+      input: z.object({ id: memberId }),
+      handler: async ({ id }, ctx) => {
+        const admin = requireAdmin(ctx);
+        if (!(await adminDeleteMember(id))) throw new ActionError({ code: 'NOT_FOUND', message: 'That team member no longer exists.' });
+        await audit(admin.id, 'team.delete', `team_members:${id}`);
+        return { ok: true as const };
+      },
+    }),
+    teamMove: defineAction({
+      accept: 'form',
+      input: z.object({ id: memberId, dir: z.enum(['up', 'down']) }),
+      handler: async ({ id, dir }, ctx) => {
+        const admin = requireAdmin(ctx);
+        const moved = await adminMoveMember(id, dir);
+        if (moved) await audit(admin.id, 'team.move', `team_members:${id}`);
+        return { moved };
+      },
+    }),
+  },
   join: defineAction({
     accept: 'form',
     input: z.object({

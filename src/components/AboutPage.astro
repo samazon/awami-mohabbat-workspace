@@ -4,7 +4,8 @@
  * then three columns: editorial team, publication details, contact. No ads.
  */
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import editorPhoto from '@/assets/team/iqbal-danial-khokhar.webp';
+import fallbackPhoto from '@/assets/team/iqbal-danial-khokhar.webp';
+import { getTeamPage } from '@/lib/services/team';
 import { t, type Locale } from '@/i18n';
 import { about } from '@/content/about';
 import { getSiteConfig } from '@/lib/services/config';
@@ -19,7 +20,9 @@ interface Props {
 const { locale } = Astro.props;
 const s = t(locale);
 const c = about[locale];
-const [config, edition] = await Promise.all([getSiteConfig(locale), getLatestEdition(locale)]);
+const [config, edition, team] = await Promise.all([getSiteConfig(locale), getLatestEdition(locale), getTeamPage()]);
+// The featured team member's photo (edited in /admin/team), or the bundled one.
+const editorPhoto = team.featured?.photo ?? fallbackPhoto;
 ---
 
 <BaseLayout title={`${s.about.title} — ${s.meta.siteName}`} description={s.about.description}>

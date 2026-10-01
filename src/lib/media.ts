@@ -144,6 +144,12 @@ export const magazinePageKey = (month: string, page: number, variant: MagazineVa
 
 export const magazinePdfKey = (month: string, hash: string): string => `magazine/${assertMonth(month)}/issue.${assertHash(hash)}.pdf`;
 
+/** Team photos, already sized in the browser (or by `pnpm optimize-image`):  team/a3f91c2e….webp */
+export const teamPhotoKey = (hash: string, ext: 'webp' | 'jpg'): string => {
+  if (ext !== 'webp' && ext !== 'jpg') throw new RangeError(`Invalid team photo type: ${JSON.stringify(ext)}`);
+  return `team/${assertHash(hash)}.${ext}`;
+};
+
 export const editionPageKey = (
   date: string,
   page: number,

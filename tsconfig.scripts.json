@@ -26,6 +26,9 @@
     "src/lib/columns/**/*",
     "src/lib/gallery/**/*",
     "src/lib/special/**/*",
-    "src/lib/magazine/**/*"
+    "src/lib/magazine/**/*",
+    "src/lib/team/**/*",
+    "src/lib/admin/**/*",
+    "src/lib/image-header.ts"
   ]
 }
