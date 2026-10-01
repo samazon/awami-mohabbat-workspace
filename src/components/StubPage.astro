@@ -1,7 +1,7 @@
 ---
 /**
  * Placeholder for sections that exist in the nav but ship in phase 2
- * (/media-forum, /magazine, /articles, /search) — and the 404. Full header/footer so
+ * (/media-forum, /articles, /search) — and the 404. Full header/footer so
  * the site never dead-ends; noindex so search engines don't record soft-404s.
  */
 import BaseLayout from '@/layouts/BaseLayout.astro';
@@ -14,7 +14,7 @@ import AMFooter from './AMFooter.astro';
 
 interface Props {
   locale: Locale;
-  section: 'media-forum' | 'magazine' | 'articles' | 'search' | 'notfound';
+  section: 'media-forum' | 'articles' | 'search' | 'notfound';
 }
 const { locale, section } = Astro.props;
 const s = t(locale);
@@ -40,7 +40,6 @@ const copy = {
 
 const titles: Record<Props['section'], string> = {
   'media-forum': s.nav.mediaForum,
-  magazine: s.nav.magazine,
   articles: s.nav.articles,
   search: s.search.label,
   notfound: '404',

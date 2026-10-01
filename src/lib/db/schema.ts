@@ -146,6 +146,40 @@ export const specialEditions = sqliteTable(
 export type SpecialEdition = typeof specialEditions.$inferSelect;
 
 // ---------------------------------------------------------------------------
+// Monthly magazine (ماہانہ اقلیتی میگزین) — one issue per month, its pages in
+// order, and an optional PDF. Like editions, only hashes are stored; R2 keys
+// derive from month + page + hash (src/lib/media.ts). Re-uploading a month
+// replaces that issue's rows.
+// ---------------------------------------------------------------------------
+export const magazineIssues = sqliteTable('magazine_issues', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  /** YYYY-MM: the issue's month, and its URL (/magazine/2019-12). */
+  month: text('month').notNull().unique(),
+  titleUr: text('title_ur').notNull(),
+  titleEn: text('title_en'),
+  pdfHash: text('pdf_hash'),
+  pdfBytes: integer('pdf_bytes'),
+  hidden: integer('hidden', { mode: 'boolean' }).notNull().default(false),
+  createdAt: integer('created_at').notNull(),
+});
+
+export const magazinePages = sqliteTable(
+  'magazine_pages',
+  {
+    issueId: integer('issue_id')
+      .notNull()
+      .references(() => magazineIssues.id, { onDelete: 'cascade' }),
+    pageNumber: integer('page_number').notNull(),
+    hash: text('hash').notNull(),
+    width: integer('width').notNull(),
+    height: integer('height').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.issueId, t.pageNumber] })],
+);
+
+export type MagazineIssue = typeof magazineIssues.$inferSelect;
+
+// ---------------------------------------------------------------------------
 // Articles — optional long-form text; the only indexable prose on the site
 // ---------------------------------------------------------------------------
 export const articles = sqliteTable(

@@ -4,24 +4,26 @@ import { getRecentEditions } from '@/lib/services/editions';
 import { listPublishedColumnSlugs } from '@/lib/services/columns';
 import { gallerySitemapPages } from '@/lib/services/gallery';
 import { specialSitemapPages } from '@/lib/services/special';
+import { magazineSitemapPages } from '@/lib/services/magazine';
 
 /**
  * Static routes plus every published edition and column, each in both locales with hreflang alternates.
  * Gallery and special-edition pages carry <image:image> entries (Google's image sitemap extension) for their photos.
  * Every new indexable page belongs here. The under-construction sections
- * (/media-forum, /magazine) are noindex, so they join the list once built.
+ * (/media-forum) are noindex, so they join the list once built.
  */
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 export const GET: APIRoute = async ({ url }) => {
   const base = new URL(url.origin);
-  const [editions, columns, galleryPages, specialPages] = await Promise.all([
+  const [editions, columns, galleryPages, specialPages, magazinePages] = await Promise.all([
     getRecentEditions('ur', { limit: 5000 }),
     listPublishedColumnSlugs(),
     gallerySitemapPages(base),
     specialSitemapPages(base),
+    magazineSitemapPages(base),
   ]);
-  const galleryImages = new Map([...galleryPages, ...specialPages].map((g) => [g.path, g.images]));
+  const galleryImages = new Map([...galleryPages, ...specialPages, ...magazinePages].map((g) => [g.path, g.images]));
   const routes: { path: string; changefreq: string }[] = [
     { path: '/', changefreq: 'daily' },
     { path: '/archive', changefreq: 'daily' },
@@ -29,6 +31,8 @@ export const GET: APIRoute = async ({ url }) => {
     { path: '/gallery', changefreq: 'weekly' },
     ...galleryPages.filter((g) => g.path !== '/gallery').map((g) => ({ path: g.path, changefreq: 'weekly' })),
     { path: '/special-editions', changefreq: 'weekly' },
+    { path: '/magazine', changefreq: 'monthly' },
+    ...magazinePages.map((g) => ({ path: g.path, changefreq: 'yearly' })),
     ...specialPages.filter((g) => g.path !== '/special-editions').map((g) => ({ path: g.path, changefreq: 'weekly' })),
     { path: '/about', changefreq: 'monthly' },
     { path: '/team', changefreq: 'monthly' },

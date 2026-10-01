@@ -1,0 +1,9 @@
+---
+import MagazineIssuePage from '@/components/MagazineIssuePage.astro';
+import { getMagazineIssue } from '@/lib/services/magazine';
+
+const issue = await getMagazineIssue(Astro.params.month ?? '', 'ur');
+if (!issue) return Astro.rewrite('/404');
+---
+
+<MagazineIssuePage locale="ur" issue={issue} />

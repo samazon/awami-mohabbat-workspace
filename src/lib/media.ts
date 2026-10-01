@@ -115,6 +115,35 @@ export const specialEditionKey = (hash: string, variant: SpecialVariant): string
   return `special/${assertHash(hash)}/page-${variant}.webp`;
 };
 
+/**
+ * Monthly magazine: an issue per month, many pages, plus its PDF.
+ *
+ *   magazine/2019-12/page-03-thumb.a3f91c2e….webp    360w   strip, covers
+ *   magazine/2019-12/page-03-view.a3f91c2e….webp    1400w   reader stage
+ *   magazine/2019-12/page-03-zoom.a3f91c2e….webp    2400w   full screen (never upscaled)
+ *   magazine/2019-12/issue.7b02d4f1….pdf
+ */
+export const MAGAZINE_VARIANTS = {
+  thumb: { width: 360, quality: 80 },
+  view: { width: 1400, quality: 80 },
+  zoom: { width: 2400, quality: 80 },
+} as const;
+export type MagazineVariant = keyof typeof MAGAZINE_VARIANTS;
+
+const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
+export const assertMonth = (m: string): string => {
+  if (!MONTH.test(m)) throw new RangeError(`Invalid month: ${JSON.stringify(m)}`);
+  return m;
+};
+
+export const magazinePageKey = (month: string, page: number, variant: MagazineVariant, hash: string): string => {
+  if (!Number.isInteger(page) || page < 1 || page > 500) throw new RangeError(`Invalid page: ${page}`);
+  if (!(variant in MAGAZINE_VARIANTS)) throw new RangeError(`Invalid magazine variant: ${JSON.stringify(variant)}`);
+  return `magazine/${assertMonth(month)}/page-${String(page).padStart(2, '0')}-${variant}.${assertHash(hash)}.webp`;
+};
+
+export const magazinePdfKey = (month: string, hash: string): string => `magazine/${assertMonth(month)}/issue.${assertHash(hash)}.pdf`;
+
 export const editionPageKey = (
   date: string,
   page: number,

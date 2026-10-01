@@ -1,0 +1,440 @@
+---
+/**
+ * /magazine/YYYY-MM — the issue reader: one page large on a stage, a strip of
+ * every page beneath, prev/next (keys and swipe too), full screen with zoom,
+ * and the PDF to download.
+ *
+ * Without JS the stage is page 1 linked to its full-size image and every strip
+ * thumb is a link to its page. With JS the strip and arrows change the stage in
+ * place (the page number is kept in the URL hash, so a reload or a shared link
+ * opens the same page), and the stage opens the shared full-screen viewer.
+ */
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { dirFor, localePath, t, type Locale } from '@/i18n';
+import { formatFileSize } from '@/lib/dates';
+import { getSiteConfig } from '@/lib/services/config';
+import type { getMagazineIssue } from '@/lib/services/magazine';
+import AMFooter from './AMFooter.astro';
+import AMHeader from './AMHeader.astro';
+import Icon from './Icon.astro';
+import Lightbox from './Lightbox.astro';
+import LtrRun from './LtrRun.astro';
+import ShareBar from './ShareBar.astro';
+
+interface Props {
+  locale: Locale;
+  issue: NonNullable<Awaited<ReturnType<typeof getMagazineIssue>>>;
+}
+const { locale, issue } = Astro.props;
+const s = t(locale);
+const config = await getSiteConfig(locale);
+const monthLabel = `${s.archive.months[Number(issue.month.slice(5, 7)) - 1]} ${issue.month.slice(0, 4)}`;
+const first = issue.pages[0]!;
+const total = issue.pages.length;
+const rtl = locale === 'ur';
+
+const labels = { close: s.nav.close, zoom: s.viewer.zoom, prev: s.magazine.prev, next: s.magazine.next, error: s.magazine.error };
+---
+
+<BaseLayout
+  title={`${issue.title} — ${monthLabel} — ${s.magazine.title}`}
+  description={`${s.magazine.title}: ${monthLabel} — ${issue.title}`}
+  ogImage={new URL(first.view, Astro.url.origin).toString()}
+  ogImageType="image/webp"
+  ogImageWidth={1400}
+  ogImageHeight={Math.round((first.height / first.width) * 1400)}
+>
+  <AMHeader slot="header" locale={locale} active="magazine" />
+
+  <div class="container">
+    <header class="head">
+      <a class="back" href={localePath(locale, '/magazine')}><Icon name="arrow-left" size="sm" /> {s.magazine.allIssues}</a>
+      <p class="month">{monthLabel}</p>
+      <h1 class="title t-head" lang={issue.titleLang} dir={dirFor(issue.titleLang)}>{issue.title}</h1>
+      <div class="actions">
+        {issue.pdf && (
+          <a class="btn" href={issue.pdf.url} download={`awami-mohabbat-magazine-${issue.month}.pdf`}>
+            <Icon name="download" />
+            <span>{s.magazine.downloadPdf}</span>
+            <LtrRun class="btn__meta">{formatFileSize(issue.pdf.bytes)}</LtrRun>
+          </a>
+        )}
+        <span class="meta"><LtrRun>{s.magazine.pages(total)}</LtrRun></span>
+      </div>
+      <ShareBar locale={locale} title={`${issue.title} — ${monthLabel}`} />
+    </header>
+
+    <am-magazine class="reader" data-total={String(total)} data-rtl={rtl ? '1' : undefined} data-page-of={s.magazine.pageOf(1111111, 2222222)}>
+      <div class="stage">
+        <button type="button" class="nav nav--prev" data-prev aria-label={s.magazine.prev} disabled>
+          <Icon name={rtl ? 'chevron-right' : 'chevron-left'} size="lg" flip={false} />
+        </button>
+        <a class="stage__page" href={first.zoom} data-stage aria-label={s.magazine.open(1)} title={s.magazine.fullScreen}>
+          <img data-stage-img src={first.view} width={first.width} height={first.height} alt={s.magazine.pageOf(1, total)} fetchpriority="high" decoding="async" />
+          <span class="stage__zoom" aria-hidden="true"><Icon name="maximize-2" size="sm" /></span>
+        </a>
+        <button type="button" class="nav nav--next" data-next aria-label={s.magazine.next} disabled={total < 2}>
+          <Icon name={rtl ? 'chevron-left' : 'chevron-right'} size="lg" flip={false} />
+        </button>
+      </div>
+      <p class="counter" aria-live="polite" data-counter><LtrRun>{s.magazine.pageOf(1, total)}</LtrRun></p>
+
+      <nav class="strip" aria-label={s.magazine.pagesNav}>
+        <ol class="strip__list">
+          {issue.pages.map((p) => (
+            <li>
+              <a
+                class="thumb"
+                href={p.zoom}
+                data-page={p.n}
+                data-view={p.view}
+                data-w={p.width}
+                data-h={p.height}
+                aria-label={s.magazine.goTo(p.n)}
+                aria-current={p.n === 1 ? 'true' : undefined}
+              >
+                <img src={p.thumb} width={p.width} height={p.height} alt="" loading={p.n <= 8 ? 'eager' : 'lazy'} decoding="async" />
+                <span class="thumb__n"><LtrRun>{p.n}</LtrRun></span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+
+      {/* Full-screen viewer items: one per page, opened from the stage. */}
+      <am-gallery
+        class="viewer-items"
+        aria-hidden="true"
+        data-zoom="print"
+        data-labels={JSON.stringify(labels)}
+        data-rtl={rtl ? '1' : undefined}
+        data-count-template={s.magazine.count(1111111, 2222222)}
+        data-total={String(total)}
+        data-offset="0"
+      >
+        {issue.pages.map((p) => (
+          <a href={p.zoom} data-pswp-width={p.zoomWidth} data-pswp-height={p.zoomHeight} tabindex="-1">
+            <span hidden>{p.n}</span>
+          </a>
+        ))}
+      </am-gallery>
+    </am-magazine>
+  </div>
+
+  <AMFooter slot="footer" locale={locale} config={config} />
+</BaseLayout>
+
+<Lightbox />
+
+<script>
+  class Magazine extends HTMLElement {
+    connectedCallback() {
+      const total = Number(this.dataset.total ?? '1');
+      const rtl = this.dataset.rtl === '1';
+      const pageOf = this.dataset.pageOf ?? '';
+      const stage = this.querySelector<HTMLAnchorElement>('[data-stage]')!;
+      const img = this.querySelector<HTMLImageElement>('[data-stage-img]')!;
+      const counter = this.querySelector<HTMLElement>('[data-counter] .ltr') ?? this.querySelector<HTMLElement>('[data-counter]')!;
+      const prev = this.querySelector<HTMLButtonElement>('[data-prev]')!;
+      const next = this.querySelector<HTMLButtonElement>('[data-next]')!;
+      const thumbs = [...this.querySelectorAll<HTMLAnchorElement>('.thumb')];
+      const items = [...this.querySelectorAll<HTMLAnchorElement>('am-gallery a')];
+      const label = (n: number) => pageOf.replace('1111111', String(n)).replace('2222222', String(total));
+      let current = 1;
+
+      const go = (n: number, { scroll = true } = {}) => {
+        n = Math.min(total, Math.max(1, n));
+        const t = thumbs[n - 1];
+        if (!t) return;
+        current = n;
+        img.src = t.dataset.view!;
+        img.width = Number(t.dataset.w);
+        img.height = Number(t.dataset.h);
+        img.alt = label(n);
+        stage.href = t.href;
+        stage.setAttribute('aria-label', stage.getAttribute('aria-label')!.replace(/\d+/, String(n)));
+        counter.textContent = label(n);
+        prev.disabled = n === 1;
+        next.disabled = n === total;
+        thumbs.forEach((x, i) => x.toggleAttribute('aria-current', i === n - 1));
+        if (scroll) t.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+        history.replaceState(null, '', n > 1 ? `#page-${n}` : location.pathname + location.search);
+        // Warm the next page so turning feels instant.
+        const ahead = thumbs[n];
+        if (ahead) new Image().src = ahead.dataset.view!;
+      };
+
+      thumbs.forEach((t, i) =>
+        t.addEventListener('click', (e) => {
+          e.preventDefault();
+          go(i + 1);
+          stage.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }),
+      );
+      prev.addEventListener('click', () => go(current - 1));
+      next.addEventListener('click', () => go(current + 1));
+      stage.addEventListener('click', (e) => {
+        e.preventDefault();
+        items[current - 1]?.click(); // the shared viewer opens at this page
+      });
+
+      // ← / → turn pages (reading direction aware) when focus is in the reader.
+      this.addEventListener('keydown', (e) => {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        const forward = (e.key === 'ArrowLeft') === rtl;
+        e.preventDefault();
+        go(current + (forward ? 1 : -1));
+      });
+
+      // Swipe on the stage: towards the reading start goes forward.
+      let x0: number | null = null;
+      stage.addEventListener('touchstart', (e) => (x0 = e.touches[0]?.clientX ?? null), { passive: true });
+      stage.addEventListener(
+        'touchend',
+        (e) => {
+          if (x0 === null) return;
+          const dx = (e.changedTouches[0]?.clientX ?? x0) - x0;
+          x0 = null;
+          if (Math.abs(dx) < 50) return;
+          go(current + ((dx > 0) === rtl ? 1 : -1));
+        },
+        { passive: true },
+      );
+
+      const fromHash = Number(location.hash.match(/^#page-(\d+)$/)?.[1]);
+      if (fromHash > 1) go(fromHash, { scroll: false });
+    }
+  }
+  if (!customElements.get('am-magazine')) customElements.define('am-magazine', Magazine);
+</script>
+
+<style>
+  .head {
+    padding: 24px 0 8px;
+  }
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-meta);
+    color: var(--red);
+    text-decoration: none;
+  }
+  .back:hover {
+    text-decoration: underline;
+  }
+  .month {
+    margin-block-start: 14px;
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-nav);
+    font-weight: 700;
+    color: var(--red);
+  }
+  .title {
+    padding-block-start: 0.3em;
+    font-size: var(--fs-h1);
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 18px;
+    margin-block-start: 14px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: var(--touch);
+    padding: 0 18px;
+    border-radius: var(--radius-sm);
+    background: var(--ink);
+    color: var(--on-red);
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-button);
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .btn:hover {
+    background: var(--red);
+    color: var(--on-red);
+    text-decoration: none;
+  }
+  .btn :global(.btn__meta) {
+    font-family: var(--font-ui);
+    font-size: var(--ui-caption);
+    opacity: 0.8;
+  }
+  .meta {
+    font-family: var(--font-ui-mixed);
+    font-size: var(--ui-meta);
+    color: var(--muted);
+  }
+
+  /* ---- reader ---- */
+  .reader {
+    display: block;
+    margin-block: 18px 48px;
+    padding: 20px 16px 16px;
+    border-radius: var(--radius-sm);
+    background: #1c1c22;
+  }
+  .stage {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+  }
+  .stage__page {
+    position: relative;
+    justify-self: center;
+    display: block;
+    max-width: 100%;
+    cursor: zoom-in;
+  }
+  .stage__page img {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    max-height: min(82vh, 1100px);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+    background: #2a2a31;
+  }
+  .stage__zoom {
+    position: absolute;
+    inset-block-start: 10px;
+    inset-inline-end: 10px;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(17, 17, 17, 0.6);
+    color: #ffffff;
+    opacity: 0.85;
+  }
+  .stage__page:focus-visible {
+    outline: 3px solid var(--gold);
+    outline-offset: 4px;
+  }
+  .nav {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 50%;
+    background: transparent;
+    color: #ffffff;
+    cursor: pointer;
+    transition: background-color 120ms ease-out;
+  }
+  .nav:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+  }
+  .nav:disabled {
+    opacity: 0.25;
+    cursor: default;
+  }
+  .nav:focus-visible {
+    outline: 3px solid var(--gold);
+    outline-offset: 2px;
+  }
+  .counter {
+    margin-block: 14px 12px;
+    text-align: center;
+    font-family: var(--font-ui-mixed);
+    font-size: var(--ui-meta);
+    color: rgba(255, 255, 255, 0.75);
+  }
+
+  .strip {
+    overflow-x: auto;
+    padding-block-end: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  }
+  .strip__list {
+    display: flex;
+    gap: 10px;
+    margin: 0;
+    padding: 4px 2px;
+    list-style: none;
+  }
+  .thumb {
+    position: relative;
+    display: block;
+    flex: none;
+    width: 76px;
+    border-radius: 3px;
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    opacity: 0.6;
+    transition: opacity 120ms ease-out;
+  }
+  .thumb img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 8 / 11;
+    object-fit: cover;
+    object-position: 50% 0;
+    border-radius: 3px;
+    background: #2a2a31;
+  }
+  .thumb:hover,
+  .thumb:focus-visible {
+    opacity: 1;
+  }
+  .thumb[aria-current] {
+    opacity: 1;
+    outline-color: var(--gold);
+  }
+  .thumb__n {
+    position: absolute;
+    inset-block-end: 4px;
+    inset-inline-start: 4px;
+    padding: 0 5px;
+    border-radius: 3px;
+    background: rgba(17, 17, 17, 0.75);
+    color: #ffffff;
+    font-family: var(--font-ui);
+    font-size: var(--ui-caption);
+    line-height: 1.5;
+  }
+  .viewer-items {
+    display: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .nav,
+    .thumb {
+      transition: none;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .reader {
+      margin-inline: calc(var(--gutter) * -1);
+      padding: 14px 8px 10px;
+      border-radius: 0;
+    }
+    .stage {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    /* Phones: swipe or the strip; the arrows sit under the page. */
+    .nav {
+      display: none;
+    }
+    .stage__page img {
+      max-height: none;
+    }
+    .thumb {
+      width: 60px;
+    }
+  }
+</style>

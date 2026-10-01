@@ -1,0 +1,164 @@
+---
+/** /magazine — every issue, newest month first: cover, month, title, page count. */
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { dirFor, localePath, t, type Locale } from '@/i18n';
+import { getSiteConfig } from '@/lib/services/config';
+import { listMagazine } from '@/lib/services/magazine';
+import AMFooter from './AMFooter.astro';
+import AMHeader from './AMHeader.astro';
+import LtrRun from './LtrRun.astro';
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const s = t(locale);
+const [config, issues] = await Promise.all([getSiteConfig(locale), listMagazine(locale)]);
+const monthLabel = (m: string) => `${s.archive.months[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`;
+---
+
+<BaseLayout title={`${s.magazine.title} — ${s.meta.siteName}`} description={s.magazine.description}>
+  <AMHeader slot="header" locale={locale} active="magazine" />
+
+  <div class="container">
+    <header class="head">
+      <h1 class="title t-head">{s.magazine.title}</h1>
+      <p class="sub">{s.magazine.subtitle}</p>
+    </header>
+
+    {issues.length > 0 ? (
+      <ul class="grid">
+        {issues.map((i, k) => (
+          <li class="card">
+            <a class="card__link" href={localePath(locale, `/magazine/${i.month}`)}>
+              <img
+                class="card__cover"
+                src={i.cover.thumb}
+                width={i.cover.width}
+                height={i.cover.height}
+                alt=""
+                loading={k < 4 ? 'eager' : 'lazy'}
+                decoding="async"
+              />
+              <span class="card__month">{monthLabel(i.month)}</span>
+              <span class="card__title" lang={i.titleLang} dir={dirFor(i.titleLang)}>{i.title}</span>
+              <span class="card__meta"><LtrRun>{s.magazine.pages(i.pageCount)}</LtrRun></span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p class="empty t-body">{s.magazine.empty}</p>
+    )}
+  </div>
+
+  <AMFooter slot="footer" locale={locale} config={config} />
+</BaseLayout>
+
+<style>
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 20px;
+    padding: 34px 0 14px;
+    border-block-end: 1px solid var(--ink);
+  }
+  .title {
+    font-size: var(--fs-h1);
+  }
+  .sub {
+    font-family: var(--font-body);
+    line-height: var(--lh-body);
+    font-size: var(--fs-card);
+    color: var(--secondary);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 32px 24px;
+    margin: 0;
+    padding: 28px 0 48px;
+    list-style: none;
+  }
+  .card__link {
+    display: flex;
+    flex-direction: column;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .card__cover {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 8 / 11;
+    object-fit: cover;
+    object-position: 50% 0;
+    border-radius: var(--radius-sm);
+    background: var(--thumb-ground);
+    box-shadow:
+      0 0 0 1px rgba(17, 17, 17, 0.1),
+      0 8px 22px rgba(17, 17, 17, 0.14);
+    transition: translate 160ms ease-out, box-shadow 160ms ease-out;
+  }
+  .card__link:hover .card__cover,
+  .card__link:focus-visible .card__cover {
+    translate: 0 -3px;
+    box-shadow:
+      0 0 0 1px rgba(17, 17, 17, 0.14),
+      0 14px 30px rgba(17, 17, 17, 0.2);
+  }
+  .card__link:focus-visible {
+    outline: none;
+  }
+  .card__link:focus-visible .card__cover {
+    outline: 3px solid var(--gold);
+    outline-offset: 3px;
+  }
+  .card__month {
+    margin-block-start: 14px;
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-meta);
+    font-weight: 700;
+    color: var(--red);
+  }
+  .card__title {
+    margin-block-start: 2px;
+    padding-block-start: 0.35em; /* room for Nastaliq ascenders */
+    font-family: var(--font-head);
+    line-height: var(--lh-head);
+    font-size: var(--fs-summary);
+    font-weight: 700;
+  }
+  .card__link:hover .card__title {
+    color: var(--red);
+  }
+  .card__meta {
+    margin-block-start: 4px;
+    font-family: var(--font-ui-mixed);
+    font-size: var(--ui-meta);
+    color: var(--muted);
+  }
+  .empty {
+    padding: 30px 0 40px;
+    font-size: var(--fs-body);
+    color: var(--secondary);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .card__cover {
+      transition: none;
+    }
+  }
+  @media (max-width: 1023px) {
+    .grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 767px) {
+    .grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px 14px;
+    }
+  }
+</style>

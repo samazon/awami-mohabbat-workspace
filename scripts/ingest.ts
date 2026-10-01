@@ -175,7 +175,7 @@ export interface DerivedWebpSet<V extends string> {
   variants: { variant: V; buffer: Buffer; width: number; height: number }[];
 }
 
-async function deriveWebpSet<V extends string>(
+export async function deriveWebpSet<V extends string>(
   input: Buffer,
   label: string,
   specs: Record<V, { width: number; quality: number }>,

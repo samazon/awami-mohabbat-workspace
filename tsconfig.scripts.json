@@ -25,6 +25,7 @@
     "vitest.config.ts",
     "src/lib/columns/**/*",
     "src/lib/gallery/**/*",
-    "src/lib/special/**/*"
+    "src/lib/special/**/*",
+    "src/lib/magazine/**/*"
   ]
 }

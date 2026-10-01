@@ -21,6 +21,7 @@
     "columns": "tsx scripts/columns.ts",
     "gallery": "tsx scripts/gallery.ts",
     "special": "tsx scripts/special.ts",
+    "magazine": "tsx scripts/magazine.ts",
     "optimize-image": "tsx scripts/optimize-image.ts",
     "deploy": "wrangler types && astro build && wrangler deploy"
   },
