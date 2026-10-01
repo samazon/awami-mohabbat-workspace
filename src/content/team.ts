@@ -46,6 +46,7 @@ import teresaHizkeal from '@/assets/team/teresa-hizkeal.webp';
 import bilawalKhurshid from '@/assets/team/bilawal-khurshid.webp';
 import mathewIqbal from '@/assets/team/mathew-iqbal.webp';
 import asgharChann from '@/assets/team/asghar-chann.webp';
+import rafyalIqbal from '@/assets/team/rafyal-iqbal.webp';
 
 export const ROLE_UR = {
   'Chief Editor': 'چیف ایڈیٹر',
@@ -159,7 +160,7 @@ export const groups: TeamGroup[] = [
     title: { ur: 'آئی ٹی و ڈیجیٹل میڈیا', en: 'IT & Digital Media' },
     members: [
       { name: 'Sommer Bareen', nameUr: 'سومر برین', role: 'Director IT', photo: sommerBareen },
-      { name: 'Rafyal Iqbal', nameUr: 'رافیل اقبال', role: 'Page Designer' },
+      { name: 'Rafyal Iqbal', nameUr: 'رافیل اقبال', role: 'Page Designer', photo: rafyalIqbal },
       { name: 'Mathew Iqbal', nameUr: 'میتھیو اقبال', role: 'Composer', photo: mathewIqbal },
       { name: 'Zaki Mansha', nameUr: 'ذکی منشا', role: 'Social Media', photo: zakiMansha },
       { name: 'Rozaim Ellahi', nameUr: 'روزیم الٰہی', role: 'Social Media', photo: rozaimElahi },
