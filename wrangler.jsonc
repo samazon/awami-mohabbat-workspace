@@ -41,6 +41,11 @@
     // Once the R2 custom domain exists, set this to https://cdn.<domain>.
     "CDN_BASE": "/media",
     // Comma-separated inboxes for new "Join us" applications.
-    "JOIN_NOTIFY_TO": "awami_mohabbat@yahoo.com,sommerbareen1@gmail.com"
+    "JOIN_NOTIFY_TO": "awami_mohabbat@yahoo.com,sommerbareen1@gmail.com",
+    // Cloudflare Access for /admin (src/lib/admin/access.ts). Not secrets: the
+    // application's audience tag and the Zero Trust team name. If either is
+    // missing, /admin refuses everyone in production.
+    "ACCESS_AUD": "bf86f11801703a11756959874bb6038a2c58fb2e9805c483252b08b375ccff39",
+    "ACCESS_TEAM_DOMAIN": "damp-morning-0645"
   }
 }
