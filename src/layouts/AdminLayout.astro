@@ -15,6 +15,9 @@ interface Props {
 }
 const { title, section } = Astro.props;
 const admin = Astro.locals.admin!;
+// Cloudflare Access ends the session (and clears its cookie) at this path on our own domain.
+// Locally there is no Access session, so sign-out just returns to the site.
+const signOutHref = import.meta.env.DEV ? '/' : '/cdn-cgi/access/logout';
 
 const nav = [
   { key: 'dashboard', href: '/admin', label: 'Dashboard', icon: 'layout-dashboard' },
@@ -45,6 +48,7 @@ const later = [
       <div class="bar__end">
         <a class="bar__link" href="/" target="_blank" rel="noopener">View site <Icon name="external-link" size="sm" /></a>
         <span class="bar__who" title={admin.email}>{admin.name ?? admin.email}</span>
+        <a class="bar__out" href={signOutHref}><Icon name="log-out" size="sm" /> Sign out</a>
       </div>
     </header>
 
@@ -314,6 +318,25 @@ const later = [
   }
   .bar__link:hover {
     color: #ffffff;
+  }
+  .bar__out {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 0 12px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: var(--ui-a-md);
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 120ms ease-out;
+  }
+  .bar__out:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    text-decoration: none;
   }
   .bar__who {
     max-width: 220px;
