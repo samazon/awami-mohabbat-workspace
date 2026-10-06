@@ -78,6 +78,8 @@ export const ur = {
     google: 'GOOGLE ADS',
     client: 'CLIENT',
     placeholder: 'اشتہار کی جگہ',
+    advertiseHere: 'اپنا اشتہار یہاں دیں',
+    advertiseCta: 'رابطہ کریں',
   },
   today: {
     title: 'آج کا اخبار',

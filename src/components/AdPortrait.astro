@@ -19,7 +19,7 @@ const internal = c ? c.linkUrl.startsWith('/') : false;
 
 {ad && c && c.imageUrl && (
   <aside class="adp" aria-label={s.label} data-slot={ad.slotId}>
-    <span class="adp__label">{c.labelAs === 'sponsored' ? s.sponsored : s.label}</span>
+    <span class="adp__badge"><span class="adp__dot" aria-hidden="true"></span>{c.labelAs === 'sponsored' ? s.sponsored : s.label}</span>
     <a
       class="adp__link"
       href={c.linkUrl}
@@ -28,6 +28,7 @@ const internal = c ? c.linkUrl.startsWith('/') : false;
     >
       <img src={c.imageUrl} width={c.imageWidth ?? 300} height={c.imageHeight ?? 394} alt={c.altText} loading="eager" decoding="async" />
     </a>
+    <a class="adp__cta" href="#footer-contact">{s.advertiseHere} — <strong>{s.advertiseCta}</strong></a>
   </aside>
 )}
 
@@ -37,11 +38,69 @@ const internal = c ? c.linkUrl.startsWith('/') : false;
     flex-direction: column;
     gap: 6px;
   }
-  .adp__label {
+  /* A gently pulsing badge draws the eye without flashing (well under 3/s, WCAG 2.3.1). */
+  .adp__badge {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 1px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--red);
+    color: var(--on-red);
     font-family: var(--font-label);
     line-height: var(--lh-label);
     font-size: var(--ui-eyebrow);
-    color: var(--muted);
+    font-weight: 700;
+  }
+  .adp__dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--gold);
+    animation: adp-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes adp-pulse {
+    50% {
+      opacity: 0.25;
+      scale: 0.7;
+    }
+  }
+  .adp__link {
+    animation: adp-glow 3.2s ease-in-out infinite;
+  }
+  @keyframes adp-glow {
+    50% {
+      box-shadow:
+        0 0 0 2px color-mix(in srgb, var(--red) 55%, transparent),
+        0 10px 26px rgba(168, 22, 30, 0.22);
+    }
+  }
+  .adp__cta {
+    display: block;
+    padding: 8px 10px;
+    border: 1px dashed var(--rule-strong);
+    border-radius: var(--radius-sm);
+    text-align: center;
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-meta);
+    color: var(--secondary);
+    text-decoration: none;
+  }
+  .adp__cta strong {
+    color: var(--red);
+  }
+  .adp__cta:hover {
+    border-color: var(--red);
+    color: var(--ink);
+    text-decoration: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .adp__dot,
+    .adp__link {
+      animation: none;
+    }
   }
   .adp__link {
     display: block;

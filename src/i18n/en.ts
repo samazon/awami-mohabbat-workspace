@@ -74,6 +74,8 @@ export const en: Catalog = {
     google: 'GOOGLE ADS',
     client: 'CLIENT',
     placeholder: 'Ad placement',
+    advertiseHere: 'Advertise here',
+    advertiseCta: 'Contact us',
   },
   today: {
     title: 'Today\'s edition',
