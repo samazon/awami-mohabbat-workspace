@@ -245,6 +245,9 @@ export const ur = {
     language: 'زبان',
     printedAt: 'طباعت',
     certification: 'تصدیق',
+    message: 'چیف ایڈیٹر و پبلشر کا پیغام',
+    readMessage: 'پیغام پڑھیں',
+    messageInUrdu: '',
   },
   team: {
     title: 'ہماری ٹیم',

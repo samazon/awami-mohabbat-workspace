@@ -240,6 +240,9 @@ export const en: Catalog = {
     language: 'Language',
     printedAt: 'Printed at',
     certification: 'Certification',
+    message: 'Message from the Chief Editor & Publisher',
+    readMessage: 'Read the message',
+    messageInUrdu: 'In Urdu',
   },
   team: {
     title: 'Our team',

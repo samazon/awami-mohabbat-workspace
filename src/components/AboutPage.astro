@@ -13,6 +13,8 @@ import { getLatestEdition } from '@/lib/services/editions';
 import AMHeader from './AMHeader.astro';
 import AMFooter from './AMFooter.astro';
 import LtrRun from './LtrRun.astro';
+import Icon from './Icon.astro';
+import { editorMessage } from '@/content/editor-message';
 
 interface Props {
   locale: Locale;
@@ -23,6 +25,8 @@ const c = about[locale];
 const [config, edition, team] = await Promise.all([getSiteConfig(locale), getLatestEdition(locale), getTeamPage()]);
 // The featured team member's photo (edited in /admin/team), or the bundled one.
 const editorPhoto = team.featured?.photo ?? fallbackPhoto;
+// Signature: the featured team member's Urdu name (admin-edited), else the masthead name.
+const signName = team.featured?.nameUr ?? about.ur.editor.name;
 ---
 
 <BaseLayout title={`${s.about.title} — ${s.meta.siteName}`} description={s.about.description}>
@@ -43,9 +47,26 @@ const editorPhoto = team.featured?.photo ?? fallbackPhoto;
           <h2 class="editor__name t-head">{c.editor.name}</h2>
           <p class="editor__role">{c.editor.role}</p>
           <p class="t-body editor__bio">{c.editor.bio}</p>
+          <a class="editor__more" href="#editor-message">{s.about.readMessage} <Icon name="arrow-down" size="sm" /></a>
         </div>
       </section>
     </div>
+
+    <section class="message" id="editor-message" aria-labelledby="message-h">
+      <header class="message__head">
+        <span class="message__quote" aria-hidden="true">”</span>
+        <h2 id="message-h" class="h2 message__title">{s.about.message}</h2>
+        {s.about.messageInUrdu && <span class="message__lang">{s.about.messageInUrdu}</span>}
+      </header>
+      <div class="message__body" lang="ur" dir="rtl">
+        {editorMessage.paragraphs.map((p) => <p>{p}</p>)}
+        <p class="message__closing">{editorMessage.closing.map((l) => <span>{l}</span>)}</p>
+        <footer class="message__sign">
+          <span class="message__name">{signName}</span>
+          <span class="message__role">چیف ایڈیٹر و پبلشر، روزنامہ عوامی محبت</span>
+        </footer>
+      </div>
+    </section>
 
     <div class="details">
       <section aria-labelledby="staff-h">
@@ -156,6 +177,94 @@ const editorPhoto = team.featured?.photo ?? fallbackPhoto;
   .editor__bio {
     margin-block-start: 10px;
     font-size: var(--fs-card);
+  }
+
+  .editor__more {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-block-start: 12px;
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-meta);
+    font-weight: 700;
+    color: var(--red);
+    text-decoration: none;
+  }
+  .editor__more:hover {
+    text-decoration: underline;
+  }
+
+  /* the chief editor's message */
+  .message {
+    scroll-margin-block-start: 16px;
+    padding: 36px 0 40px;
+    border-block-end: 1px solid var(--rule);
+  }
+  .message__head {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 14px;
+    max-width: 780px;
+    margin-inline: auto;
+    padding-block-end: 14px;
+    border-block-end: 3px solid var(--red);
+  }
+  .message__quote {
+    font-family: var(--font-serif);
+    font-size: var(--fs-title);
+    line-height: 0.6;
+    color: var(--red);
+  }
+  .message__title {
+    margin: 0;
+  }
+  .message__lang {
+    font-family: var(--font-ui);
+    font-size: var(--ui-meta);
+    color: var(--muted);
+  }
+  .message__body {
+    max-width: 780px;
+    margin-inline: auto;
+    padding-block-start: 18px;
+    font-family: var(--font-naskh);
+    font-size: var(--fs-body);
+    line-height: var(--lh-naskh);
+    color: var(--body);
+    text-align: justify;
+  }
+  .message__body p + p {
+    margin-block-start: 16px;
+  }
+  .message__closing {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-block-start: 22px;
+    font-weight: 700;
+    color: var(--ink);
+    text-align: start;
+  }
+  .message__sign {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    margin-block-start: 22px;
+  }
+  .message__name {
+    font-family: var(--font-nastaliq);
+    line-height: var(--lh-nastaliq);
+    font-size: var(--fs-section);
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .message__role {
+    font-family: var(--font-label);
+    font-size: var(--ui-meta);
+    color: var(--red);
   }
 
   /* three detail columns */
