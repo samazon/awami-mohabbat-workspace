@@ -2,7 +2,7 @@ import { and, asc, eq, gte, lte } from 'drizzle-orm';
 import { CDN_BASE } from 'astro:env/server';
 import { db } from '@/lib/db/client';
 import { adCampaigns, adSlots, type AdSlot } from '@/lib/db/schema';
-import { mediaUrl } from '@/lib/media';
+import { adCreativeKey, mediaUrl } from '@/lib/media';
 
 export type AdKind = AdSlot['kind'];
 
@@ -12,6 +12,8 @@ export interface AdCreative {
   linkUrl: string;
   altText: string;
   imageUrl: string | null;
+  imageWidth: number | null;
+  imageHeight: number | null;
   title: string | null;
   body: string | null;
   cta: string | null;
@@ -63,7 +65,9 @@ export async function getAdSlotsForPage(page: string, date: string): Promise<Rec
             client: c.client,
             linkUrl: c.linkUrl,
             altText: c.altText,
-            imageUrl: c.imageHash ? mediaUrl(CDN_BASE, `ads/${c.id}/creative.${c.imageHash}.webp`) : null,
+            imageUrl: c.imageHash ? mediaUrl(CDN_BASE, adCreativeKey(c.id, c.imageHash)) : null,
+            imageWidth: c.imageWidth,
+            imageHeight: c.imageHeight,
             title: c.title,
             body: c.body,
             cta: c.cta,

@@ -9,6 +9,7 @@ type NewContact = typeof emergencyContacts.$inferInsert;
 type NewConfig = typeof siteConfig.$inferInsert;
 
 export const AD_SLOTS: NewSlot[] = [
+  { slotId: 'home-hero-side', page: 'home', kind: 'portrait', fallbackMode: 'hidden', displayOrder: 0 },
   { slotId: 'home-leaderboard', page: 'home', kind: 'leaderboard', fallbackMode: 'google', displayOrder: 1 },
   { slotId: 'home-sponsor-strip', page: 'home', kind: 'strip', fallbackMode: 'hidden', displayOrder: 2 },
   { slotId: 'home-mid', page: 'home', kind: 'banner', fallbackMode: 'google', displayOrder: 3 },

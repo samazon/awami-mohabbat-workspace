@@ -298,7 +298,7 @@ export const emergencyContacts = sqliteTable('emergency_contacts', {
 // ---------------------------------------------------------------------------
 // Ads — nine seeded slots; campaigns are booked against them
 // ---------------------------------------------------------------------------
-export const AD_KINDS = ['leaderboard', 'banner', 'rect', 'halfpage', 'square', 'mobile', 'strip'] as const;
+export const AD_KINDS = ['leaderboard', 'banner', 'rect', 'halfpage', 'square', 'mobile', 'strip', 'portrait'] as const;
 
 export const adSlots = sqliteTable('ad_slots', {
   slotId: text('slot_id').primaryKey(),
@@ -320,6 +320,9 @@ export const adCampaigns = sqliteTable(
       .references(() => adSlots.slotId),
     type: text('type', { enum: ['image', 'text'] }).notNull(),
     imageHash: text('image_hash'),
+    /** The creative's size, for width/height on <img> (no layout shift). */
+    imageWidth: integer('image_width'),
+    imageHeight: integer('image_height'),
     title: text('title'),
     body: text('body'),
     cta: text('cta'),

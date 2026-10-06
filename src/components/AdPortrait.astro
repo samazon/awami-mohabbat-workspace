@@ -1,0 +1,70 @@
+---
+/**
+ * A portrait ad beside today's edition. Renders only when a campaign is live
+ * in the slot (no placeholder). Labelled "اشتہار" above the creative, never
+ * inside it; the link is marked sponsored and opens in a new tab when set.
+ */
+import { t, type Locale } from '@/i18n';
+import type { AdSlotView } from '@/lib/services/ads';
+
+interface Props {
+  ad: AdSlotView | undefined;
+  locale: Locale;
+}
+const { ad, locale } = Astro.props;
+const s = t(locale).ad;
+const c = ad?.creative;
+const internal = c ? c.linkUrl.startsWith('/') : false;
+---
+
+{ad && c && c.imageUrl && (
+  <aside class="adp" aria-label={s.label} data-slot={ad.slotId}>
+    <span class="adp__label">{c.labelAs === 'sponsored' ? s.sponsored : s.label}</span>
+    <a
+      class="adp__link"
+      href={c.linkUrl}
+      target={c.newTab && !internal ? '_blank' : undefined}
+      rel={internal ? undefined : 'sponsored noopener'}
+    >
+      <img src={c.imageUrl} width={c.imageWidth ?? 300} height={c.imageHeight ?? 394} alt={c.altText} loading="eager" decoding="async" />
+    </a>
+  </aside>
+)}
+
+<style>
+  .adp {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .adp__label {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-eyebrow);
+    color: var(--muted);
+  }
+  .adp__link {
+    display: block;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(17, 17, 17, 0.08),
+      0 6px 18px rgba(17, 17, 17, 0.1);
+    transition: box-shadow 160ms ease-out;
+  }
+  .adp__link:hover,
+  .adp__link:focus-visible {
+    box-shadow:
+      0 0 0 1px rgba(17, 17, 17, 0.14),
+      0 10px 26px rgba(17, 17, 17, 0.16);
+  }
+  .adp__link:focus-visible {
+    outline: 3px solid var(--gold);
+    outline-offset: 3px;
+  }
+  .adp img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+</style>

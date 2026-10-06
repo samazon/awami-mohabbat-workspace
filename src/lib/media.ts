@@ -150,6 +150,12 @@ export const teamPhotoKey = (hash: string, ext: 'webp' | 'jpg'): string => {
   return `team/${assertHash(hash)}.${ext}`;
 };
 
+/** Ad creatives, sized at upload:  ads/<campaign id>/creative.<hash>.webp */
+export const adCreativeKey = (campaignId: number, hash: string): string => {
+  if (!Number.isInteger(campaignId) || campaignId < 1) throw new RangeError(`Invalid campaign id: ${campaignId}`);
+  return `ads/${campaignId}/creative.${assertHash(hash)}.webp`;
+};
+
 export const editionPageKey = (
   date: string,
   page: number,

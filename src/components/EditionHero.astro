@@ -11,12 +11,17 @@ import type { EditionView } from '@/lib/services/editions';
 import Icon from './Icon.astro';
 import LtrRun from './LtrRun.astro';
 import PageThumb from './PageThumb.astro';
+import AdPortrait from './AdPortrait.astro';
+import type { AdSlotView } from '@/lib/services/ads';
 
 interface Props {
   edition: EditionView;
   locale: Locale;
+  /** Portrait ad beside the edition (home-hero-side); shown only when a campaign is live. */
+  sideAd?: AdSlotView;
 }
-const { edition, locale } = Astro.props;
+const { edition, locale, sideAd } = Astro.props;
+const hasAd = !!sideAd?.creative?.imageUrl;
 const s = t(locale);
 const { translation } = edition;
 const notice = translation.isFallback ? s.mt.fallback : translation.isMachineTranslated ? s.mt.notice : null;
@@ -30,7 +35,7 @@ const front = edition.pages[0]!;
       <LtrRun class="eyebrow">{formatEyebrow(edition.date)} · {edition.pages.length} {s.today.pagesEyebrow}</LtrRun>
     </header>
 
-    <div class="hero">
+    <div class:list={['hero', { 'hero--ad': hasAd }]}>
       <div class="front">
         <PageThumb
           page={front}
@@ -91,6 +96,7 @@ const front = edition.pages[0]!;
           </div>
         </div>
       </div>
+      {hasAd && <div class="side-ad"><AdPortrait ad={sideAd} locale={locale} /></div>}
     </div>
   </div>
 </section>
@@ -105,6 +111,20 @@ const front = edition.pages[0]!;
     grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
     gap: 28px 40px;
     align-items: start;
+  }
+  /* With a portrait ad: front page · text · ad (the ad at the reading end). */
+  @media (min-width: 1100px) {
+    .hero--ad {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 240px;
+      gap: 28px 32px;
+    }
+  }
+  @media (min-width: 768px) and (max-width: 1099px) {
+    .hero--ad .side-ad {
+      grid-column: 1 / -1;
+      justify-self: center;
+      width: min(320px, 100%);
+    }
   }
   .front__caption {
     display: flex;
@@ -212,6 +232,11 @@ const front = edition.pages[0]!;
     }
     .hero {
       gap: 18px;
+    }
+    .side-ad {
+      order: 6;
+      justify-self: center;
+      width: min(320px, 100%);
     }
   }
 </style>
