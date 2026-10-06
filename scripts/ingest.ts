@@ -43,9 +43,11 @@ export interface DerivedPage {
 export const contentHash = (buf: Buffer): string => createHash('sha256').update(buf).digest('hex').slice(0, 16);
 
 const MIN_WIDTH_HARD = 1200;
+/** With --allow-low-res: for days when only shared (compressed) images exist. */
+const MIN_WIDTH_LOW_RES = 700;
 const MIN_WIDTH_SOFT = 2400;
 
-export async function derivePage(input: Buffer, label = 'page'): Promise<DerivedPage> {
+export async function derivePage(input: Buffer, label = 'page', { allowLowRes = false } = {}): Promise<DerivedPage> {
   const image = sharp(input, { failOn: 'error' }).rotate(); // honour EXIF orientation
   const meta = await image.metadata();
 
@@ -54,10 +56,12 @@ export async function derivePage(input: Buffer, label = 'page'): Promise<Derived
   }
   const width = meta.width ?? 0;
   const height = meta.height ?? 0;
-  if (width < MIN_WIDTH_HARD) {
-    throw new Error(`${label}: ${width}px wide is too small to read; need at least ${MIN_WIDTH_HARD}px`);
+  const min = allowLowRes ? MIN_WIDTH_LOW_RES : MIN_WIDTH_HARD;
+  if (width < min) {
+    throw new Error(`${label}: ${width}px wide is too small to read; need at least ${min}px${allowLowRes ? '' : ' (or --allow-low-res)'}`);
   }
   const warnings: string[] = [];
+  if (width < MIN_WIDTH_HARD) warnings.push(`${label}: LOW RESOLUTION (${width}px) — small print will be blurry when zoomed`);
   if (width < MIN_WIDTH_SOFT) {
     warnings.push(`${label}: ${width}px wide — the zoom derivative will not be enlarged past the original`);
   }

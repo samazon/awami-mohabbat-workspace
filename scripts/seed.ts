@@ -62,6 +62,8 @@ const Args = z.object({
   static: z.boolean().default(false),
   /** Upload the media objects only; leave D1 alone (rows already mirrored another way). */
   r2Only: z.boolean().default(false),
+  /** Accept pages down to 700px wide (shared/compressed images, no PDF that day). */
+  allowLowRes: z.boolean().default(false),
   dryRun: z.boolean().default(false),
 });
 
@@ -82,6 +84,7 @@ function readArgs() {
       static: { type: 'boolean' },
       'r2-only': { type: 'boolean' },
       'dry-run': { type: 'boolean' },
+      'allow-low-res': { type: 'boolean' },
     },
     strict: true,
   });
@@ -100,6 +103,7 @@ function readArgs() {
     static: values.static,
     r2Only: values['r2-only'],
     dryRun: values['dry-run'],
+    allowLowRes: values['allow-low-res'],
   });
   if (!parsed.success) {
     console.error('Invalid arguments:');
@@ -165,7 +169,7 @@ async function main() {
     const n = i + 1;
     const file = resolve(args.pages[i]!);
     const buf = await readFile(file);
-    const d = await derivePage(buf, `page ${n} (${basename(file)})`);
+    const d = await derivePage(buf, `page ${n} (${basename(file)})`, { allowLowRes: args.allowLowRes });
     for (const w of d.warnings) console.warn(`  ⚠ ${w}`);
 
     uploads.push({ key: editionPageKey(date, n, 'orig', d.hash, d.origExt), contentType: contentTypeFor(`.${d.origExt}`), source: { path: file } });
