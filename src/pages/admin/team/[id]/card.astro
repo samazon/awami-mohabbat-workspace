@@ -1,0 +1,553 @@
+---
+/**
+ * /admin/team/<id>/card: a team member's press card, front and back, at the
+ * ID-1 card size (54 × 85.6 mm, portrait). "Print / Save as PDF" prints one
+ * card side per page, so the browser's "Save as PDF" gives a print-ready file.
+ *
+ * Name, role, station and photo come from the profile. CNIC, address, card
+ * number and expiry are typed here for this print only: they live in the page,
+ * are never sent to the server and are not stored (no PII at rest).
+ */
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Icon from '@/components/Icon.astro';
+import logo from '@/assets/logo-awami-mohabbat.webp';
+import { photoUrl } from '@/lib/services/team';
+import { adminGetMember } from '@/lib/services/team-admin';
+import { eq } from 'drizzle-orm';
+import { db } from '@/lib/db/client';
+import { siteConfig } from '@/lib/db/schema';
+
+const param = Astro.params.id ?? '';
+if (!/^[1-9]\d{0,8}$/.test(param)) return new Response('Not found', { status: 404 });
+const member = await adminGetMember(Number(param));
+if (!member) return new Response('Not found', { status: 404 });
+
+const [config] = await db().select().from(siteConfig).where(eq(siteConfig.id, 1)).limit(1);
+const photo = photoUrl(member);
+const year = new Date().getFullYear();
+const cardNo = `${String(member.id).padStart(3, '0')}-${String(year).slice(-2)}`;
+const validUntil = `${year}-12-31`;
+const office = config?.officeEn.split('\n').map((l) => l.trim()).filter(Boolean).join(', ');
+const contact = [office, config?.bureauEn].filter((l): l is string => !!l);
+// As printed in the paper (0304-…), not the site's international +92 form.
+const phones = config?.phones.join(' · ') ?? '';
+const email = config?.email ?? '';
+
+const fields = [
+  { key: 'name', label: 'Name', value: member.nameEn, max: 60 },
+  { key: 'role', label: 'Designation', value: member.roleEn ?? '', max: 40 },
+  { key: 'station', label: 'Station', value: member.placeEn ?? '', max: 40 },
+  { key: 'cnic', label: 'CNIC', value: '', max: 15, placeholder: '35401-1234567-1', pattern: '\\d{5}-\\d{7}-\\d' },
+  { key: 'address', label: 'Address', value: '', max: 120, wide: true },
+  { key: 'cardNo', label: 'Card no.', value: cardNo, max: 12 },
+] as const;
+---
+
+<AdminLayout title={`Press card — ${member.nameEn}`} section="team">
+  <div class="screen-only">
+    <a class="back" href={`/admin/team/${member.id}`}><Icon name="arrow-left" size="sm" flip={false} /> {member.nameEn}</a>
+    <div class="a-page-head">
+      <h1 class="a-title">Press card</h1>
+      <div class="head-actions">
+        <span class="a-hint" data-status role="status"></span>
+        <button class="a-btn a-btn--ghost" type="button" data-print><Icon name="printer" size="sm" /> Print</button>
+        <button class="a-btn" type="button" data-download data-file={`press-card-${cardNo}-${member.nameEn}`}><Icon name="download" size="sm" /> Download PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <section class="a-card panel screen-only" aria-labelledby="card-details">
+      <h2 class="panel__title" id="card-details">Card details</h2>
+      <div class="grid2">
+        {fields.map((f) => (
+          <div class={'wide' in f && f.wide ? 'wide' : undefined}>
+            <label class="a-label" for={`pc-${f.key}`}>{f.label}</label>
+            <input
+              class="a-input"
+              id={`pc-${f.key}`}
+              value={f.value}
+              maxlength={f.max}
+              placeholder={'placeholder' in f ? f.placeholder : undefined}
+              pattern={'pattern' in f ? f.pattern : undefined}
+              autocomplete="off"
+              spellcheck="false"
+              data-field={f.key}
+            />
+          </div>
+        ))}
+        <div>
+          <label class="a-label" for="pc-valid">Valid until</label>
+          <input class="a-input" id="pc-valid" type="date" value={validUntil} data-valid />
+        </div>
+      </div>
+      <p class="a-hint">
+        These details are only for this print — they aren't saved. Name, designation and station start from the profile; change the profile to change them for good.
+      </p>
+      <p class="a-hint">“Download PDF” gives a two-page file — front, then back — each page exactly 85.6 × 54 mm (CR80), ready for a card printer.</p>
+    </section>
+
+    <div class="cards" aria-label="Card preview">
+      {/* ---------- front ---------- */}
+      <article class="pc pc--front" aria-label="Front">
+        <div class="pc__spine" aria-hidden="true">
+          <span class="pc__slot"></span>
+          <span class="pc__press">PRESS</span>
+          <span class="pc__country">PAKISTAN MEDIA</span>
+        </div>
+        <div class="pc__body">
+          <img class="pc__logo" src={logo.src} width={logo.width} height={logo.height} alt="Awami Mohabbat" />
+          <p class="pc__dateline">DAILY · KASUR / LAHORE</p>
+          <div class="pc__photo">
+            {photo ? <img src={photo} alt="" /> : <span>Photo</span>}
+          </div>
+          <p class="pc__name" data-out="name">{member.nameEn}</p>
+          <p class="pc__name-ur" lang="ur" dir="rtl">{member.nameUr}</p>
+          <p class="pc__role" data-out="role">{member.roleEn ?? ''}</p>
+          <div class="pc__foot">
+            <div>
+              <p class="pc__k">CARD NO.</p>
+              <p class="pc__no" data-out="cardNo">{cardNo}</p>
+            </div>
+            <p class="pc__sign">EDITOR'S SIGNATURE</p>
+          </div>
+        </div>
+      </article>
+
+      {/* ---------- back ---------- */}
+      <article class="pc pc--back" aria-label="Back">
+        <header class="pc__head">
+          <span class="pc__press-h">PRESS</span>
+          <span class="pc__motto">Positive &amp; Productive but True Journalism</span>
+        </header>
+        <dl class="pc__rows">
+          <div><dt>CNIC</dt><dd data-out="cnic"></dd></div>
+          <div><dt>STATION</dt><dd data-out="station">{member.placeEn ?? ''}</dd></div>
+          <div><dt>ADDRESS</dt><dd data-out="address"></dd></div>
+        </dl>
+        <p class="pc__note">The holder of this card may kindly be given the necessary facilities for the performance of duty.</p>
+        <div class="pc__contact">
+          {contact.map((l) => <p>{l}</p>)}
+          {phones && <p class="pc__mono">{phones}</p>}
+          <p>{email}{email && ' · '}awamimohabbat.com</p>
+        </div>
+        <footer class="pc__bar">
+          <span>PAKISTAN MEDIA</span>
+          <span>Valid until <strong data-out="valid"></strong></span>
+        </footer>
+      </article>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  // Mirror the form into the card. textContent only — typed text is never parsed as HTML.
+  const outs = (key: string) => document.querySelectorAll<HTMLElement>(`[data-out="${key}"]`);
+  document.querySelectorAll<HTMLInputElement>('input[data-field]').forEach((input) => {
+    const sync = () => outs(input.dataset.field!).forEach((el) => (el.textContent = input.value.trim()));
+    input.addEventListener('input', sync);
+    sync();
+  });
+
+  const valid = document.querySelector<HTMLInputElement>('input[data-valid]');
+  if (valid) {
+    const sync = () => {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valid.value);
+      outs('valid').forEach((el) => (el.textContent = m ? `${m[3]}/${m[2]}/${m[1]}` : ''));
+    };
+    valid.addEventListener('input', sync);
+    sync();
+  }
+
+  document.querySelector('[data-print]')?.addEventListener('click', async () => {
+    await document.fonts.ready; // print only once the card's fonts are in
+    window.print();
+  });
+
+  /**
+   * CR80 PDF, made entirely in the browser: each side is rendered at 600 dpi
+   * and placed on its own 54 × 85.6 mm page. Nothing typed here (CNIC,
+   * address) leaves the browser. The libraries load only when asked for.
+   */
+  const CARD_W_MM = 54;
+  const CARD_H_MM = 85.6;
+  const DPI = 600;
+  const download = document.querySelector<HTMLButtonElement>('[data-download]');
+  const status = document.querySelector<HTMLElement>('[data-status]');
+  download?.addEventListener('click', async () => {
+    if (download.disabled) return;
+    download.disabled = true;
+    if (status) status.textContent = 'Preparing PDF…';
+    try {
+      const [{ domToCanvas }, { jsPDF }] = await Promise.all([import('modern-screenshot'), import('jspdf')]);
+      await document.fonts.ready;
+      const sides = [...document.querySelectorAll<HTMLElement>('.pc')];
+      const pdf = new jsPDF({ unit: 'mm', format: [CARD_W_MM, CARD_H_MM], orientation: 'portrait', compress: true });
+      pdf.setProperties({ title: download.dataset.file ?? 'Press card', creator: 'Awami Mohabbat admin' });
+      for (const [i, side] of sides.entries()) {
+        // Layout size (offset* ignore the preview's CSS zoom; the bounding rect doesn't).
+        const cssW = side.offsetWidth;
+        const canvas = await domToCanvas(side, {
+          width: cssW,
+          height: side.offsetHeight,
+          scale: (CARD_W_MM / 25.4) * DPI / cssW,
+          backgroundColor: '#ffffff',
+          // Full bleed: square corners, no preview shadow.
+          style: { borderRadius: '0', boxShadow: 'none', zoom: '1' },
+        });
+        if (i > 0) pdf.addPage([CARD_W_MM, CARD_H_MM], 'portrait');
+        pdf.addImage(canvas, 'PNG', 0, 0, CARD_W_MM, CARD_H_MM, undefined, 'FAST');
+      }
+      const name = (download.dataset.file ?? 'press-card').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      pdf.save(`${name || 'press-card'}.pdf`);
+      if (status) status.textContent = '';
+    } catch (err) {
+      console.error('press card pdf failed', err);
+      if (status) status.textContent = 'The PDF could not be made. Try again, or use Print.';
+    } finally {
+      download.disabled = false;
+    }
+  });
+</script>
+
+<style>
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-block-end: 10px;
+    color: var(--a-ink-2);
+    font-size: var(--ui-a-md);
+    text-decoration: none;
+  }
+  .back:hover {
+    color: var(--ink);
+  }
+  .head-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+  .head-actions [data-download]:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+  .layout {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 24px;
+  }
+  .panel {
+    flex: 1 1 340px;
+    max-width: 520px;
+    padding: 18px 20px 20px;
+  }
+  .panel__title {
+    margin-block-end: 14px;
+    font-size: var(--ui-a-base);
+    font-weight: 700;
+  }
+  .panel .a-hint {
+    margin-block-start: 12px;
+  }
+  .grid2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 16px;
+  }
+  .wide {
+    grid-column: 1 / -1;
+  }
+  .a-input:invalid {
+    border-color: var(--red);
+  }
+
+  /* ---------- the card ----------
+     Everything inside is in mm/pt so the print is true to size. On screen the
+     preview is zoomed; in print it is 1:1, one side per page. */
+  .cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    zoom: 1.9;
+  }
+  .pc {
+    --ui-pc-press: 15pt;
+    --ui-pc-name: 11pt;
+    --ui-pc-ur: 8pt;
+    --ui-pc-md: 6.5pt;
+    --ui-pc-sm: 5.5pt;
+    --ui-pc-xs: 4.6pt;
+    --pc-red: #9b2727;
+    position: relative;
+    display: flex;
+    width: 54mm;
+    height: 85.6mm;
+    overflow: hidden;
+    border-radius: 3.18mm;
+    background: #ffffff;
+    color: #111111;
+    font-family: var(--font-ui);
+    line-height: 1.3;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.12), 0 6px 18px rgb(0 0 0 / 0.1);
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .pc p {
+    margin: 0;
+  }
+  .pc__red {
+    color: var(--pc-red);
+  }
+
+  /* front */
+  .pc__spine {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    width: 10mm;
+    padding: 3.5mm 0 4mm;
+    background: var(--pc-red);
+    color: #ffffff;
+  }
+  .pc__slot {
+    width: 2mm;
+    height: 2mm;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 0.85);
+  }
+  .pc__press,
+  .pc__country {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+  .pc__press {
+    font-size: var(--ui-pc-press);
+    font-weight: 700;
+    letter-spacing: 0.22em;
+  }
+  .pc__country {
+    font-size: var(--ui-pc-xs);
+    letter-spacing: 0.2em;
+  }
+  .pc__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 4mm 4mm 3.5mm;
+  }
+  .pc__logo {
+    display: block;
+    width: 30mm;
+    height: auto;
+    margin-inline-start: -0.5mm;
+  }
+  .pc__dateline {
+    margin-block-start: 1.5mm;
+    padding-block-end: 1mm;
+    border-bottom: 0.25mm solid #111111;
+    font-size: var(--ui-pc-xs);
+    letter-spacing: 0.12em;
+  }
+  .pc__photo {
+    display: grid;
+    place-items: center;
+    width: 20mm;
+    height: 25mm;
+    margin-block: 3mm 2.5mm;
+    overflow: hidden;
+    background: #e6e5e1;
+    color: #77756f;
+    font-size: var(--ui-pc-sm);
+  }
+  .pc__photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .pc__name {
+    font-family: var(--font-serif);
+    font-size: var(--ui-pc-name);
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  .pc__name-ur {
+    margin-block-start: 0.6mm;
+    font-family: var(--font-naskh);
+    font-size: var(--ui-pc-ur);
+    line-height: 1.5;
+    text-align: left;
+  }
+  .pc__role {
+    margin-block-start: 0.6mm;
+    color: var(--pc-red);
+    font-size: var(--ui-pc-md);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .pc__foot {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 2mm;
+    margin-block-start: auto;
+    padding-block-start: 2mm;
+    border-top: 0.2mm solid #dddcd8;
+  }
+  .pc__k {
+    font-size: var(--ui-pc-xs);
+    letter-spacing: 0.12em;
+    color: #55534e;
+  }
+  .pc__no,
+  .pc__mono {
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  }
+  .pc__no {
+    font-size: var(--ui-pc-name);
+    font-weight: 600;
+    line-height: 1.1;
+  }
+  .pc__sign {
+    min-width: 16mm;
+    padding-block-start: 0.8mm;
+    border-top: 0.2mm solid #111111;
+    font-size: var(--ui-pc-xs);
+    letter-spacing: 0.1em;
+    text-align: end;
+    color: #55534e;
+  }
+
+  /* back */
+  .pc--back {
+    flex-direction: column;
+  }
+  .pc__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2mm;
+    min-height: 13mm;
+    padding: 0 4mm;
+    background: var(--pc-red);
+    color: #ffffff;
+  }
+  .pc__press-h {
+    font-size: var(--ui-pc-press);
+    font-weight: 700;
+    letter-spacing: 0.22em;
+  }
+  .pc__motto {
+    max-width: 22mm;
+    font-family: var(--font-serif);
+    font-size: var(--ui-pc-sm);
+    font-style: italic;
+    text-align: end;
+    line-height: 1.25;
+  }
+  .pc__rows {
+    margin: 2mm 4mm 0;
+  }
+  .pc__rows div {
+    display: grid;
+    grid-template-columns: 12mm 1fr;
+    gap: 1.5mm;
+    padding-block: 1.5mm;
+    border-bottom: 0.2mm solid #e6e5e1;
+  }
+  .pc__rows dt {
+    padding-block-start: 0.3mm;
+    font-size: var(--ui-pc-xs);
+    letter-spacing: 0.14em;
+    color: #55534e;
+  }
+  .pc__rows dd {
+    min-height: 1.3em;
+    margin: 0;
+    font-size: var(--ui-pc-md);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  .pc__note {
+    margin: 2.5mm 4mm 0 !important;
+    padding: 1.6mm 2mm;
+    border-inline-start: 0.6mm solid var(--pc-red);
+    background: #f4f3f0;
+    font-family: var(--font-serif);
+    font-size: var(--ui-pc-md);
+    line-height: 1.35;
+  }
+  .pc__contact {
+    display: grid;
+    gap: 0.4mm;
+    margin: auto 4mm 2.5mm;
+    font-size: var(--ui-pc-xs);
+    color: #33312d;
+  }
+  .pc__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2mm;
+    min-height: 6.5mm;
+    padding: 0 4mm;
+    background: #111111;
+    color: #ffffff;
+    font-size: var(--ui-pc-xs);
+    letter-spacing: 0.08em;
+  }
+  .pc__bar span:first-child {
+    letter-spacing: 0.2em;
+  }
+
+  @media (max-width: 640px) {
+    .grid2 {
+      grid-template-columns: 1fr;
+    }
+    .cards {
+      zoom: 1.4;
+    }
+  }
+
+  /* ---------- print: the two card sides, one per page, nothing else ---------- */
+  @page {
+    size: 54mm 85.6mm;
+    margin: 0;
+  }
+  @media print {
+    :global(body.admin .bar),
+    :global(body.admin .side),
+    .screen-only {
+      display: none !important;
+    }
+    /* body.admin raises specificity over the layout's own scoped rules. */
+    :global(body.admin),
+    :global(body.admin .shell),
+    :global(body.admin .main) {
+      display: block;
+      min-height: 0;
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+    }
+    .layout,
+    .cards {
+      display: block;
+      zoom: 1;
+    }
+    .pc {
+      border-radius: 0;
+      box-shadow: none;
+      break-after: page;
+    }
+    .pc:last-child {
+      break-after: auto;
+    }
+  }
+</style>

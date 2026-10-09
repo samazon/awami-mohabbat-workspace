@@ -161,6 +161,16 @@ const COUNTRIES = ['ae', 'au', 'be', 'ca', 'de', 'es', 'fr', 'gb', 'it', 'lk', '
   </form>
 
   {member && (
+    <div class="card-link a-card">
+      <div>
+        <h2 class="panel__title">Press card</h2>
+        <p class="a-hint">Print this person's press card, or save it as a PDF. Uses the saved profile.</p>
+      </div>
+      <a class="a-btn a-btn--ghost" href={`/admin/team/${member.id}/card`}><Icon name="id-card" size="sm" /> Press card</a>
+    </div>
+  )}
+
+  {member && (
     <form class="danger a-card" method="POST" action={actions.admin.teamDelete} data-confirm={`Remove ${member.nameEn} from the team? This cannot be undone.`}>
       <div>
         <h2 class="panel__title">Remove from the team</h2>
@@ -433,6 +443,7 @@ const COUNTRIES = ['ae', 'au', 'be', 'ca', 'de', 'es', 'fr', 'gb', 'it', 'lk', '
     display: flex;
     gap: 10px;
   }
+  .card-link,
   .danger {
     display: flex;
     flex-wrap: wrap;
@@ -442,8 +453,12 @@ const COUNTRIES = ['ae', 'au', 'be', 'ca', 'de', 'es', 'fr', 'gb', 'it', 'lk', '
     max-width: 860px;
     margin-block-start: 28px;
     padding: 16px 20px;
+  }
+  .danger {
+    margin-block-start: 16px;
     border-color: color-mix(in srgb, var(--red) 25%, var(--a-line));
   }
+  .card-link .panel__title,
   .danger .panel__title {
     margin-block-end: 2px;
   }
