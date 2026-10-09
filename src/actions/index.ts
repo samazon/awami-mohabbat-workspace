@@ -5,7 +5,7 @@ import { isLocale, DEFAULT_LOCALE } from '@/i18n';
 import { createJoinRequest, hashIp, isRateLimited, type NewJoinRequest } from '@/lib/services/join';
 import { notifyJoinRequest } from '@/lib/services/join-mail';
 import { audit } from '@/lib/services/admin';
-import { PhotoError, adminDeleteMember, adminMoveMember, adminSaveMember } from '@/lib/services/team-admin';
+import { PhotoError, adminDeleteMember, adminMoveMember, adminSaveMember, adminSavePressCard } from '@/lib/services/team-admin';
 import { TEAM_GROUPS } from '@/lib/db/schema';
 import type { ActionAPIContext } from 'astro:actions';
 import { JOIN_LIMITS, PHONE_CHARS } from '@/lib/join-rules';
@@ -91,6 +91,31 @@ export const server = {
         if (!(await adminDeleteMember(id))) throw new ActionError({ code: 'NOT_FOUND', message: 'That team member no longer exists.' });
         await audit(admin.id, 'team.delete', `team_members:${id}`);
         return { ok: true as const };
+      },
+    }),
+    /** Press-card details. Identity data: validated here, stored in its own table, logged by member id only. */
+    pressCardSave: defineAction({
+      accept: 'form',
+      input: z.object({
+        id: memberId,
+        cnic: z.string().max(40).optional(),
+        station: z.string().max(200).optional(),
+        address: z.string().max(400).optional(),
+        cardNo: z.string().max(40).optional(),
+        validUntil: z.string().max(20).optional(),
+      }),
+      handler: async ({ id, ...fields }, ctx) => {
+        const admin = requireAdmin(ctx);
+        try {
+          if (!(await adminSavePressCard(id, fields))) throw new ActionError({ code: 'NOT_FOUND', message: 'That team member no longer exists.' });
+        } catch (err) {
+          if (err instanceof z.ZodError) {
+            throw new ActionError({ code: 'BAD_REQUEST', message: err.issues.map((i) => `${i.path.join('.') || 'value'}: ${i.message}`).join('; ') });
+          }
+          throw err;
+        }
+        await audit(admin.id, 'team.card', `team_members:${id}`);
+        return { id };
       },
     }),
     teamMove: defineAction({

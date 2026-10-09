@@ -477,3 +477,25 @@ export const teamMembers = sqliteTable(
 
 export type TeamMemberRow = typeof teamMembers.$inferSelect;
 
+/**
+ * What a member's press card carries beyond the profile. CNIC and home address
+ * are identity data: this table is read by the admin card page only and never
+ * by anything on the public site. Goes with the member when they are deleted.
+ */
+export const teamPressCards = sqliteTable('team_press_cards', {
+  memberId: integer('member_id')
+    .primaryKey()
+    .references(() => teamMembers.id, { onDelete: 'cascade' }),
+  /** Pakistani national ID, 35401-1234567-1. */
+  cnic: text('cnic'),
+  /** Where the holder is posted; falls back to the profile's place when empty. */
+  station: text('station'),
+  address: text('address'),
+  cardNo: text('card_no'),
+  /** ISO date (YYYY-MM-DD). */
+  validUntil: text('valid_until'),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+export type TeamPressCardRow = typeof teamPressCards.$inferSelect;
+

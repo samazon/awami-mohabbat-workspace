@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { readImageHeader } from '@/lib/image-header';
 import { IMMUTABLE_CACHE_CONTROL, teamPhotoKey } from '@/lib/media';
 import { createMember, deleteMember, getMember, listMembers, moveMember, updateMember, type MemberInput } from '@/lib/team/data';
+import { getPressCard, savePressCard, type PressCardInput } from '@/lib/team/press-card';
 
 /** Upload limits for a team photo, already cropped and sized in the browser (CWE-434). */
 export const PHOTO_MAX_BYTES = 1_500_000;
@@ -53,4 +54,6 @@ export async function adminSaveMember(
 }
 
 export const adminDeleteMember = (id: number) => deleteMember(db(), id);
+export const adminGetPressCard = (id: number) => getPressCard(db(), id);
+export const adminSavePressCard = (id: number, input: PressCardInput) => savePressCard(db(), id, input);
 export const adminMoveMember = (id: number, dir: 'up' | 'down') => moveMember(db(), id, dir);

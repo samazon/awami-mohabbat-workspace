@@ -1,46 +1,48 @@
 ---
 /**
  * /admin/team/<id>/card: a team member's press card, front and back, at the
- * ID-1 card size (54 × 85.6 mm, portrait). "Print / Save as PDF" prints one
- * card side per page, so the browser's "Save as PDF" gives a print-ready file.
+ * CR80 card size (54 × 85.6 mm, portrait).
  *
- * Name, role, station and photo come from the profile. CNIC, address, card
- * number and expiry are typed here for this print only: they live in the page,
- * are never sent to the server and are not stored (no PII at rest).
+ * Name, Urdu name, designation and photo come from the profile. CNIC, station,
+ * address, card number and expiry are the card's own details: saved per member
+ * in team_press_cards (admin only, never read by the public site). "Download
+ * PDF" renders both sides in the browser into a two-page CR80 PDF; "Print"
+ * does the same through the print dialog.
  */
+import { actions, isInputError } from 'astro:actions';
 import AdminLayout from '@/layouts/AdminLayout.astro';
 import Icon from '@/components/Icon.astro';
-import logo from '@/assets/logo-awami-mohabbat.webp';
+import paishani from '@/assets/paishani.webp';
+import { pressCard as fixed } from '@/content/press-card';
 import { photoUrl } from '@/lib/services/team';
-import { adminGetMember } from '@/lib/services/team-admin';
-import { eq } from 'drizzle-orm';
-import { db } from '@/lib/db/client';
-import { siteConfig } from '@/lib/db/schema';
+import { adminGetMember, adminGetPressCard } from '@/lib/services/team-admin';
 
 const param = Astro.params.id ?? '';
 if (!/^[1-9]\d{0,8}$/.test(param)) return new Response('Not found', { status: 404 });
 const member = await adminGetMember(Number(param));
 if (!member) return new Response('Not found', { status: 404 });
 
-const [config] = await db().select().from(siteConfig).where(eq(siteConfig.id, 1)).limit(1);
-const photo = photoUrl(member);
-const year = new Date().getFullYear();
-const cardNo = `${String(member.id).padStart(3, '0')}-${String(year).slice(-2)}`;
-const validUntil = `${year}-12-31`;
-const office = config?.officeEn.split('\n').map((l) => l.trim()).filter(Boolean).join(', ');
-const contact = [office, config?.bureauEn].filter((l): l is string => !!l);
-// As printed in the paper (0304-…), not the site's international +92 form.
-const phones = config?.phones.join(' · ') ?? '';
-const email = config?.email ?? '';
+const result = Astro.getActionResult(actions.admin.pressCardSave);
+if (result && !result.error) return Astro.redirect(`/admin/team/${member.id}/card?saved=1`);
+const error = result?.error ?? null;
+const saved = Astro.url.searchParams.get('saved') === '1';
+const typed = (result?.error as { inputValue?: Record<string, unknown> } | undefined)?.inputValue ?? null;
 
-const fields = [
-  { key: 'name', label: 'Name', value: member.nameEn, max: 60 },
-  { key: 'role', label: 'Designation', value: member.roleEn ?? '', max: 40 },
-  { key: 'station', label: 'Station', value: member.placeEn ?? '', max: 40 },
-  { key: 'cnic', label: 'CNIC', value: '', max: 15, placeholder: '35401-1234567-1', pattern: '\\d{5}-\\d{7}-\\d' },
-  { key: 'address', label: 'Address', value: '', max: 120, wide: true },
-  { key: 'cardNo', label: 'Card no.', value: cardNo, max: 12 },
-] as const;
+const card = await adminGetPressCard(member.id);
+const year = new Date().getFullYear();
+const defaults = {
+  cnic: card?.cnic ?? '',
+  station: card?.station ?? member.placeEn ?? '',
+  address: card?.address ?? '',
+  cardNo: card?.cardNo ?? `${String(member.id).padStart(3, '0')}-${String(year).slice(-2)}`,
+  validUntil: card?.validUntil ?? `${year}-12-31`,
+};
+const val = (k: keyof typeof defaults) => (typed && typeof typed[k] === 'string' ? (typed[k] as string) : defaults[k]);
+const fmtDate = (iso: string) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+};
+const photo = photoUrl(member);
 ---
 
 <AdminLayout title={`Press card — ${member.nameEn}`} section="team">
@@ -51,41 +53,56 @@ const fields = [
       <div class="head-actions">
         <span class="a-hint" data-status role="status"></span>
         <button class="a-btn a-btn--ghost" type="button" data-print><Icon name="printer" size="sm" /> Print</button>
-        <button class="a-btn" type="button" data-download data-file={`press-card-${cardNo}-${member.nameEn}`}><Icon name="download" size="sm" /> Download PDF</button>
+        <button class="a-btn" type="button" data-download data-name={member.nameEn}><Icon name="download" size="sm" /> Download PDF</button>
       </div>
     </div>
+
+    {error && (
+      <p class="a-alert a-alert--bad" role="alert">
+        <Icon name="triangle-alert" size="sm" />
+        {isInputError(error) ? 'Some fields need attention.' : error.message}
+      </p>
+    )}
+    {saved && !error && (
+      <p class="a-alert" role="status"><Icon name="check" size="sm" /> Card details saved.</p>
+    )}
   </div>
 
   <div class="layout">
-    <section class="a-card panel screen-only" aria-labelledby="card-details">
+    <form class="a-card panel screen-only" method="POST" action={actions.admin.pressCardSave} aria-labelledby="card-details" data-card-form>
+      <input type="hidden" name="id" value={member.id} />
       <h2 class="panel__title" id="card-details">Card details</h2>
       <div class="grid2">
-        {fields.map((f) => (
-          <div class={'wide' in f && f.wide ? 'wide' : undefined}>
-            <label class="a-label" for={`pc-${f.key}`}>{f.label}</label>
-            <input
-              class="a-input"
-              id={`pc-${f.key}`}
-              value={f.value}
-              maxlength={f.max}
-              placeholder={'placeholder' in f ? f.placeholder : undefined}
-              pattern={'pattern' in f ? f.pattern : undefined}
-              autocomplete="off"
-              spellcheck="false"
-              data-field={f.key}
-            />
-          </div>
-        ))}
+        <div>
+          <label class="a-label" for="pc-station">Station</label>
+          <input class="a-input" id="pc-station" name="station" maxlength="60" value={val('station')} placeholder="e.g. Lahore" autocomplete="off" data-field="station" />
+        </div>
+        <div>
+          <label class="a-label" for="pc-cnic">CNIC</label>
+          <input class="a-input" id="pc-cnic" name="cnic" maxlength="15" value={val('cnic')} placeholder="35401-1234567-1" pattern="\d{5}-\d{7}-\d" inputmode="numeric" autocomplete="off" spellcheck="false" data-field="cnic" />
+        </div>
+        <div class="wide">
+          <label class="a-label" for="pc-address">Address</label>
+          <input class="a-input" id="pc-address" name="address" maxlength="160" value={val('address')} autocomplete="off" data-field="address" />
+        </div>
+        <div>
+          <label class="a-label" for="pc-cardNo">Card no.</label>
+          <input class="a-input" id="pc-cardNo" name="cardNo" maxlength="12" value={val('cardNo')} pattern="[A-Za-z0-9/-]+" autocomplete="off" spellcheck="false" data-field="cardNo" />
+        </div>
         <div>
           <label class="a-label" for="pc-valid">Valid until</label>
-          <input class="a-input" id="pc-valid" type="date" value={validUntil} data-valid />
+          <input class="a-input" id="pc-valid" name="validUntil" type="date" value={val('validUntil')} data-valid />
         </div>
       </div>
+      <div class="panel__actions">
+        <button class="a-btn" type="submit"><Icon name="check" size="sm" /> Save details</button>
+        <span class="a-hint" data-dirty hidden>Changes not saved yet.</span>
+      </div>
       <p class="a-hint">
-        These details are only for this print — they aren't saved. Name, designation and station start from the profile; change the profile to change them for good.
+        Saved with this person, so the card can be printed again later. Name, Urdu name, designation and photo come from the profile — change them there.
       </p>
       <p class="a-hint">“Download PDF” gives a two-page file — front, then back — each page exactly 85.6 × 54 mm (CR80), ready for a card printer.</p>
-    </section>
+    </form>
 
     <div class="cards" aria-label="Card preview">
       {/* ---------- front ---------- */}
@@ -96,18 +113,18 @@ const fields = [
           <span class="pc__country">PAKISTAN MEDIA</span>
         </div>
         <div class="pc__body">
-          <img class="pc__logo" src={logo.src} width={logo.width} height={logo.height} alt="Awami Mohabbat" />
-          <p class="pc__dateline">DAILY · KASUR / LAHORE</p>
+          <img class="pc__paishani" src={paishani.src} width={paishani.width} height={paishani.height} alt="Awami Mohabbat" />
+          <p class="pc__dateline">{fixed.dateline}</p>
           <div class="pc__photo">
             {photo ? <img src={photo} alt="" /> : <span>Photo</span>}
           </div>
-          <p class="pc__name" data-out="name">{member.nameEn}</p>
+          <p class="pc__name">{member.nameEn}</p>
           <p class="pc__name-ur" lang="ur" dir="rtl">{member.nameUr}</p>
-          <p class="pc__role" data-out="role">{member.roleEn ?? ''}</p>
+          <p class="pc__role">{member.roleEn ?? ''}</p>
           <div class="pc__foot">
             <div>
               <p class="pc__k">CARD NO.</p>
-              <p class="pc__no" data-out="cardNo">{cardNo}</p>
+              <p class="pc__no" data-out="cardNo">{val('cardNo')}</p>
             </div>
             <p class="pc__sign">EDITOR'S SIGNATURE</p>
           </div>
@@ -118,22 +135,22 @@ const fields = [
       <article class="pc pc--back" aria-label="Back">
         <header class="pc__head">
           <span class="pc__press-h">PRESS</span>
-          <span class="pc__motto">Positive &amp; Productive but True Journalism</span>
+          <span class="pc__motto">{fixed.motto}</span>
         </header>
         <dl class="pc__rows">
-          <div><dt>CNIC</dt><dd data-out="cnic"></dd></div>
-          <div><dt>STATION</dt><dd data-out="station">{member.placeEn ?? ''}</dd></div>
-          <div><dt>ADDRESS</dt><dd data-out="address"></dd></div>
+          <div><dt>CNIC</dt><dd data-out="cnic">{val('cnic')}</dd></div>
+          <div><dt>STATION</dt><dd data-out="station">{val('station')}</dd></div>
+          <div><dt>ADDRESS</dt><dd data-out="address">{val('address')}</dd></div>
         </dl>
-        <p class="pc__note">The holder of this card may kindly be given the necessary facilities for the performance of duty.</p>
+        <p class="pc__note">{fixed.note}</p>
         <div class="pc__contact">
-          {contact.map((l) => <p>{l}</p>)}
-          {phones && <p class="pc__mono">{phones}</p>}
-          <p>{email}{email && ' · '}awamimohabbat.com</p>
+          {fixed.contact.map((l) => <p>{l}</p>)}
+          <p class="pc__mono">{fixed.phones.join(' · ')}</p>
+          <p>{fixed.email} · {fixed.website}</p>
         </div>
         <footer class="pc__bar">
           <span>PAKISTAN MEDIA</span>
-          <span>Valid until <strong data-out="valid"></strong></span>
+          <span>Valid until <strong data-out="valid">{fmtDate(val('validUntil'))}</strong></span>
         </footer>
       </article>
     </div>
@@ -141,23 +158,38 @@ const fields = [
 </AdminLayout>
 
 <script>
-  // Mirror the form into the card. textContent only — typed text is never parsed as HTML.
+  // Mirror the form into the card as you type. textContent only — typed text is never parsed as HTML.
   const outs = (key: string) => document.querySelectorAll<HTMLElement>(`[data-out="${key}"]`);
+  const form = document.querySelector<HTMLFormElement>('[data-card-form]');
+  const dirty = document.querySelector<HTMLElement>('[data-dirty]');
+  const initial = new Map<HTMLInputElement, string>();
+  const markDirty = () => {
+    const changed = [...initial].some(([el, v]) => el.value !== v);
+    if (dirty) dirty.hidden = !changed;
+  };
   document.querySelectorAll<HTMLInputElement>('input[data-field]').forEach((input) => {
-    const sync = () => outs(input.dataset.field!).forEach((el) => (el.textContent = input.value.trim()));
-    input.addEventListener('input', sync);
-    sync();
+    initial.set(input, input.value);
+    input.addEventListener('input', () => {
+      outs(input.dataset.field!).forEach((el) => (el.textContent = input.value.trim()));
+      markDirty();
+    });
   });
-
   const valid = document.querySelector<HTMLInputElement>('input[data-valid]');
   if (valid) {
-    const sync = () => {
+    initial.set(valid, valid.value);
+    valid.addEventListener('input', () => {
       const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valid.value);
       outs('valid').forEach((el) => (el.textContent = m ? `${m[3]}/${m[2]}/${m[1]}` : ''));
-    };
-    valid.addEventListener('input', sync);
-    sync();
+      markDirty();
+    });
   }
+  // Leaving with unsaved edits? The browser asks first.
+  window.addEventListener('beforeunload', (e) => {
+    if (dirty && !dirty.hidden) e.preventDefault();
+  });
+  form?.addEventListener('submit', () => {
+    if (dirty) dirty.hidden = true;
+  });
 
   document.querySelector('[data-print]')?.addEventListener('click', async () => {
     await document.fonts.ready; // print only once the card's fonts are in
@@ -166,8 +198,7 @@ const fields = [
 
   /**
    * CR80 PDF, made entirely in the browser: each side is rendered at 600 dpi
-   * and placed on its own 54 × 85.6 mm page. Nothing typed here (CNIC,
-   * address) leaves the browser. The libraries load only when asked for.
+   * and placed on its own 54 × 85.6 mm page. The libraries load only when asked for.
    */
   const CARD_W_MM = 54;
   const CARD_H_MM = 85.6;
@@ -182,8 +213,10 @@ const fields = [
       const [{ domToCanvas }, { jsPDF }] = await Promise.all([import('modern-screenshot'), import('jspdf')]);
       await document.fonts.ready;
       const sides = [...document.querySelectorAll<HTMLElement>('.pc')];
+      const cardNo = document.querySelector<HTMLInputElement>('[data-field="cardNo"]')?.value.trim() ?? '';
+      const title = `press-card-${cardNo}-${download.dataset.name ?? ''}`;
       const pdf = new jsPDF({ unit: 'mm', format: [CARD_W_MM, CARD_H_MM], orientation: 'portrait', compress: true });
-      pdf.setProperties({ title: download.dataset.file ?? 'Press card', creator: 'Awami Mohabbat admin' });
+      pdf.setProperties({ title, creator: 'Awami Mohabbat admin' });
       for (const [i, side] of sides.entries()) {
         // Layout size (offset* ignore the preview's CSS zoom; the bounding rect doesn't).
         const cssW = side.offsetWidth;
@@ -198,7 +231,7 @@ const fields = [
         if (i > 0) pdf.addPage([CARD_W_MM, CARD_H_MM], 'portrait');
         pdf.addImage(canvas, 'PNG', 0, 0, CARD_W_MM, CARD_H_MM, undefined, 'FAST');
       }
-      const name = (download.dataset.file ?? 'press-card').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const name = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       pdf.save(`${name || 'press-card'}.pdf`);
       if (status) status.textContent = '';
     } catch (err) {
@@ -249,8 +282,18 @@ const fields = [
     font-size: var(--ui-a-base);
     font-weight: 700;
   }
+  .panel__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-block-start: 16px;
+  }
   .panel .a-hint {
     margin-block-start: 12px;
+  }
+  .panel__actions .a-hint {
+    margin: 0;
   }
   .grid2 {
     display: grid;
@@ -281,6 +324,7 @@ const fields = [
     --ui-pc-sm: 5.5pt;
     --ui-pc-xs: 4.6pt;
     --pc-red: #9b2727;
+    --pc-navy: #14284b;
     position: relative;
     display: flex;
     width: 54mm;
@@ -297,9 +341,6 @@ const fields = [
   }
   .pc p {
     margin: 0;
-  }
-  .pc__red {
-    color: var(--pc-red);
   }
 
   /* front */
@@ -339,13 +380,13 @@ const fields = [
     display: flex;
     flex-direction: column;
     min-width: 0;
-    padding: 4mm 4mm 3.5mm;
+    padding: 3.5mm 3.5mm 3.5mm;
   }
-  .pc__logo {
+  /* The printed paishani, whole, as it appears above the paper. */
+  .pc__paishani {
     display: block;
-    width: 30mm;
+    width: 100%;
     height: auto;
-    margin-inline-start: -0.5mm;
   }
   .pc__dateline {
     margin-block-start: 1.5mm;
@@ -357,9 +398,9 @@ const fields = [
   .pc__photo {
     display: grid;
     place-items: center;
-    width: 20mm;
-    height: 25mm;
-    margin-block: 3mm 2.5mm;
+    width: 19mm;
+    height: 23.75mm;
+    margin-block: 2.5mm;
     overflow: hidden;
     background: #e6e5e1;
     color: #77756f;
@@ -497,7 +538,7 @@ const fields = [
     gap: 2mm;
     min-height: 6.5mm;
     padding: 0 4mm;
-    background: #111111;
+    background: var(--pc-navy);
     color: #ffffff;
     font-size: var(--ui-pc-xs);
     letter-spacing: 0.08em;
