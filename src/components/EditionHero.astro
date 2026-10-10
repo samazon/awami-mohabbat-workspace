@@ -11,7 +11,7 @@ import type { EditionView } from '@/lib/services/editions';
 import Icon from './Icon.astro';
 import LtrRun from './LtrRun.astro';
 import PageThumb from './PageThumb.astro';
-import AdPortrait from './AdPortrait.astro';
+import Showcase from './Showcase.astro';
 import type { AdSlotView } from '@/lib/services/ads';
 
 interface Props {
@@ -35,7 +35,7 @@ const front = edition.pages[0]!;
       <LtrRun class="eyebrow">{formatEyebrow(edition.date)} · {edition.pages.length} {s.today.pagesEyebrow}</LtrRun>
     </header>
 
-    <div class:list={['hero', { 'hero--ad': hasAd }]}>
+    <div class:list={['hero', { 'hero--showcase': hasAd }]}>
       <div class="front">
         <PageThumb
           page={front}
@@ -96,7 +96,7 @@ const front = edition.pages[0]!;
           </div>
         </div>
       </div>
-      {hasAd && <div class="side-ad"><AdPortrait ad={sideAd} locale={locale} /></div>}
+      {hasAd && <div class="hero__side"><Showcase ad={sideAd} locale={locale} /></div>}
     </div>
   </div>
 </section>
@@ -114,13 +114,13 @@ const front = edition.pages[0]!;
   }
   /* With a portrait ad: front page · text · ad (the ad at the reading end). */
   @media (min-width: 1100px) {
-    .hero--ad {
+    .hero--showcase {
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 300px;
       gap: 28px 32px;
     }
   }
   @media (min-width: 768px) and (max-width: 1099px) {
-    .hero--ad .side-ad {
+    .hero--showcase .hero__side {
       grid-column: 1 / -1;
       justify-self: center;
       width: min(320px, 100%);
@@ -233,7 +233,7 @@ const front = edition.pages[0]!;
     .hero {
       gap: 18px;
     }
-    .side-ad {
+    .hero__side {
       order: 6;
       justify-self: center;
       width: min(320px, 100%);

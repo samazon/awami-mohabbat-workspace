@@ -8,7 +8,8 @@
  *
  *   --remote   production D1 + R2 (default: local)
  *
- * The image is resized to the slot's display size ×2 (WebP, no metadata). The
+ * The image is resized to the slot's display size ×2 (WebP, no metadata) and
+ * stored under showcase/<id>/ — a neutral name, so ad blockers leave it be. The
  * link must be https:// (or http://) or a path on this site starting with "/";
  * anything else — javascript:, data:, protocol-relative "//" — is refused.
  * Row first (paused), then R2, then the row goes live: a failed upload never

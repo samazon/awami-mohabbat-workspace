@@ -1,8 +1,14 @@
 ---
 /**
- * A portrait ad beside today's edition. Renders only when a campaign is live
- * in the slot (no placeholder). Labelled "اشتہار" above the creative, never
- * inside it; the link is marked sponsored and opens in a new tab when set.
+ * The portrait ad beside today's edition — our own client's image, not a
+ * network ad. Renders only when a campaign is live in the slot (no
+ * placeholder). Labelled "اشتہار" above the image, never inside it; the link
+ * is marked sponsored and opens in a new tab when set.
+ *
+ * Naming matters here: ad blockers hide anything whose URL, class or
+ * aria-label matches their lists (ads/, creative, .ad*, "Advertisement"), and
+ * they did hide this. So the markup is named like any other component and
+ * the image is served from media/showcase/. The visible label stays.
  */
 import { t, type Locale } from '@/i18n';
 import type { AdSlotView } from '@/lib/services/ads';
@@ -18,28 +24,28 @@ const internal = c ? c.linkUrl.startsWith('/') : false;
 ---
 
 {ad && c && c.imageUrl && (
-  <aside class="adp" aria-label={s.label} data-slot={ad.slotId}>
-    <span class="adp__badge"><span class="adp__dot" aria-hidden="true"></span>{c.labelAs === 'sponsored' ? s.sponsored : s.label}</span>
+  <aside class="showcase" aria-labelledby="showcase-label">
+    <span class="showcase__badge" id="showcase-label"><span class="showcase__dot" aria-hidden="true"></span>{c.labelAs === 'sponsored' ? s.sponsored : s.label}</span>
     <a
-      class="adp__link"
+      class="showcase__link"
       href={c.linkUrl}
       target={c.newTab && !internal ? '_blank' : undefined}
       rel={internal ? undefined : 'sponsored noopener'}
     >
       <img src={c.imageUrl} width={c.imageWidth ?? 300} height={c.imageHeight ?? 394} alt={c.altText} loading="eager" decoding="async" />
     </a>
-    <a class="adp__cta" href="#footer-contact">{s.advertiseHere} — <strong>{s.advertiseCta}</strong></a>
+    <a class="showcase__cta" href="#footer-contact">{s.advertiseHere} — <strong>{s.advertiseCta}</strong></a>
   </aside>
 )}
 
 <style>
-  .adp {
+  .showcase {
     display: flex;
     flex-direction: column;
     gap: 6px;
   }
   /* A gently pulsing badge draws the eye without flashing (well under 3/s, WCAG 2.3.1). */
-  .adp__badge {
+  .showcase__badge {
     align-self: flex-start;
     display: inline-flex;
     align-items: center;
@@ -53,30 +59,30 @@ const internal = c ? c.linkUrl.startsWith('/') : false;
     font-size: var(--ui-eyebrow);
     font-weight: 700;
   }
-  .adp__dot {
+  .showcase__dot {
     width: 7px;
     height: 7px;
     border-radius: 50%;
     background: var(--gold);
-    animation: adp-pulse 1.6s ease-in-out infinite;
+    animation: showcase-pulse 1.6s ease-in-out infinite;
   }
-  @keyframes adp-pulse {
+  @keyframes showcase-pulse {
     50% {
       opacity: 0.25;
       scale: 0.7;
     }
   }
-  .adp__link {
-    animation: adp-glow 3.2s ease-in-out infinite;
+  .showcase__link {
+    animation: showcase-glow 3.2s ease-in-out infinite;
   }
-  @keyframes adp-glow {
+  @keyframes showcase-glow {
     50% {
       box-shadow:
         0 0 0 2px color-mix(in srgb, var(--red) 55%, transparent),
         0 10px 26px rgba(168, 22, 30, 0.22);
     }
   }
-  .adp__cta {
+  .showcase__cta {
     display: block;
     padding: 8px 10px;
     border: 1px dashed var(--rule-strong);
@@ -88,21 +94,21 @@ const internal = c ? c.linkUrl.startsWith('/') : false;
     color: var(--secondary);
     text-decoration: none;
   }
-  .adp__cta strong {
+  .showcase__cta strong {
     color: var(--red);
   }
-  .adp__cta:hover {
+  .showcase__cta:hover {
     border-color: var(--red);
     color: var(--ink);
     text-decoration: none;
   }
   @media (prefers-reduced-motion: reduce) {
-    .adp__dot,
-    .adp__link {
+    .showcase__dot,
+    .showcase__link {
       animation: none;
     }
   }
-  .adp__link {
+  .showcase__link {
     display: block;
     border-radius: var(--radius-sm);
     overflow: hidden;
@@ -111,17 +117,17 @@ const internal = c ? c.linkUrl.startsWith('/') : false;
       0 6px 18px rgba(17, 17, 17, 0.1);
     transition: box-shadow 160ms ease-out;
   }
-  .adp__link:hover,
-  .adp__link:focus-visible {
+  .showcase__link:hover,
+  .showcase__link:focus-visible {
     box-shadow:
       0 0 0 1px rgba(17, 17, 17, 0.14),
       0 10px 26px rgba(17, 17, 17, 0.16);
   }
-  .adp__link:focus-visible {
+  .showcase__link:focus-visible {
     outline: 3px solid var(--gold);
     outline-offset: 3px;
   }
-  .adp img {
+  .showcase img {
     display: block;
     width: 100%;
     height: auto;
