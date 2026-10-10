@@ -78,7 +78,7 @@ export const ur = {
     google: 'GOOGLE ADS',
     client: 'CLIENT',
     placeholder: 'اشتہار کی جگہ',
-    advertiseHere: 'اپنا اشتہار یہاں دیں',
+    advertiseHere: 'یہاں اپنا اشتہار شائع کروائیں',
     advertiseCta: 'رابطہ کریں',
   },
   today: {
