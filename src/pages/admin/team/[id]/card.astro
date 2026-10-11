@@ -15,6 +15,7 @@ import AdminLayout from '@/layouts/AdminLayout.astro';
 import Icon from '@/components/Icon.astro';
 import paishani from '@/assets/paishani.webp';
 import { pressCard as fixed } from '@/content/press-card';
+import guilloche from '@/assets/press-card-guilloche.webp';
 import { photoUrl } from '@/lib/services/team';
 import { adminGetMember, adminGetPressCard } from '@/lib/services/team-admin';
 import { suggestCardNo } from '@/lib/team/press-card';
@@ -50,7 +51,17 @@ const photo = photoUrl(member);
 const origin = import.meta.env.DEV ? Astro.url.origin : (Astro.site?.origin ?? Astro.url.origin);
 const verifyUrl = card?.verifyToken ? `${origin}/verify/${card.verifyToken}` : null;
 // Our own SVG from a URL we built (token is validated on write); nothing typed here reaches it.
-const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
+const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0, blackColor: '#1a1a1a', whiteColor: '#ffffff' }) : null;
+// Lucide outlines, inlined: the site's <Icon> uses a sprite (<use href="#ai:…">) that the PDF renderer can't resolve.
+const ICON = {
+  pin: '<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
+  phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+  globe: '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
+} as const;
+const icon = (k: keyof typeof ICON) =>
+  `<svg class="pc__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
+
 ---
 
 <AdminLayout title={`Press card — ${member.nameEn}`} section="team">
@@ -121,11 +132,12 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
       {/* ---------- front ---------- */}
       <article class="pc pc--front" aria-label="Front">
         <div class="pc__spine" aria-hidden="true">
-          <span class="pc__slot"></span>
+          <span class="pc__hole"></span>
           <span class="pc__press">PRESS</span>
           <span class="pc__country">PAKISTAN MEDIA</span>
         </div>
         <div class="pc__body">
+          <img class="pc__guilloche" src={guilloche.src} width={guilloche.width} height={guilloche.height} alt="" aria-hidden="true" />
           <img class="pc__paishani" src={paishani.src} width={paishani.width} height={paishani.height} alt="Awami Mohabbat" />
           <p class="pc__dateline">{fixed.dateline}</p>
           <div class="pc__photo">
@@ -140,7 +152,7 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
               <p class="pc__no" data-out="cardNo">{val('cardNo')}</p>
             </div>
             <div class="pc__qr">
-              {qrSvg ? <div class="pc__qr-code" set:html={qrSvg} /> : <div class="pc__qr-code pc__qr-code--empty"><span>Save to create</span></div>}
+              {qrSvg ? <div class="pc__qr-code"><div class="pc__qr-svg" set:html={qrSvg} /></div> : <div class="pc__qr-code pc__qr-code--empty"><span>Save to create</span></div>}
               <p class="pc__k">SCAN TO VERIFY</p>
             </div>
           </div>
@@ -160,9 +172,12 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
         </dl>
         <p class="pc__note">{fixed.note}</p>
         <div class="pc__contact">
-          {fixed.contact.map((l) => <p>{l}</p>)}
-          <p class="pc__mono">{fixed.phones.join(' · ')}</p>
-          <p>{fixed.email} · {fixed.website}</p>
+          <p class="pc__ci"><Fragment set:html={icon('pin')} /><span>{fixed.contact.map((l, i) => <>{i > 0 && <br />}{l}</>)}</span></p>
+          <p class="pc__ci pc__ci--row">{fixed.phones.map((n) => <span class="pc__ci"><Fragment set:html={icon('phone')} /><span class="pc__mono">{n}</span></span>)}</p>
+          <p class="pc__ci pc__ci--row">
+            <span class="pc__ci"><Fragment set:html={icon('mail')} /><span>{fixed.email}</span></span>
+            <span class="pc__ci"><Fragment set:html={icon('globe')} /><span>{fixed.website}</span></span>
+          </p>
         </div>
         <footer class="pc__bar">
           <span>PAKISTAN MEDIA</span>
@@ -356,16 +371,22 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
     --ui-pc-md: 6.5pt;
     --ui-pc-sm: 5.5pt;
     --ui-pc-xs: 4.6pt;
-    --pc-red: #9b2727;
-    --pc-navy: #14284b;
+    /* Print palette: crimson (C22 M98 Y94 K15), charcoal, off-white, divider grey, rich black. */
+    --pc-red: #8f1d1d;
+    --pc-charcoal: #1d262f;
+    --pc-paper: #fafafa;
+    --pc-line: #eaeaea;
+    --pc-ink: #1a1a1a;
+    --pc-muted: #5c5c5c;
     position: relative;
+    isolation: isolate;
     display: flex;
     width: 54mm;
     height: 85.6mm;
     overflow: hidden;
     border-radius: 3.18mm;
-    background: #ffffff;
-    color: #111111;
+    background: var(--pc-paper);
+    color: var(--pc-ink);
     font-family: var(--font-ui);
     line-height: 1.3;
     box-shadow: 0 1px 2px rgb(0 0 0 / 0.12), 0 6px 18px rgb(0 0 0 / 0.1);
@@ -384,15 +405,18 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
     align-items: center;
     justify-content: space-between;
     width: 10mm;
-    padding: 3.5mm 0 4mm;
+    padding: 3mm 0 4mm;
     background: var(--pc-red);
     color: #ffffff;
   }
-  .pc__slot {
-    width: 2mm;
-    height: 2mm;
+  /* Punch hole: 3 mm with a pale ring; the wordmark starts well below so a lanyard clip never clips the P. */
+  .pc__hole {
+    width: 3mm;
+    height: 3mm;
+    margin-block-end: 3mm;
     border-radius: 50%;
-    background: rgb(255 255 255 / 0.85);
+    background: #ffffff;
+    box-shadow: 0 0 0 0.6mm rgb(255 255 255 / 0.4);
   }
   .pc__press,
   .pc__country {
@@ -409,11 +433,23 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
     letter-spacing: 0.2em;
   }
   .pc__body {
+    position: relative;
     flex: 1;
     display: flex;
     flex-direction: column;
     min-width: 0;
     padding: 3.5mm 3.5mm 3.5mm;
+  }
+  /* Security rosette (half, its centre on the card's right edge), behind the photo and text. */
+  .pc__guilloche {
+    position: absolute;
+    z-index: -1;
+    inset-inline-end: 0;
+    inset-block-start: 23mm;
+    width: auto;
+    height: 40mm;
+    opacity: 0.5;
+    pointer-events: none;
   }
   /* The printed paishani, whole, as it appears above the paper. */
   .pc__paishani {
@@ -424,33 +460,41 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
   /* A band between the paishani and the rule: the same air above and below the text. */
   .pc__dateline {
     padding-block: 1.6mm;
-    border-bottom: 0.25mm solid #111111;
+    border-bottom: 0.25mm solid var(--pc-line);
     font-size: var(--ui-pc-xs);
+    font-weight: 600;
     line-height: 1;
     letter-spacing: 0.16em;
     text-align: center;
+    color: var(--pc-ink);
   }
   .pc__photo {
     display: grid;
     place-items: center;
+    box-sizing: border-box;
     width: 19mm;
     height: 23.75mm;
-    margin: 2.5mm 0 2.2mm;
+    margin: 2.5mm 0 2mm;
+    padding: 0.7mm;
     overflow: hidden;
-    background: #e6e5e1;
-    color: #77756f;
+    /* An inset shadow, not a border: the PDF renderer rounds sub-pixel borders up to a whole pixel. */
+    box-shadow: inset 0 0 0 0.18mm #d6d6d6;
+    border-radius: 1mm;
+    background: #ffffff;
+    color: var(--pc-muted);
     font-size: var(--ui-pc-sm);
   }
   .pc__photo img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    border-radius: 0.5mm;
   }
   .pc__name {
     font-family: var(--font-serif);
     font-size: var(--ui-pc-name);
     font-weight: 700;
-    line-height: 1.1;
+    line-height: 1.05;
   }
   .pc__name-ur {
     margin-block-start: 0.6mm;
@@ -473,13 +517,14 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
     justify-content: space-between;
     gap: 2mm;
     margin-block-start: auto;
-    padding-block-start: 2mm;
-    border-top: 0.2mm solid #dddcd8;
+    padding-block-start: 1mm;
+    border-top: 0.25mm solid var(--pc-line);
   }
   .pc__k {
     font-size: var(--ui-pc-xs);
+    font-weight: 600;
     letter-spacing: 0.12em;
-    color: #55534e;
+    color: var(--pc-muted);
   }
   .pc__mono {
     font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
@@ -494,17 +539,22 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
   }
   .pc__qr {
     display: grid;
-    gap: 0.8mm;
+    gap: 0.6mm;
     justify-items: center;
   }
   .pc__qr .pc__k {
     letter-spacing: 0.1em;
   }
+  /* 10 mm code inside a white box: the 1.5 mm padding plus the card margin is the quiet zone. */
   .pc__qr-code {
-    width: 10mm;
-    height: 10mm;
+    width: 12.4mm;
+    height: 12.4mm;
+    padding: 1.2mm;
+    border-radius: 0.6mm;
+    background: #ffffff;
   }
-  .pc__qr-code :global(svg) {
+  .pc__qr-svg,
+  .pc__qr-svg :global(svg) {
     display: block;
     width: 100%;
     height: 100%;
@@ -513,7 +563,7 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
     display: grid;
     place-items: center;
     border: 0.25mm dashed #b5b3ad;
-    color: #77756f;
+    color: var(--pc-muted);
     font-size: var(--ui-pc-xs);
     text-align: center;
   }
@@ -538,12 +588,12 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
     letter-spacing: 0.22em;
   }
   .pc__motto {
-    max-width: 22mm;
+    max-width: 23mm;
     font-family: var(--font-serif);
     font-size: var(--ui-pc-sm);
     font-style: italic;
     text-align: end;
-    line-height: 1.25;
+    line-height: 1.3;
   }
   .pc__rows {
     margin: 2mm 4mm 0;
@@ -553,13 +603,14 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
     grid-template-columns: 12mm 1fr;
     gap: 1.5mm;
     padding-block: 1.5mm;
-    border-bottom: 0.2mm solid #e6e5e1;
+    border-bottom: 0.25mm solid var(--pc-line);
   }
   .pc__rows dt {
     padding-block-start: 0.3mm;
     font-size: var(--ui-pc-xs);
+    font-weight: 600;
     letter-spacing: 0.14em;
-    color: #55534e;
+    color: var(--pc-muted);
   }
   .pc__rows dd {
     min-height: 1.3em;
@@ -571,18 +622,37 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
   .pc__note {
     margin: 2.5mm 4mm 0 !important;
     padding: 1.6mm 2mm;
+    border: 0.25mm solid var(--pc-line);
     border-inline-start: 0.6mm solid var(--pc-red);
-    background: #f4f3f0;
+    border-radius: 0.8mm;
+    background: #f3f3f3;
     font-family: var(--font-serif);
     font-size: var(--ui-pc-md);
     line-height: 1.35;
   }
   .pc__contact {
     display: grid;
-    gap: 0.4mm;
+    gap: 0.9mm;
     margin: auto 4mm 2.5mm;
     font-size: var(--ui-pc-xs);
-    color: #33312d;
+    line-height: 1.35;
+    color: var(--pc-ink);
+  }
+  .pc__ci {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9mm;
+  }
+  .pc__ci--row {
+    flex-wrap: wrap;
+    gap: 0.6mm 2.4mm;
+  }
+  .pc__ci :global(.pc__icon) {
+    flex: none;
+    width: 2.1mm;
+    height: 2.1mm;
+    margin-block-start: 0.2mm;
+    color: var(--pc-red);
   }
   .pc__bar {
     display: flex;
@@ -591,7 +661,7 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
     gap: 2mm;
     min-height: 6.5mm;
     padding: 0 4mm;
-    background: var(--pc-navy);
+    background: var(--pc-charcoal);
     color: #ffffff;
     font-size: var(--ui-pc-xs);
     letter-spacing: 0.08em;
