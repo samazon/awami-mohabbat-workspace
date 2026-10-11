@@ -477,11 +477,13 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
 
   /* ---- AM News TV card: a small dark "screen" with a play button ---- */
   .tv {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 12px;
     padding-block: 8px;
     padding-inline: 8px 14px;
+    overflow: hidden;
     border-radius: var(--radius-sm);
     background: var(--nav-bg);
     color: var(--on-dark);
@@ -493,6 +495,36 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     color: var(--on-dark);
     text-decoration: none;
     box-shadow: inset 0 0 0 1px var(--strip-bg);
+  }
+  /* Attention cues (gentle, far under WCAG 2.3.1's three flashes a second):
+     a light swoosh sweeps across the card every 5 s, and a ring ripples out
+     of the play button every 2.4 s. Both stop under reduced motion. */
+  .tv::after {
+    content: '';
+    position: absolute;
+    inset: -40% auto -40% 0;
+    width: 26%;
+    background: linear-gradient(
+      100deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.06) 30%,
+      rgba(255, 255, 255, 0.5) 50%,
+      rgba(255, 255, 255, 0.06) 70%,
+      transparent 100%
+    );
+    translate: -160% 0;
+    rotate: 14deg;
+    pointer-events: none;
+    animation: tv-swoosh 5s ease-in-out infinite;
+  }
+  @keyframes tv-swoosh {
+    0% {
+      translate: -160% 0;
+    }
+    24%,
+    100% {
+      translate: 560% 0;
+    }
   }
   .tv__screen {
     flex: none;
@@ -508,6 +540,7 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
       radial-gradient(120% 90% at 30% 20%, #3a3a48 0%, #101016 70%);
   }
   .tv__play {
+    position: relative;
     display: grid;
     place-items: center;
     width: 26px;
@@ -517,6 +550,26 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     color: #fff;
     box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.08);
     transition: scale 160ms ease-out;
+  }
+  .tv__play::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid var(--strip-bg);
+    opacity: 0;
+    animation: tv-ring 2.4s ease-out infinite;
+  }
+  @keyframes tv-ring {
+    0% {
+      scale: 1;
+      opacity: 0.7;
+    }
+    70%,
+    100% {
+      scale: 1.55;
+      opacity: 0;
+    }
   }
   .tv__play :global(svg) {
     width: 12px;
@@ -590,7 +643,9 @@ const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAA
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .tv__dot {
+    .tv__dot,
+    .tv::after,
+    .tv__play::before {
       animation: none;
     }
   }
