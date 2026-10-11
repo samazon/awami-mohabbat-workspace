@@ -3,6 +3,7 @@ import { db } from '@/lib/db/client';
 import { TEAM_GROUPS, type TeamGroupKey } from '@/lib/db/schema';
 import { mediaUrl, teamPhotoKey } from '@/lib/media';
 import { GROUP_TITLES, listMembers, type MemberRow } from '@/lib/team/data';
+import { getPressCardByToken } from '@/lib/team/press-card';
 
 export interface TeamMemberView {
   id: number;
@@ -15,6 +16,9 @@ export interface TeamMemberView {
   country: string | null;
   photo: { src: string; width: number; height: number } | null;
 }
+
+/** For /verify/<token>: the card a QR code points at. Public, so only what the card front shows is used. */
+export const verifyPressCard = (token: string) => getPressCardByToken(db(), token);
 
 export const photoUrl = (r: Pick<MemberRow, 'photoHash' | 'photoExt'>): string | null =>
   r.photoHash && r.photoExt ? mediaUrl(CDN_BASE, teamPhotoKey(r.photoHash, r.photoExt)) : null;

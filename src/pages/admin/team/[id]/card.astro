@@ -5,7 +5,8 @@
  *
  * Name, Urdu name, designation and photo come from the profile. CNIC, station,
  * address, card number and expiry are the card's own details: saved per member
- * in team_press_cards (admin only, never read by the public site). "Download
+ * in team_press_cards (admin only, never read by the public site). The QR on
+ * the front opens /verify/<token>, a public page that confirms the card. "Download
  * PDF" renders both sides in the browser into a two-page CR80 PDF; "Print"
  * does the same through the print dialog.
  */
@@ -16,6 +17,8 @@ import paishani from '@/assets/paishani.webp';
 import { pressCard as fixed } from '@/content/press-card';
 import { photoUrl } from '@/lib/services/team';
 import { adminGetMember, adminGetPressCard } from '@/lib/services/team-admin';
+import { suggestCardNo } from '@/lib/team/press-card';
+import { renderSVG } from 'uqr';
 
 const param = Astro.params.id ?? '';
 if (!/^[1-9]\d{0,8}$/.test(param)) return new Response('Not found', { status: 404 });
@@ -34,7 +37,7 @@ const defaults = {
   cnic: card?.cnic ?? '',
   station: card?.station ?? member.placeEn ?? '',
   address: card?.address ?? '',
-  cardNo: card?.cardNo ?? `${String(member.id).padStart(3, '0')}-${String(year).slice(-2)}`,
+  cardNo: card?.cardNo ?? suggestCardNo(member.id, year),
   validUntil: card?.validUntil ?? `${year}-12-31`,
 };
 const val = (k: keyof typeof defaults) => (typed && typeof typed[k] === 'string' ? (typed[k] as string) : defaults[k]);
@@ -43,6 +46,11 @@ const fmtDate = (iso: string) => {
   return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
 };
 const photo = photoUrl(member);
+// Printed cards must point at the real domain, whatever host served this page.
+const origin = import.meta.env.DEV ? Astro.url.origin : (Astro.site?.origin ?? Astro.url.origin);
+const verifyUrl = card?.verifyToken ? `${origin}/verify/${card.verifyToken}` : null;
+// Our own SVG from a URL we built (token is validated on write); nothing typed here reaches it.
+const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
 ---
 
 <AdminLayout title={`Press card — ${member.nameEn}`} section="team">
@@ -101,6 +109,11 @@ const photo = photoUrl(member);
       <p class="a-hint">
         Saved with this person, so the card can be printed again later. Name, Urdu name, designation and photo come from the profile — change them there.
       </p>
+      {verifyUrl ? (
+        <p class="a-hint">The QR code opens <a href={verifyUrl} target="_blank" rel="noopener">{verifyUrl.replace(/^https?:\/\//, '')}</a>, which confirms this card is genuine and in date. It shows only what the card front shows.</p>
+      ) : (
+        <p class="a-hint">Save once and the card gets its QR code: a verification link unique to this person.</p>
+      )}
       <p class="a-hint">“Download PDF” gives a two-page file — front, then back — each page exactly 85.6 × 54 mm (CR80), ready for a card printer.</p>
     </form>
 
@@ -126,7 +139,10 @@ const photo = photoUrl(member);
               <p class="pc__k">CARD NO.</p>
               <p class="pc__no" data-out="cardNo">{val('cardNo')}</p>
             </div>
-            <p class="pc__sign">EDITOR'S SIGNATURE</p>
+            <div class="pc__qr">
+              {qrSvg ? <div class="pc__qr-code" set:html={qrSvg} /> : <div class="pc__qr-code pc__qr-code--empty"><span>Save to create</span></div>}
+              <p class="pc__k">SCAN TO VERIFY</p>
+            </div>
           </div>
         </div>
       </article>
@@ -389,7 +405,7 @@ const photo = photoUrl(member);
     height: auto;
   }
   .pc__dateline {
-    margin-block-start: 1.5mm;
+    margin-block-start: 2.5mm;
     padding-block-end: 1mm;
     border-bottom: 0.25mm solid #111111;
     font-size: var(--ui-pc-xs);
@@ -455,14 +471,30 @@ const photo = photoUrl(member);
     font-weight: 600;
     line-height: 1.1;
   }
-  .pc__sign {
-    min-width: 16mm;
-    padding-block-start: 0.8mm;
-    border-top: 0.2mm solid #111111;
-    font-size: var(--ui-pc-xs);
+  .pc__qr {
+    display: grid;
+    gap: 0.8mm;
+    justify-items: center;
+  }
+  .pc__qr .pc__k {
     letter-spacing: 0.1em;
-    text-align: end;
-    color: #55534e;
+  }
+  .pc__qr-code {
+    width: 13mm;
+    height: 13mm;
+  }
+  .pc__qr-code :global(svg) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .pc__qr-code--empty {
+    display: grid;
+    place-items: center;
+    border: 0.25mm dashed #b5b3ad;
+    color: #77756f;
+    font-size: var(--ui-pc-xs);
+    text-align: center;
   }
 
   /* back */

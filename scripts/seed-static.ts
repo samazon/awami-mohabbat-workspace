@@ -37,8 +37,8 @@ export const SITE_CONFIG = (now: number): NewConfig => ({
   id: 1,
   currentVolume: 20,
   currentIssue: 93,
-  coverageUr: 'قصور / لاہور',
-  coverageEn: 'Kasur / Lahore',
+  coverageUr: 'قصور / اسلام آباد',
+  coverageEn: 'Kasur / Islamabad',
   editorUr: 'اقبال کھوکھر',
   editorEn: 'Iqbal Khokhar',
   // Newline-separated: one entry per printed line.

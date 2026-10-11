@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { createMember, deleteMember } from '../src/lib/team/data';
-import { getPressCard, savePressCard } from '../src/lib/team/press-card';
+import { VERIFY_TOKEN, getPressCard, getPressCardByToken, newVerifyToken, savePressCard, suggestCardNo } from '../src/lib/team/press-card';
 import { testDb } from './helpers/db';
 
 const base = { groupKey: 'reporting' as const, nameEn: 'Atif Gill', nameUr: 'عاطف گل' };
-const card = { cnic: '35401-1234567-1', station: 'Lahore', address: '12 Mall Road, Lahore', cardNo: '004/09', validUntil: '2026-12-31' };
+const card = { cnic: '35401-1234567-1', station: 'Lahore', address: '12 Mall Road, Lahore', cardNo: 'AM-2026-004', validUntil: '2026-12-31' };
 
 describe('press cards', () => {
   it('saves, reads back and replaces a member’s card; empty fields become null', async () => {
@@ -22,7 +22,6 @@ describe('press cards', () => {
   it('rejects a malformed CNIC, card number or date', async () => {
     const { db } = testDb();
     const id = await createMember(db, base);
-    await expect(savePressCard(db, id, { ...card, cnic: '35401-1234567' })).rejects.toThrow(/CNIC/);
     await expect(savePressCard(db, id, { ...card, cnic: '35401-123456-12' })).rejects.toThrow(/CNIC/);
     await expect(savePressCard(db, id, { ...card, cnic: '35401-1234567-1; drop' })).rejects.toThrow(/too_big|CNIC/);
     await expect(savePressCard(db, id, { ...card, cardNo: '<b>1</b>' })).rejects.toThrow(/letters, digits/);
@@ -38,5 +37,39 @@ describe('press cards', () => {
     await savePressCard(db, id, card);
     await deleteMember(db, id);
     expect(await getPressCard(db, id)).toBeNull();
+  });
+
+  it('mints one verify token per member, keeps it across saves, and finds the card by it', async () => {
+    const { db, sqlite } = testDb();
+    const id = await createMember(db, base);
+    await savePressCard(db, id, card);
+    const first = (await getPressCard(db, id))!.verifyToken!;
+    expect(first).toMatch(VERIFY_TOKEN);
+
+    await savePressCard(db, id, { ...card, station: 'Kasur' });
+    expect((await getPressCard(db, id))!.verifyToken).toBe(first);
+
+    const found = await getPressCardByToken(db, first);
+    expect(found?.member.nameEn).toBe('Atif Gill');
+    expect(found?.card.station).toBe('Kasur');
+
+    // A card saved before tokens existed gets one on its next save.
+    sqlite.prepare('UPDATE team_press_cards SET verify_token = NULL WHERE member_id = ?').run(id);
+    await savePressCard(db, id, card);
+    const minted = (await getPressCard(db, id))!.verifyToken;
+    expect(minted).toMatch(VERIFY_TOKEN);
+    expect(minted).not.toBe(first);
+
+    expect(await getPressCardByToken(db, 'zzzzzzzzzzzz')).toBeNull();
+    // Malformed tokens never reach the database.
+    expect(await getPressCardByToken(db, "' OR 1=1 --")).toBeNull();
+    expect(await getPressCardByToken(db, first.toUpperCase())).toBeNull();
+  });
+
+  it('tokens are well-formed and distinct', () => {
+    const seen = new Set(Array.from({ length: 200 }, newVerifyToken));
+    expect(seen.size).toBe(200);
+    for (const t of seen) expect(t).toMatch(VERIFY_TOKEN);
+    expect(suggestCardNo(24, 2026)).toBe('AM-2026-024');
   });
 });

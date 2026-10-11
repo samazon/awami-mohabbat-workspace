@@ -5,7 +5,7 @@ export const en: Catalog = {
   meta: {
     siteName: 'Awami Mohabbat',
     siteNameLatin: 'Awami Mohabbat',
-    description: 'Awami Mohabbat — the Urdu daily from Kasur and Lahore. Today\'s edition, the archive and articles.',
+    description: 'Awami Mohabbat — the Urdu daily from Kasur and Islamabad. Today\'s edition, the archive and articles.',
   },
   strip: {
     group: 'Awami Mohabbat Group of Publications',
@@ -49,7 +49,7 @@ export const en: Catalog = {
     daily: 'Daily',
     groupEyebrow: 'GROUP OF PUBLICATIONS',
     lockup: 'DAILY AWAMI MOHABBAT',
-    subline: 'Daily Urdu newspaper • Kasur | Lahore',
+    subline: 'Daily Urdu newspaper • Kasur | Islamabad',
     epaper: 'e-Paper',
     tvCta: 'Watch on YouTube',
     tvLabel: 'AM News TV — watch on YouTube (opens in a new tab)',

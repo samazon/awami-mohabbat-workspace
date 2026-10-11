@@ -22,7 +22,7 @@ export interface AboutContent {
 export const about: Record<Locale, AboutContent> = {
   ur: {
     mission: [
-      'روزنامہ عوامی محبت قصور اور لاہور سے شائع ہونے والا اردو روزنامہ ہے۔ ادارے کا بنیادی مقصد مقامی سطح پر عوامی مسائل کی غیر جانبدار رپورٹنگ اور تعمیری اور مثبت صحافت ہے۔',
+      'روزنامہ عوامی محبت قصور اور اسلام آباد سے شائع ہونے والا اردو روزنامہ ہے۔ ادارے کا بنیادی مقصد مقامی سطح پر عوامی مسائل کی غیر جانبدار رپورٹنگ اور تعمیری اور مثبت صحافت ہے۔',
       'اخبار روزانہ چار صفحات پر مشتمل ہوتا ہے اور ہر اشاعت اسی روز ویب سائٹ پر بھی دستیاب ہوتی ہے تاکہ قاری کہیں سے بھی اسے پڑھ سکے۔',
     ],
     editor: {
@@ -46,7 +46,7 @@ export const about: Record<Locale, AboutContent> = {
   },
   en: {
     mission: [
-      'Awami Mohabbat is an Urdu daily published from Kasur and Lahore. Its purpose is impartial reporting of public issues at the local level, and constructive, positive journalism.',
+      'Awami Mohabbat is an Urdu daily published from Kasur and Islamabad. Its purpose is impartial reporting of public issues at the local level, and constructive, positive journalism.',
       'Each edition runs to four pages and is published on this website the same day, so readers can pick it up from anywhere.',
     ],
     editor: {

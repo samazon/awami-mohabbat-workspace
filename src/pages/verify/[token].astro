@@ -1,0 +1,213 @@
+---
+/**
+ * /verify/<token>: what the QR on a press card opens. Public — anyone who is
+ * shown a card can check it — so it carries only what the card front already
+ * shows (photo, names, designation, station, card no, expiry) and a status.
+ * Never the CNIC or address. Tokens are random, so there is nothing to
+ * enumerate; a malformed or unknown one is a plain 404 page. noindex, not in
+ * the sitemap.
+ */
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Icon from '@/components/Icon.astro';
+import paishani from '@/assets/paishani.webp';
+import { photoUrl, verifyPressCard } from '@/lib/services/team';
+
+const found = await verifyPressCard(Astro.params.token ?? '');
+// Pakistan's calendar day decides "in date", wherever the server runs.
+const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' });
+const expired = !!found?.card.validUntil && found.card.validUntil < today;
+const status: 'valid' | 'expired' | 'unknown' = !found ? 'unknown' : expired ? 'expired' : 'valid';
+if (!found) Astro.response.status = 404;
+
+const fmt = (iso: string | null) => {
+  const m = iso && /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : '—';
+};
+const photo = found ? photoUrl(found.member) : null;
+const copy = {
+  valid: { en: 'Valid press card', ur: 'درست پریس کارڈ', icon: 'badge-check' },
+  expired: { en: 'Expired press card', ur: 'زائد المیعاد پریس کارڈ', icon: 'badge-alert' },
+  unknown: { en: 'No such press card', ur: 'یہ پریس کارڈ ہمارے ریکارڈ میں نہیں', icon: 'badge-x' },
+}[status];
+---
+
+<BaseLayout title={`${copy.en} — Daily Awami Mohabbat`} description="Press card verification for Daily Awami Mohabbat." noindex>
+  <main class="wrap" lang="en" dir="ltr">
+    <a class="brand" href="/" aria-label="Daily Awami Mohabbat">
+      <img src={paishani.src} width={paishani.width} height={paishani.height} alt="" />
+    </a>
+
+    <section class:list={['card', `card--${status}`]} aria-live="polite">
+      <header class="status">
+        <Icon name={copy.icon} size="xl" />
+        <div>
+          <h1 class="status__en">{copy.en}</h1>
+          <p class="status__ur" lang="ur" dir="rtl">{copy.ur}</p>
+        </div>
+      </header>
+
+      {found ? (
+        <div class="holder">
+          <div class="holder__photo">{photo ? <img src={photo} alt="" width="200" height="250" /> : <Icon name="user" size="xl" />}</div>
+          <dl class="holder__facts">
+            <div class="wide">
+              <dt>Name</dt>
+              <dd>
+                <strong>{found.member.nameEn}</strong>
+                <span lang="ur" dir="rtl">{found.member.nameUr}</span>
+              </dd>
+            </div>
+            <div><dt>Designation</dt><dd>{found.member.roleEn ?? '—'}</dd></div>
+            <div><dt>Station</dt><dd>{found.card.station ?? found.member.placeEn ?? '—'}</dd></div>
+            <div><dt>Card no.</dt><dd class="mono">{found.card.cardNo ?? '—'}</dd></div>
+            <div><dt>Valid until</dt><dd class="mono">{fmt(found.card.validUntil)}</dd></div>
+          </dl>
+        </div>
+      ) : (
+        <p class="none">
+          This link does not match any card issued by Daily Awami Mohabbat. The card may be forged, or the link mistyped. To confirm a
+          card, scan the QR code printed on it.
+        </p>
+      )}
+
+      <footer class="issuer">
+        Issued by <strong>Daily Awami Mohabbat</strong>, Kasur / Islamabad · ABC certified · Checked {fmt(today)}
+      </footer>
+    </section>
+  </main>
+</BaseLayout>
+
+<style>
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 28px 16px 48px;
+    font-family: var(--font-ui);
+  }
+  .brand {
+    display: block;
+    width: min(100%, 420px);
+    margin: 0 auto 24px;
+  }
+  .brand img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .card {
+    --tone: #1d7a3b;
+    overflow: hidden;
+    border: 1px solid var(--rule-strong);
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 8px 28px rgba(17, 17, 17, 0.08);
+  }
+  .card--expired {
+    --tone: #b26a00;
+  }
+  .card--unknown {
+    --tone: var(--red);
+  }
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 20px;
+    background: var(--tone);
+    color: #ffffff;
+  }
+  .status__en {
+    font-family: var(--font-ui);
+    font-size: var(--fs-title);
+    font-weight: 700;
+    line-height: 1.2;
+    color: inherit;
+  }
+  .status__ur {
+    margin: 2px 0 0;
+    font-family: var(--font-naskh);
+    font-size: var(--ui-meta);
+    text-align: left;
+    opacity: 0.92;
+  }
+  .holder {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 20px;
+    padding: 20px;
+  }
+  .holder__photo {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    background: #e6e5e1;
+    color: #77756f;
+  }
+  .holder__photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .holder__facts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 18px;
+    margin: 0;
+    align-content: start;
+  }
+  .holder__facts .wide {
+    grid-column: 1 / -1;
+  }
+  .holder__facts dt {
+    font-size: var(--ui-eyebrow);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--secondary);
+  }
+  .holder__facts dd {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 12px;
+    align-items: baseline;
+    margin: 3px 0 0;
+    font-size: var(--fs-body);
+    color: var(--ink);
+  }
+  .holder__facts dd strong {
+    font-size: var(--fs-title);
+    font-weight: 700;
+  }
+  .holder__facts dd span[lang='ur'] {
+    font-family: var(--font-naskh);
+  }
+  .mono {
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  }
+  .none {
+    margin: 0;
+    padding: 20px;
+    font-size: var(--fs-body);
+    line-height: 1.55;
+    color: var(--ink);
+  }
+  .issuer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--rule);
+    background: #f6f6f4;
+    font-size: var(--ui-meta);
+    color: var(--secondary);
+  }
+  @media (max-width: 480px) {
+    .holder {
+      grid-template-columns: 96px 1fr;
+      gap: 14px;
+      padding: 16px;
+    }
+    .holder__facts {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -9,7 +9,7 @@ export const ur = {
   meta: {
     siteName: 'عوامی محبت',
     siteNameLatin: 'Awami Mohabbat',
-    description: 'روزنامہ عوامی محبت — قصور اور لاہور سے شائع ہونے والا اردو روزنامہ۔ آج کا اخبار، آرکائیو اور مضامین۔',
+    description: 'روزنامہ عوامی محبت — قصور اور اسلام آباد سے شائع ہونے والا اردو روزنامہ۔ آج کا اخبار، آرکائیو اور مضامین۔',
   },
   strip: {
     group: 'عوامی محبت گروپ آف پبلیکیشنز',
@@ -53,7 +53,7 @@ export const ur = {
     daily: 'روزنامہ',
     groupEyebrow: 'GROUP OF PUBLICATIONS',
     lockup: 'DAILY AWAMI MOHABBAT',
-    subline: 'Daily Urdu newspaper • Kasur | Lahore',
+    subline: 'Daily Urdu newspaper • Kasur | Islamabad',
     epaper: 'ای پیپر',
     tvCta: 'یوٹیوب پر دیکھیں',
     tvLabel: 'اے ایم نیوز ٹی وی — یوٹیوب پر دیکھیں (نئی ٹیب میں کھلے گا)',
