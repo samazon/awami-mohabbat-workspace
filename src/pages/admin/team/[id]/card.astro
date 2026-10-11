@@ -128,24 +128,16 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
         <div class="pc__body">
           <img class="pc__paishani" src={paishani.src} width={paishani.width} height={paishani.height} alt="Awami Mohabbat" />
           <p class="pc__dateline">{fixed.dateline}</p>
-          <div class="pc__row">
-            <div class="pc__photo">
-              {photo ? <img src={photo} alt="" /> : <span>Photo</span>}
-            </div>
-            <dl class="pc__facts">
-              <div><dt>CARD NO.</dt><dd data-out="cardNo">{val('cardNo')}</dd></div>
-              <div><dt>VALID UNTIL</dt><dd data-out="valid">{fmtDate(val('validUntil'))}</dd></div>
-              <div><dt>STATION</dt><dd data-out="station">{val('station')}</dd></div>
-            </dl>
+          <div class="pc__photo">
+            {photo ? <img src={photo} alt="" /> : <span>Photo</span>}
           </div>
           <p class="pc__name">{member.nameEn}</p>
           <p class="pc__name-ur" lang="ur" dir="rtl">{member.nameUr}</p>
           <p class="pc__role">{member.roleEn ?? ''}</p>
           <div class="pc__foot">
-            <div class="pc__issuer">
-              <p class="pc__k">ISSUED BY</p>
-              <p class="pc__issuer-name">{fixed.issuer.name}</p>
-              <p class="pc__issuer-title">{fixed.issuer.title}</p>
+            <div>
+              <p class="pc__k">CARD NO.</p>
+              <p class="pc__no" data-out="cardNo">{val('cardNo')}</p>
             </div>
             <div class="pc__qr">
               {qrSvg ? <div class="pc__qr-code" set:html={qrSvg} /> : <div class="pc__qr-code pc__qr-code--empty"><span>Save to create</span></div>}
@@ -359,6 +351,7 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
   .pc {
     --ui-pc-press: 15pt;
     --ui-pc-name: 11pt;
+    --ui-pc-no: 8.5pt;
     --ui-pc-ur: 8pt;
     --ui-pc-md: 6.5pt;
     --ui-pc-sm: 5.5pt;
@@ -437,37 +430,13 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
     letter-spacing: 0.16em;
     text-align: center;
   }
-  .pc__row {
-    display: flex;
-    gap: 2.5mm;
-    margin-block: 2.2mm;
-  }
-  .pc__facts {
-    flex: 1;
-    display: grid;
-    gap: 1.6mm;
-    align-content: center;
-    min-width: 0;
-    margin: 0;
-  }
-  .pc__facts dt {
-    font-size: var(--ui-pc-xs);
-    letter-spacing: 0.12em;
-    color: #55534e;
-  }
-  .pc__facts dd {
-    margin: 0.2mm 0 0;
-    font-size: var(--ui-pc-md);
-    font-weight: 700;
-    line-height: 1.2;
-    overflow-wrap: anywhere;
-  }
+  /* Photo and name block centred under the paishani. */
   .pc__photo {
-    flex: none;
     display: grid;
     place-items: center;
-    width: 17mm;
-    height: 21.25mm;
+    width: 20mm;
+    height: 25mm;
+    margin: 2.5mm auto 2.2mm;
     overflow: hidden;
     background: #e6e5e1;
     color: #77756f;
@@ -483,15 +452,17 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
     font-size: var(--ui-pc-name);
     font-weight: 700;
     line-height: 1.1;
+    text-align: center;
   }
   .pc__name-ur {
     margin-block-start: 0.6mm;
     font-family: var(--font-naskh);
     font-size: var(--ui-pc-ur);
     line-height: 1.5;
-    text-align: left;
+    text-align: center;
   }
   .pc__role {
+    text-align: center;
     margin-block-start: 0.6mm;
     color: var(--pc-red);
     font-size: var(--ui-pc-md);
@@ -516,19 +487,13 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
   .pc__mono {
     font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   }
-  .pc__issuer {
-    min-width: 0;
-  }
-  .pc__issuer-name {
+  .pc__no {
     margin-block-start: 0.4mm;
-    font-family: var(--font-serif);
-    font-size: var(--ui-pc-md);
-    font-weight: 700;
-    line-height: 1.2;
-  }
-  .pc__issuer-title {
-    font-size: var(--ui-pc-xs);
-    color: #55534e;
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: var(--ui-pc-no);
+    font-weight: 600;
+    line-height: 1.1;
+    white-space: nowrap;
   }
   .pc__qr {
     display: grid;
