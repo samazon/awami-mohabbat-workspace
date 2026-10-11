@@ -351,7 +351,7 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
   .pc {
     --ui-pc-press: 15pt;
     --ui-pc-name: 11pt;
-    --ui-pc-no: 8.5pt;
+    --ui-pc-no: 7.5pt;
     --ui-pc-ur: 8pt;
     --ui-pc-md: 6.5pt;
     --ui-pc-sm: 5.5pt;
@@ -430,13 +430,12 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
     letter-spacing: 0.16em;
     text-align: center;
   }
-  /* Photo and name block centred under the paishani. */
   .pc__photo {
     display: grid;
     place-items: center;
-    width: 20mm;
-    height: 25mm;
-    margin: 2.5mm auto 2.2mm;
+    width: 19mm;
+    height: 23.75mm;
+    margin: 2.5mm 0 2.2mm;
     overflow: hidden;
     background: #e6e5e1;
     color: #77756f;
@@ -452,17 +451,15 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
     font-size: var(--ui-pc-name);
     font-weight: 700;
     line-height: 1.1;
-    text-align: center;
   }
   .pc__name-ur {
     margin-block-start: 0.6mm;
     font-family: var(--font-naskh);
     font-size: var(--ui-pc-ur);
     line-height: 1.5;
-    text-align: center;
+    text-align: left;
   }
   .pc__role {
-    text-align: center;
     margin-block-start: 0.6mm;
     color: var(--pc-red);
     font-size: var(--ui-pc-md);
@@ -504,8 +501,8 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
     letter-spacing: 0.1em;
   }
   .pc__qr-code {
-    width: 12mm;
-    height: 12mm;
+    width: 10mm;
+    height: 10mm;
   }
   .pc__qr-code :global(svg) {
     display: block;
