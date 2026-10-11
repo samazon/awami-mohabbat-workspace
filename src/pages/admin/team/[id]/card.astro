@@ -72,7 +72,7 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
       </p>
     )}
     {saved && !error && (
-      <p class="a-alert" role="status"><Icon name="check" size="sm" /> Card details saved.</p>
+      <p class="a-alert" role="status" data-saved-alert><Icon name="check" size="sm" /> Card details saved.</p>
     )}
   </div>
 
@@ -128,16 +128,24 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
         <div class="pc__body">
           <img class="pc__paishani" src={paishani.src} width={paishani.width} height={paishani.height} alt="Awami Mohabbat" />
           <p class="pc__dateline">{fixed.dateline}</p>
-          <div class="pc__photo">
-            {photo ? <img src={photo} alt="" /> : <span>Photo</span>}
+          <div class="pc__row">
+            <div class="pc__photo">
+              {photo ? <img src={photo} alt="" /> : <span>Photo</span>}
+            </div>
+            <dl class="pc__facts">
+              <div><dt>CARD NO.</dt><dd data-out="cardNo">{val('cardNo')}</dd></div>
+              <div><dt>VALID UNTIL</dt><dd data-out="valid">{fmtDate(val('validUntil'))}</dd></div>
+              <div><dt>STATION</dt><dd data-out="station">{val('station')}</dd></div>
+            </dl>
           </div>
           <p class="pc__name">{member.nameEn}</p>
           <p class="pc__name-ur" lang="ur" dir="rtl">{member.nameUr}</p>
           <p class="pc__role">{member.roleEn ?? ''}</p>
           <div class="pc__foot">
-            <div>
-              <p class="pc__k">CARD NO.</p>
-              <p class="pc__no" data-out="cardNo">{val('cardNo')}</p>
+            <div class="pc__issuer">
+              <p class="pc__k">ISSUED BY</p>
+              <p class="pc__issuer-name">{fixed.issuer.name}</p>
+              <p class="pc__issuer-title">{fixed.issuer.title}</p>
             </div>
             <div class="pc__qr">
               {qrSvg ? <div class="pc__qr-code" set:html={qrSvg} /> : <div class="pc__qr-code pc__qr-code--empty"><span>Save to create</span></div>}
@@ -206,6 +214,16 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
   form?.addEventListener('submit', () => {
     if (dirty) dirty.hidden = true;
   });
+
+  // The "saved" note fades after a few seconds, and the ?saved=1 is dropped so a reload doesn't repeat it.
+  const savedAlert = document.querySelector<HTMLElement>('[data-saved-alert]');
+  if (savedAlert) {
+    history.replaceState(null, '', location.pathname);
+    setTimeout(() => {
+      savedAlert.classList.add('is-leaving');
+      savedAlert.addEventListener('transitionend', () => savedAlert.remove(), { once: true });
+    }, 3500);
+  }
 
   document.querySelector('[data-print]')?.addEventListener('click', async () => {
     await document.fonts.ready; // print only once the card's fonts are in
@@ -322,6 +340,12 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
   .a-input:invalid {
     border-color: var(--red);
   }
+  [data-saved-alert] {
+    transition: opacity 400ms ease-out;
+  }
+  [data-saved-alert].is-leaving {
+    opacity: 0;
+  }
 
   /* ---------- the card ----------
      Everything inside is in mm/pt so the print is true to size. On screen the
@@ -404,19 +428,46 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
     width: 100%;
     height: auto;
   }
+  /* A band between the paishani and the rule: the same air above and below the text. */
   .pc__dateline {
-    margin-block-start: 2.5mm;
-    padding-block-end: 1mm;
+    padding-block: 1.6mm;
     border-bottom: 0.25mm solid #111111;
     font-size: var(--ui-pc-xs);
+    line-height: 1;
+    letter-spacing: 0.16em;
+    text-align: center;
+  }
+  .pc__row {
+    display: flex;
+    gap: 2.5mm;
+    margin-block: 2.2mm;
+  }
+  .pc__facts {
+    flex: 1;
+    display: grid;
+    gap: 1.6mm;
+    align-content: center;
+    min-width: 0;
+    margin: 0;
+  }
+  .pc__facts dt {
+    font-size: var(--ui-pc-xs);
     letter-spacing: 0.12em;
+    color: #55534e;
+  }
+  .pc__facts dd {
+    margin: 0.2mm 0 0;
+    font-size: var(--ui-pc-md);
+    font-weight: 700;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
   }
   .pc__photo {
+    flex: none;
     display: grid;
     place-items: center;
-    width: 19mm;
-    height: 23.75mm;
-    margin-block: 2.5mm;
+    width: 17mm;
+    height: 21.25mm;
     overflow: hidden;
     background: #e6e5e1;
     color: #77756f;
@@ -462,14 +513,22 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
     letter-spacing: 0.12em;
     color: #55534e;
   }
-  .pc__no,
   .pc__mono {
     font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   }
-  .pc__no {
-    font-size: var(--ui-pc-name);
-    font-weight: 600;
-    line-height: 1.1;
+  .pc__issuer {
+    min-width: 0;
+  }
+  .pc__issuer-name {
+    margin-block-start: 0.4mm;
+    font-family: var(--font-serif);
+    font-size: var(--ui-pc-md);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .pc__issuer-title {
+    font-size: var(--ui-pc-xs);
+    color: #55534e;
   }
   .pc__qr {
     display: grid;
@@ -480,8 +539,8 @@ const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0 }) : null;
     letter-spacing: 0.1em;
   }
   .pc__qr-code {
-    width: 13mm;
-    height: 13mm;
+    width: 12mm;
+    height: 12mm;
   }
   .pc__qr-code :global(svg) {
     display: block;
