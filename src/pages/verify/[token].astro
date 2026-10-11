@@ -25,13 +25,13 @@ const fmt = (iso: string | null) => {
 };
 const photo = found ? photoUrl(found.member) : null;
 const copy = {
-  valid: { en: 'Valid press card', ur: 'درست پریس کارڈ', icon: 'badge-check' },
-  expired: { en: 'Expired press card', ur: 'زائد المیعاد پریس کارڈ', icon: 'badge-alert' },
-  unknown: { en: 'No such press card', ur: 'یہ پریس کارڈ ہمارے ریکارڈ میں نہیں', icon: 'badge-x' },
+  valid: { title: 'Valid Press Card', icon: 'badge-check' },
+  expired: { title: 'Expired Press Card', icon: 'badge-alert' },
+  unknown: { title: 'Press Card Not Found', icon: 'badge-x' },
 }[status];
 ---
 
-<BaseLayout title={`${copy.en} — Daily Awami Mohabbat`} description="Press card verification for Daily Awami Mohabbat." noindex>
+<BaseLayout title={`${copy.title} — Daily Awami Mohabbat`} description="Press card verification for Daily Awami Mohabbat." noindex>
   <main class="wrap" lang="en" dir="ltr">
     <a class="brand" href="/" aria-label="Daily Awami Mohabbat">
       <img src={paishani.src} width={paishani.width} height={paishani.height} alt="" />
@@ -40,10 +40,7 @@ const copy = {
     <section class:list={['card', `card--${status}`]} aria-live="polite">
       <header class="status">
         <Icon name={copy.icon} size="xl" />
-        <div>
-          <h1 class="status__en">{copy.en}</h1>
-          <p class="status__ur" lang="ur" dir="rtl">{copy.ur}</p>
-        </div>
+        <h1 class="status__title">{copy.title}</h1>
       </header>
 
       {found ? (
@@ -52,9 +49,9 @@ const copy = {
           <dl class="holder__facts">
             <div class="wide">
               <dt>Name</dt>
-              <dd>
+              <dd class="name">
                 <strong>{found.member.nameEn}</strong>
-                <span lang="ur" dir="rtl">{found.member.nameUr}</span>
+                <span class="name__ur" lang="ur" dir="rtl">{found.member.nameUr}</span>
               </dd>
             </div>
             <div><dt>Designation</dt><dd>{found.member.roleEn ?? '—'}</dd></div>
@@ -116,19 +113,12 @@ const copy = {
     background: var(--tone);
     color: #ffffff;
   }
-  .status__en {
+  .status__title {
     font-family: var(--font-ui);
     font-size: var(--fs-title);
     font-weight: 700;
     line-height: 1.2;
     color: inherit;
-  }
-  .status__ur {
-    margin: 2px 0 0;
-    font-family: var(--font-naskh);
-    font-size: var(--ui-meta);
-    text-align: left;
-    opacity: 0.92;
   }
   .holder {
     display: grid;
@@ -176,12 +166,24 @@ const copy = {
     font-size: var(--fs-body);
     color: var(--ink);
   }
-  .holder__facts dd strong {
+  .name {
+    display: block;
+  }
+  .name strong {
+    display: block;
     font-size: var(--fs-title);
     font-weight: 700;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
   }
-  .holder__facts dd span[lang='ur'] {
+  .name__ur {
+    display: block;
+    margin-block-start: 4px;
     font-family: var(--font-naskh);
+    font-size: var(--fs-body);
+    line-height: 1.6;
+    text-align: left;
+    color: var(--secondary);
   }
   .mono {
     font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
