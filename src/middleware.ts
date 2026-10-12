@@ -23,6 +23,13 @@ const NO_STORE = 'private, no-store';
 /** Workers' shared edge cache. The DOM lib types `caches` without `.default`. */
 const edgeCache = (): Cache => (caches as unknown as { default: Cache }).default;
 
+/**
+ * Press-card verification (/verify/<token>) answers "is this card valid right
+ * now?", so it is never cached: an expired or withdrawn card must stop showing
+ * "Valid" the moment it changes, not five minutes later.
+ */
+const isLivePath = (p: string) => p.startsWith('/verify/');
+
 /** The admin panel and its actions (form posts land on /admin/*; JS calls on /_actions/admin.*). */
 const isAdminPath = (p: string) => p === '/admin' || p.startsWith('/admin/') || p.startsWith('/_actions/admin.');
 
@@ -44,6 +51,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const isMedia = url.pathname.startsWith('/media/');
   const admin = isAdminPath(url.pathname);
+  const live = isLivePath(url.pathname);
 
   // Admin: authenticate every request, never touch the shared edge cache (deny by default).
   if (admin) {
@@ -56,7 +64,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     context.locals.admin = auth.admin;
   }
 
-  const cacheable = request.method === 'GET' && !isMedia && !admin && import.meta.env.PROD;
+  const cacheable = request.method === 'GET' && !isMedia && !admin && !live && import.meta.env.PROD;
 
   if (cacheable) {
     const hit = await edgeCache().match(request);
@@ -74,7 +82,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const response = await next();
   const h = new Headers(response.headers);
 
-  if (admin) {
+  if (admin || live) {
     h.set('cache-control', NO_STORE);
     h.set('x-robots-tag', 'noindex, nofollow');
   } else if (!isMedia && !h.has('cache-control')) {
