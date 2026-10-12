@@ -166,7 +166,8 @@ const copy = {
     font-size: var(--fs-body);
     color: var(--ink);
   }
-  .name {
+  /* Beats `.holder__facts dd { display: flex }`, so the Urdu name stacks under the English one. */
+  .holder__facts dd.name {
     display: block;
   }
   .name strong {
