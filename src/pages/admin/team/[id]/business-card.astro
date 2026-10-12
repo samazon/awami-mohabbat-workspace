@@ -1,0 +1,398 @@
+---
+/**
+ * /admin/team/<id>/business-card: a team member's business (visiting) card —
+ * one side, white, at the size Pakistani printers use: 3.5 × 2 in
+ * (88.9 × 50.8 mm), landscape.
+ *
+ * Name and designation come from the profile. Mobile, second phone and email
+ * are the card's own: saved per member in team_business_cards (admin only,
+ * never read by the public site). Website and office address are the paper's.
+ * "Download PDF" renders the card in the browser into a one-page file.
+ */
+import { actions, isInputError } from 'astro:actions';
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Icon from '@/components/Icon.astro';
+import paishani from '@/assets/paishani.webp';
+import { pressCard as fixed } from '@/content/press-card';
+import { cardIcon, type CardIcon } from '@/content/card-icons';
+import { adminGetBusinessCard, adminGetMember } from '@/lib/services/team-admin';
+
+const param = Astro.params.id ?? '';
+if (!/^[1-9]\d{0,8}$/.test(param)) return new Response('Not found', { status: 404 });
+const member = await adminGetMember(Number(param));
+if (!member) return new Response('Not found', { status: 404 });
+
+const result = Astro.getActionResult(actions.admin.businessCardSave);
+if (result && !result.error) return Astro.redirect(`/admin/team/${member.id}/business-card?saved=1`);
+const error = result?.error ?? null;
+const saved = Astro.url.searchParams.get('saved') === '1';
+const typed = (result?.error as { inputValue?: Record<string, unknown> } | undefined)?.inputValue ?? null;
+
+const card = await adminGetBusinessCard(member.id);
+const defaults = { mobile: card?.mobile ?? '', phone2: card?.phone2 ?? '', email: card?.email ?? '' };
+const val = (k: keyof typeof defaults) => (typed && typeof typed[k] === 'string' ? (typed[k] as string) : defaults[k]);
+
+const icon = (k: CardIcon) => cardIcon(k, 'bc__icon');
+/** Head office, shortened to fit one line of the card. */
+const office = 'Hamza Town, Ferozepur Road, Lahore';
+---
+
+<AdminLayout title={`Business card — ${member.nameEn}`} section="team">
+  <div class="screen-only">
+    <a class="back" href={`/admin/team/${member.id}`}><Icon name="arrow-left" size="sm" flip={false} /> {member.nameEn}</a>
+    <div class="a-page-head">
+      <h1 class="a-title">Business card</h1>
+      <div class="head-actions">
+        <span class="a-hint" data-status role="status"></span>
+        <button class="a-btn a-btn--ghost" type="button" data-print><Icon name="printer" size="sm" /> Print</button>
+        <button class="a-btn" type="button" data-download data-name={member.nameEn}><Icon name="download" size="sm" /> Download PDF</button>
+      </div>
+    </div>
+
+    {error && (
+      <p class="a-alert a-alert--bad" role="alert">
+        <Icon name="triangle-alert" size="sm" />
+        {isInputError(error) ? 'Some fields need attention.' : error.message}
+      </p>
+    )}
+    {saved && !error && (
+      <p class="a-alert" role="status" data-saved-alert><Icon name="check" size="sm" /> Contact details saved.</p>
+    )}
+  </div>
+
+  <div class="layout">
+    <form class="a-card panel screen-only" method="POST" action={actions.admin.businessCardSave} aria-labelledby="bc-details" data-card-form>
+      <input type="hidden" name="id" value={member.id} />
+      <h2 class="panel__title" id="bc-details">Contact details</h2>
+      <div class="grid2">
+        <div>
+          <label class="a-label" for="bc-mobile">Mobile</label>
+          <input class="a-input" id="bc-mobile" name="mobile" type="tel" maxlength="20" value={val('mobile')} placeholder="0300-1234567" pattern="\+?[0-9][0-9 \-]*[0-9]" autocomplete="off" data-field="mobile" />
+        </div>
+        <div>
+          <label class="a-label" for="bc-phone2">Other phone / WhatsApp</label>
+          <input class="a-input" id="bc-phone2" name="phone2" type="tel" maxlength="20" value={val('phone2')} placeholder="optional" pattern="\+?[0-9][0-9 \-]*[0-9]" autocomplete="off" data-field="phone2" />
+        </div>
+        <div class="wide">
+          <label class="a-label" for="bc-email">Email</label>
+          <input class="a-input" id="bc-email" name="email" type="email" maxlength="120" value={val('email')} placeholder="optional" autocomplete="off" spellcheck="false" data-field="email" />
+        </div>
+      </div>
+      <div class="panel__actions">
+        <button class="a-btn" type="submit"><Icon name="check" size="sm" /> Save details</button>
+        <span class="a-hint" data-dirty hidden>Changes not saved yet.</span>
+      </div>
+      <p class="a-hint">Saved with this person, so the card can be printed again later. Name and designation come from the profile — change them there. Empty fields are left off the card.</p>
+      <p class="a-hint">“Download PDF” gives a one-page file exactly 88.9 × 50.8 mm (3.5 × 2 in), ready for the printer.</p>
+    </form>
+
+    <div class="cards" aria-label="Card preview">
+      <article class="bc" aria-label="Business card">
+        {/* The red panel with its curved edge and royal-blue swoosh, drawn in card millimetres. */}
+        <svg class="bc__art" viewBox="0 0 88.9 50.8" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M50 0 C 58 15, 61 33, 59 50.8 L 88.9 50.8 L 88.9 0 Z" fill="#a8161e" />
+          <path d="M45.8 0 C 53.8 15, 56.8 33, 54.8 50.8" fill="none" stroke="#142b6e" stroke-width="1.1" />
+        </svg>
+
+        <div class="bc__main">
+          <p class="bc__name">{member.nameEn}</p>
+          <p class="bc__role">{member.roleEn ?? ''}</p>
+          <span class="bc__rule" aria-hidden="true"></span>
+          <ul class="bc__contact">
+            <li class:list={['bc__ci', { 'is-empty': !val('mobile') }]}><span class="bc__tile" set:html={icon('mobile')} /><span class="bc__mono" data-out="mobile">{val('mobile')}</span></li>
+            <li class:list={['bc__ci', { 'is-empty': !val('phone2') }]}><span class="bc__tile" set:html={icon('phone')} /><span class="bc__mono" data-out="phone2">{val('phone2')}</span></li>
+            <li class:list={['bc__ci', { 'is-empty': !val('email') }]}><span class="bc__tile" set:html={icon('mail')} /><span data-out="email">{val('email')}</span></li>
+            <li class="bc__ci"><span class="bc__tile" set:html={icon('globe')} /><span>{fixed.website}</span></li>
+            <li class="bc__ci"><span class="bc__tile" set:html={icon('pin')} /><span>{office}</span></li>
+          </ul>
+        </div>
+
+        <div class="bc__brand">
+          <span class="bc__plate"><img src={paishani.src} width={paishani.width} height={paishani.height} alt="Awami Mohabbat" /></span>
+          {/* The paishani already reads روزنامہ, so "DAILY ·" is left off here. */}
+          <p class="bc__dateline">{fixed.dateline.replace(/^DAILY\s*·\s*/, '')}</p>
+        </div>
+      </article>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  import { initCardPage } from '@/lib/admin/card-page';
+
+  // A contact line hides when its field is emptied, and shows again when filled.
+  document.querySelectorAll<HTMLInputElement>('input[data-field]').forEach((input) =>
+    input.addEventListener('input', () => {
+      document.querySelector(`[data-out="${input.dataset.field}"]`)?.closest('.bc__ci')?.classList.toggle('is-empty', !input.value.trim());
+    }),
+  );
+
+  const download = document.querySelector<HTMLButtonElement>('[data-download]');
+  initCardPage({
+    widthMm: 88.9,
+    heightMm: 50.8, // 3.5 × 2 in, landscape
+    sides: '.bc',
+    fileName: () => `business-card-${download?.dataset.name ?? ''}`,
+  });
+</script>
+
+<style>
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-block-end: 10px;
+    color: var(--a-ink-2);
+    font-size: var(--ui-a-md);
+    text-decoration: none;
+  }
+  .back:hover {
+    color: var(--ink);
+  }
+  .head-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+  .head-actions [data-download]:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+  .layout {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 24px;
+  }
+  .panel {
+    flex: 1 1 340px;
+    max-width: 520px;
+    padding: 18px 20px 20px;
+  }
+  .panel__title {
+    margin-block-end: 14px;
+    font-size: var(--ui-a-base);
+    font-weight: 700;
+  }
+  .panel__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-block-start: 16px;
+  }
+  .panel .a-hint {
+    margin-block-start: 12px;
+  }
+  .panel__actions .a-hint {
+    margin: 0;
+  }
+  .grid2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 16px;
+  }
+  .wide {
+    grid-column: 1 / -1;
+  }
+  .a-input:invalid {
+    border-color: var(--red);
+  }
+  [data-saved-alert] {
+    transition: opacity 400ms ease-out;
+  }
+  [data-saved-alert].is-leaving {
+    opacity: 0;
+  }
+
+  /* ---------- the card ----------
+     Everything inside is in mm/pt so the print is true to size. On screen the
+     preview is zoomed; in print and in the PDF it is 1:1. */
+  .cards {
+    zoom: 1.75;
+  }
+  .bc {
+    --ui-bc-name: 11pt;
+    --ui-bc-role: 6.4pt;
+    --ui-bc-md: 6.4pt;
+    --ui-bc-xs: 4.4pt;
+    --bc-red: #a8161e; /* the site's brand red, --red */
+    --bc-royal: #142b6e;
+    --bc-ink: #1a1a1a;
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    width: 88.9mm;
+    height: 50.8mm;
+    overflow: hidden;
+    border-radius: 2.5mm;
+    background: #ffffff;
+    color: var(--bc-ink);
+    font-family: var(--font-ui);
+    line-height: 1.3;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.12), 0 6px 18px rgb(0 0 0 / 0.1);
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  /* Zero specificity, so each element's own margin below still applies. */
+  :where(.bc p) {
+    margin: 0;
+  }
+  .bc__art {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* left: the person */
+  .bc__main {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 58mm;
+    padding: 4mm 0 4mm 5.5mm;
+  }
+  .bc__name {
+    font-family: var(--font-serif);
+    font-size: var(--ui-bc-name);
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  .bc__role {
+    margin-block-start: 1.8mm;
+    color: var(--bc-red);
+    font-size: var(--ui-bc-role);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .bc__rule {
+    display: block;
+    width: 9mm;
+    height: 0.5mm;
+    margin-block: 2.2mm 2.6mm;
+    background: var(--bc-royal);
+  }
+  .bc__contact {
+    display: grid;
+    gap: 1.25mm;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--ui-bc-md);
+  }
+  .bc__ci {
+    display: flex;
+    align-items: center;
+    gap: 1.6mm;
+    min-width: 0;
+  }
+  .bc__ci > span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bc__ci.is-empty {
+    display: none;
+  }
+  .bc__tile {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 3.2mm;
+    height: 3.2mm;
+    border-radius: 0.6mm;
+    background: var(--bc-red);
+    color: #ffffff;
+  }
+  /* Injected as raw SVG, so the scoped styles need :global to reach it. */
+  .bc__tile :global(.bc__icon) {
+    display: block;
+    width: 2mm;
+    height: 2mm;
+  }
+  .bc__mono {
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  }
+
+  /* right: the paper, on the red panel */
+  /* Centred top-to-bottom in the red panel. */
+  .bc__brand {
+    position: absolute;
+    inset-block: 0;
+    justify-content: center;
+    inset-inline-end: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.8mm;
+    width: 30mm;
+    padding-inline-end: 1mm;
+  }
+  /* The paishani stays whole on its own white plate. */
+  .bc__plate {
+    display: block;
+    width: 24mm;
+    padding: 0.9mm;
+    border-radius: 0.8mm;
+    background: #ffffff;
+  }
+  .bc__plate img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .bc__dateline {
+    color: #ffffff;
+    font-size: var(--ui-bc-xs);
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 640px) {
+    .grid2 {
+      grid-template-columns: 1fr;
+    }
+    .cards {
+      zoom: 1;
+    }
+  }
+
+  /* ---------- print: the card alone, one page ---------- */
+  @page {
+    size: 88.9mm 50.8mm;
+    margin: 0;
+  }
+  @media print {
+    :global(body.admin .bar),
+    :global(body.admin .side),
+    .screen-only {
+      display: none !important;
+    }
+    /* body.admin raises specificity over the layout's own scoped rules. */
+    :global(body.admin),
+    :global(body.admin .shell),
+    :global(body.admin .main) {
+      display: block;
+      min-height: 0;
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+    }
+    .layout,
+    .cards {
+      display: block;
+      zoom: 1;
+    }
+    .bc {
+      border-radius: 0;
+      box-shadow: none;
+    }
+  }
+</style>

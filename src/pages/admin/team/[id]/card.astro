@@ -20,6 +20,7 @@ import { photoUrl } from '@/lib/services/team';
 import { adminGetMember, adminGetPressCard } from '@/lib/services/team-admin';
 import { suggestCardNo } from '@/lib/team/press-card';
 import { renderSVG } from 'uqr';
+import { cardIcon, type CardIcon } from '@/content/card-icons';
 
 const param = Astro.params.id ?? '';
 if (!/^[1-9]\d{0,8}$/.test(param)) return new Response('Not found', { status: 404 });
@@ -52,16 +53,7 @@ const origin = import.meta.env.DEV ? Astro.url.origin : (Astro.site?.origin ?? A
 const verifyUrl = card?.verifyToken ? `${origin}/verify/${card.verifyToken}` : null;
 // Our own SVG from a URL we built (token is validated on write); nothing typed here reaches it.
 const qrSvg = verifyUrl ? renderSVG(verifyUrl, { ecc: 'M', border: 0, blackColor: '#1a1a1a', whiteColor: '#ffffff' }) : null;
-// Lucide outlines, inlined: the site's <Icon> uses a sprite (<use href="#ai:…">) that the PDF renderer can't resolve.
-const ICON = {
-  pin: '<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
-  phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
-  mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
-  globe: '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
-} as const;
-const icon = (k: keyof typeof ICON) =>
-  `<svg class="pc__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
-
+const icon = (k: CardIcon) => cardIcon(k, 'pc__icon');
 ---
 
 <AdminLayout title={`Press card — ${member.nameEn}`} section="team">
@@ -110,7 +102,7 @@ const icon = (k: keyof typeof ICON) =>
         </div>
         <div>
           <label class="a-label" for="pc-valid">Valid until</label>
-          <input class="a-input" id="pc-valid" name="validUntil" type="date" value={val('validUntil')} data-valid />
+          <input class="a-input" id="pc-valid" name="validUntil" type="date" value={val('validUntil')} data-field="valid" />
         </div>
       </div>
       <div class="panel__actions">
@@ -189,98 +181,17 @@ const icon = (k: keyof typeof ICON) =>
 </AdminLayout>
 
 <script>
-  // Mirror the form into the card as you type. textContent only — typed text is never parsed as HTML.
-  const outs = (key: string) => document.querySelectorAll<HTMLElement>(`[data-out="${key}"]`);
-  const form = document.querySelector<HTMLFormElement>('[data-card-form]');
-  const dirty = document.querySelector<HTMLElement>('[data-dirty]');
-  const initial = new Map<HTMLInputElement, string>();
-  const markDirty = () => {
-    const changed = [...initial].some(([el, v]) => el.value !== v);
-    if (dirty) dirty.hidden = !changed;
-  };
-  document.querySelectorAll<HTMLInputElement>('input[data-field]').forEach((input) => {
-    initial.set(input, input.value);
-    input.addEventListener('input', () => {
-      outs(input.dataset.field!).forEach((el) => (el.textContent = input.value.trim()));
-      markDirty();
-    });
-  });
-  const valid = document.querySelector<HTMLInputElement>('input[data-valid]');
-  if (valid) {
-    initial.set(valid, valid.value);
-    valid.addEventListener('input', () => {
-      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valid.value);
-      outs('valid').forEach((el) => (el.textContent = m ? `${m[3]}/${m[2]}/${m[1]}` : ''));
-      markDirty();
-    });
-  }
-  // Leaving with unsaved edits? The browser asks first.
-  window.addEventListener('beforeunload', (e) => {
-    if (dirty && !dirty.hidden) e.preventDefault();
-  });
-  form?.addEventListener('submit', () => {
-    if (dirty) dirty.hidden = true;
-  });
+  import { initCardPage } from '@/lib/admin/card-page';
 
-  // The "saved" note fades after a few seconds, and the ?saved=1 is dropped so a reload doesn't repeat it.
-  const savedAlert = document.querySelector<HTMLElement>('[data-saved-alert]');
-  if (savedAlert) {
-    history.replaceState(null, '', location.pathname);
-    setTimeout(() => {
-      savedAlert.classList.add('is-leaving');
-      savedAlert.addEventListener('transitionend', () => savedAlert.remove(), { once: true });
-    }, 3500);
-  }
-
-  document.querySelector('[data-print]')?.addEventListener('click', async () => {
-    await document.fonts.ready; // print only once the card's fonts are in
-    window.print();
-  });
-
-  /**
-   * CR80 PDF, made entirely in the browser: each side is rendered at 600 dpi
-   * and placed on its own 54 × 85.6 mm page. The libraries load only when asked for.
-   */
-  const CARD_W_MM = 54;
-  const CARD_H_MM = 85.6;
-  const DPI = 600;
   const download = document.querySelector<HTMLButtonElement>('[data-download]');
-  const status = document.querySelector<HTMLElement>('[data-status]');
-  download?.addEventListener('click', async () => {
-    if (download.disabled) return;
-    download.disabled = true;
-    if (status) status.textContent = 'Preparing PDF…';
-    try {
-      const [{ domToCanvas }, { jsPDF }] = await Promise.all([import('modern-screenshot'), import('jspdf')]);
-      await document.fonts.ready;
-      const sides = [...document.querySelectorAll<HTMLElement>('.pc')];
+  initCardPage({
+    widthMm: 54,
+    heightMm: 85.6, // CR80, portrait
+    sides: '.pc',
+    fileName: () => {
       const cardNo = document.querySelector<HTMLInputElement>('[data-field="cardNo"]')?.value.trim() ?? '';
-      const title = `press-card-${cardNo}-${download.dataset.name ?? ''}`;
-      const pdf = new jsPDF({ unit: 'mm', format: [CARD_W_MM, CARD_H_MM], orientation: 'portrait', compress: true });
-      pdf.setProperties({ title, creator: 'Awami Mohabbat admin' });
-      for (const [i, side] of sides.entries()) {
-        // Layout size (offset* ignore the preview's CSS zoom; the bounding rect doesn't).
-        const cssW = side.offsetWidth;
-        const canvas = await domToCanvas(side, {
-          width: cssW,
-          height: side.offsetHeight,
-          scale: (CARD_W_MM / 25.4) * DPI / cssW,
-          backgroundColor: '#ffffff',
-          // Full bleed: square corners, no preview shadow.
-          style: { borderRadius: '0', boxShadow: 'none', zoom: '1' },
-        });
-        if (i > 0) pdf.addPage([CARD_W_MM, CARD_H_MM], 'portrait');
-        pdf.addImage(canvas, 'PNG', 0, 0, CARD_W_MM, CARD_H_MM, undefined, 'FAST');
-      }
-      const name = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      pdf.save(`${name || 'press-card'}.pdf`);
-      if (status) status.textContent = '';
-    } catch (err) {
-      console.error('press card pdf failed', err);
-      if (status) status.textContent = 'The PDF could not be made. Try again, or use Print.';
-    } finally {
-      download.disabled = false;
-    }
+      return `press-card-${cardNo}-${download?.dataset.name ?? ''}`;
+    },
   });
 </script>
 

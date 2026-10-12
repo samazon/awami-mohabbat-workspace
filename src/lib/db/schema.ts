@@ -508,3 +508,21 @@ export const teamPressCards = sqliteTable(
 
 export type TeamPressCardRow = typeof teamPressCards.$inferSelect;
 
+/**
+ * A member's business (visiting) card contacts. Personal phone and email:
+ * read by the admin card page only, never by the public site. Goes with the
+ * member when they are deleted.
+ */
+export const teamBusinessCards = sqliteTable('team_business_cards', {
+  memberId: integer('member_id')
+    .primaryKey()
+    .references(() => teamMembers.id, { onDelete: 'cascade' }),
+  mobile: text('mobile'),
+  /** Second number, e.g. WhatsApp or an office line. */
+  phone2: text('phone2'),
+  email: text('email'),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+export type TeamBusinessCardRow = typeof teamBusinessCards.$inferSelect;
+

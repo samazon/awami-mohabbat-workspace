@@ -5,7 +5,7 @@ import { isLocale, DEFAULT_LOCALE } from '@/i18n';
 import { createJoinRequest, hashIp, isRateLimited, type NewJoinRequest } from '@/lib/services/join';
 import { notifyJoinRequest } from '@/lib/services/join-mail';
 import { audit } from '@/lib/services/admin';
-import { PhotoError, adminDeleteMember, adminMoveMember, adminSaveMember, adminSavePressCard } from '@/lib/services/team-admin';
+import { PhotoError, adminDeleteMember, adminMoveMember, adminSaveBusinessCard, adminSaveMember, adminSavePressCard } from '@/lib/services/team-admin';
 import { TEAM_GROUPS } from '@/lib/db/schema';
 import type { ActionAPIContext } from 'astro:actions';
 import { JOIN_LIMITS, PHONE_CHARS } from '@/lib/join-rules';
@@ -115,6 +115,29 @@ export const server = {
           throw err;
         }
         await audit(admin.id, 'team.card', `team_members:${id}`);
+        return { id };
+      },
+    }),
+    /** Business-card contacts. Personal data: validated here, stored in its own table, logged by member id only. */
+    businessCardSave: defineAction({
+      accept: 'form',
+      input: z.object({
+        id: memberId,
+        mobile: z.string().max(40).optional(),
+        phone2: z.string().max(40).optional(),
+        email: z.string().max(200).optional(),
+      }),
+      handler: async ({ id, ...fields }, ctx) => {
+        const admin = requireAdmin(ctx);
+        try {
+          if (!(await adminSaveBusinessCard(id, fields))) throw new ActionError({ code: 'NOT_FOUND', message: 'That team member no longer exists.' });
+        } catch (err) {
+          if (err instanceof z.ZodError) {
+            throw new ActionError({ code: 'BAD_REQUEST', message: err.issues.map((i) => i.message).join('; ') });
+          }
+          throw err;
+        }
+        await audit(admin.id, 'team.business_card', `team_members:${id}`);
         return { id };
       },
     }),

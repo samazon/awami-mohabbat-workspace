@@ -163,10 +163,13 @@ const COUNTRIES = ['ae', 'au', 'be', 'ca', 'de', 'es', 'fr', 'gb', 'it', 'lk', '
   {member && (
     <div class="card-link a-card">
       <div>
-        <h2 class="panel__title">Press card</h2>
-        <p class="a-hint">Print this person's press card, or save it as a PDF. Uses the saved profile.</p>
+        <h2 class="panel__title">Cards</h2>
+        <p class="a-hint">Print this person's press card or business card, or save it as a PDF. Uses the saved profile.</p>
       </div>
-      <a class="a-btn a-btn--ghost" href={`/admin/team/${member.id}/card`}><Icon name="id-card" size="sm" /> Press card</a>
+      <div class="card-link__actions">
+        <a class="a-btn a-btn--ghost" href={`/admin/team/${member.id}/card`}><Icon name="id-card" size="sm" /> Press card</a>
+        <a class="a-btn a-btn--ghost" href={`/admin/team/${member.id}/business-card`}><Icon name="contact" size="sm" /> Business card</a>
+      </div>
     </div>
   )}
 
@@ -457,6 +460,11 @@ const COUNTRIES = ['ae', 'au', 'be', 'ca', 'de', 'es', 'fr', 'gb', 'it', 'lk', '
   .danger {
     margin-block-start: 16px;
     border-color: color-mix(in srgb, var(--red) 25%, var(--a-line));
+  }
+  .card-link__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
   }
   .card-link .panel__title,
   .danger .panel__title {
