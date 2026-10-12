@@ -15,7 +15,7 @@ import AdminLayout from '@/layouts/AdminLayout.astro';
 import Icon from '@/components/Icon.astro';
 import paishani from '@/assets/paishani.webp';
 import { pressCard as fixed } from '@/content/press-card';
-import guilloche from '@/assets/press-card-guilloche.webp';
+import { globe } from '@/content/press-card-globe';
 import { photoUrl } from '@/lib/services/team';
 import { adminGetMember, adminGetPressCard } from '@/lib/services/team-admin';
 import { suggestCardNo } from '@/lib/team/press-card';
@@ -137,7 +137,7 @@ const icon = (k: keyof typeof ICON) =>
           <span class="pc__country">PAKISTAN MEDIA</span>
         </div>
         <div class="pc__body">
-          <img class="pc__guilloche" src={guilloche.src} width={guilloche.width} height={guilloche.height} alt="" aria-hidden="true" />
+          <div class="pc__globe" set:html={globe} />
           <img class="pc__paishani" src={paishani.src} width={paishani.width} height={paishani.height} alt="Awami Mohabbat" />
           <p class="pc__dateline">{fixed.dateline}</p>
           <div class="pc__photo">
@@ -374,6 +374,7 @@ const icon = (k: keyof typeof ICON) =>
     /* Print palette: crimson (C22 M98 Y94 K15), charcoal, off-white, divider grey, rich black. */
     --pc-red: #8f1d1d;
     --pc-charcoal: #1d262f;
+    --pc-royal: #142b6e; /* darker royal blue, deep enough for white text in print */
     --pc-paper: #fafafa;
     --pc-line: #eaeaea;
     --pc-ink: #1a1a1a;
@@ -440,16 +441,21 @@ const icon = (k: keyof typeof ICON) =>
     min-width: 0;
     padding: 3.5mm 3.5mm 3.5mm;
   }
-  /* Security rosette (half, its centre on the card's right edge), behind the photo and text. */
-  .pc__guilloche {
+  /* Background globe: right side, part of it off the edge, between the dateline and the footer, behind the photo and text. */
+  .pc__globe {
     position: absolute;
     z-index: -1;
-    inset-inline-end: 0;
-    inset-block-start: 23mm;
-    width: auto;
-    height: 40mm;
-    opacity: 0.5;
+    inset-inline-end: -19mm;
+    inset-block-start: 19mm;
+    width: 50mm;
+    height: 50mm;
+    opacity: 0.12;
     pointer-events: none;
+  }
+  .pc__globe :global(svg) {
+    display: block;
+    width: 100%;
+    height: 100%;
   }
   /* The printed paishani, whole, as it appears above the paper. */
   .pc__paishani {
@@ -474,7 +480,7 @@ const icon = (k: keyof typeof ICON) =>
     box-sizing: border-box;
     width: 19mm;
     height: 23.75mm;
-    margin: 2.5mm 0 2mm;
+    margin: 2.5mm auto 2mm;
     padding: 0.7mm;
     overflow: hidden;
     /* An inset shadow, not a border: the PDF renderer rounds sub-pixel borders up to a whole pixel. */
@@ -495,16 +501,20 @@ const icon = (k: keyof typeof ICON) =>
     font-size: var(--ui-pc-name);
     font-weight: 700;
     line-height: 1.05;
+    text-align: center;
   }
   .pc__name-ur {
     margin-block-start: 0.6mm;
     font-family: var(--font-naskh);
     font-size: var(--ui-pc-ur);
     line-height: 1.5;
-    text-align: left;
+    text-align: center;
   }
   .pc__role {
     margin-block-start: 0.6mm;
+    text-align: center;
+    /* letter-spacing adds a trailing gap; pull it back so the word sits truly centred */
+    margin-inline-end: -0.12em;
     color: var(--pc-red);
     font-size: var(--ui-pc-md);
     font-weight: 700;
@@ -661,7 +671,7 @@ const icon = (k: keyof typeof ICON) =>
     gap: 2mm;
     min-height: 6.5mm;
     padding: 0 4mm;
-    background: var(--pc-charcoal);
+    background: var(--pc-royal);
     color: #ffffff;
     font-size: var(--ui-pc-xs);
     letter-spacing: 0.08em;
