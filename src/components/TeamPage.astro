@@ -60,7 +60,7 @@ const photoLabel = (m: TeamMemberView) => `${nameFor(m)} — ${s.about.photo}`;
         </div>
 
         {g.hasFeatured && chiefEditor && (
-          <article class="chief">
+          <article class="chief" id={chiefEditor.anchor}>
             {chiefEditor.photo ? (
               <img class="chief__photo" src={chiefEditor.photo.src} width={chiefEditor.photo.width} height={chiefEditor.photo.height} alt={nameFor(chiefEditor)} loading="eager" decoding="async" />
             ) : (
@@ -70,7 +70,9 @@ const photoLabel = (m: TeamMemberView) => `${nameFor(m)} — ${s.about.photo}`;
             )}
             <div class="chief__text">
               <p class="chief__role">{roleFor(chiefEditor)}</p>
-              <h3 class="chief__name">{nameFor(chiefEditor)}</h3>
+              <h3 class="chief__name">
+                {chiefEditor.profileSlug ? <a href={localePath(locale, `/team/${chiefEditor.profileSlug}`)}>{nameFor(chiefEditor)}</a> : nameFor(chiefEditor)}
+              </h3>
               {ur && <p class="chief__latin" dir="ltr" lang="en">{chiefEditor.nameEn}</p>}
             </div>
           </article>
@@ -78,7 +80,7 @@ const photoLabel = (m: TeamMemberView) => `${nameFor(m)} — ${s.about.photo}`;
 
         <ul class="grid">
           {g.members.map((m) => (
-            <li class="card">
+            <li class="card" id={m.anchor}>
               {m.photo ? (
                 <img class="card__photo" src={m.photo.src} width={m.photo.width} height={m.photo.height} alt={nameFor(m)} loading="lazy" decoding="async" />
               ) : (
@@ -86,7 +88,7 @@ const photoLabel = (m: TeamMemberView) => `${nameFor(m)} — ${s.about.photo}`;
                   <span>{s.about.photo}</span>
                 </div>
               )}
-              <h3 class="card__name">{nameFor(m)}</h3>
+              <h3 class="card__name">{m.profileSlug ? <a href={localePath(locale, `/team/${m.profileSlug}`)}>{nameFor(m)}</a> : nameFor(m)}</h3>
               {ur && <p class="card__latin" dir="ltr" lang="en">{m.nameEn}</p>}
               {roleFor(m) && <p class="card__role">{roleFor(m)}</p>}
               {placeFor(m) && (
@@ -265,6 +267,28 @@ const photoLabel = (m: TeamMemberView) => `${nameFor(m)} — ${s.about.photo}`;
   }
   .card {
     min-width: 0;
+  }
+  /* #anchor links land with the card clear of the sticky header. */
+  .card,
+  .chief {
+    scroll-margin-block-start: 96px;
+  }
+  .chief__name a,
+  .card__name a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .chief__name a:hover,
+  .card__name a:hover {
+    color: var(--red);
+    text-decoration: underline;
+  }
+  /* Arriving through a #anchor link: outline the card you were sent to. */
+  .card:target,
+  .chief:target {
+    outline: 2px solid var(--gold);
+    outline-offset: 8px;
+    border-radius: var(--radius-sm);
   }
   .card__name {
     margin-block-start: 12px;

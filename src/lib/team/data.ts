@@ -46,7 +46,62 @@ export const MemberInput = z.object({
     .optional(),
   featured: z.boolean().default(false),
   hidden: z.boolean().default(false),
+  profilePage: z.boolean().default(false),
 });
+
+/** Profile URLs: lowercase letters, digits and single hyphens — the same rule as column slugs. */
+export const PROFILE_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/** "Sommer Bareen" → "sommer-bareen". Latin letters and digits only; anything else becomes a hyphen. */
+export const slugify = (name: string) =>
+  name
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+    .replace(/-+$/g, '');
+
+/**
+ * A free slug for this member: their name, or name-<id> when another member
+ * already has it (or the name has no Latin letters at all).
+ */
+const freeSlug = async (db: AnyDb, id: number, nameEn: string) => {
+  const base = slugify(nameEn);
+  if (base) {
+    const [taken] = await db.select({ id: teamMembers.id }).from(teamMembers).where(eq(teamMembers.slug, base)).limit(1);
+    if (!taken || taken.id === id) return base;
+  }
+  return base ? `${base}-${id}` : `member-${id}`;
+};
+
+/** Switching the profile page on mints a slug once; it is kept from then on, even if switched off and on again. */
+const ensureSlug = async (db: AnyDb, id: number) => {
+  const m = await getMember(db, id);
+  if (!m || !m.profilePage || m.slug) return;
+  await db.update(teamMembers).set({ slug: await freeSlug(db, id, m.nameEn) }).where(eq(teamMembers.id, id));
+};
+
+/** A public profile: only when switched on and the member isn't hidden. */
+export async function getProfileBySlug(db: AnyDb, slug: string): Promise<MemberRow | null> {
+  if (slug.length > 80 || !PROFILE_SLUG.test(slug)) return null;
+  const [row] = await db
+    .select()
+    .from(teamMembers)
+    .where(and(eq(teamMembers.slug, slug), eq(teamMembers.profilePage, true), eq(teamMembers.hidden, false)))
+    .limit(1);
+  return row ?? null;
+}
+
+/** Every public profile, for the sitemap. */
+export async function listProfileSlugs(db: AnyDb): Promise<{ slug: string; updatedAt: number }[]> {
+  const rows = await db
+    .select({ slug: teamMembers.slug, updatedAt: teamMembers.updatedAt })
+    .from(teamMembers)
+    .where(and(eq(teamMembers.profilePage, true), eq(teamMembers.hidden, false)));
+  return rows.filter((r): r is { slug: string; updatedAt: number } => !!r.slug);
+}
 
 export const PhotoRef = z.object({
   hash: z.string().regex(/^[a-f0-9]{16,64}$/),
@@ -111,6 +166,7 @@ export async function createMember(
     })
     .returning({ id: teamMembers.id });
   if (m.featured) await clearOtherFeatured(db, row!.id);
+  await ensureSlug(db, row!.id);
   return row!.id;
 }
 
@@ -152,6 +208,7 @@ export async function updateMember(
     })
     .where(eq(teamMembers.id, id));
   if (m.featured) await clearOtherFeatured(db, id);
+  await ensureSlug(db, id);
   return true;
 }
 

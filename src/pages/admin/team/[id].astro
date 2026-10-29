@@ -150,6 +150,17 @@ const COUNTRIES = ['ae', 'au', 'be', 'ca', 'de', 'es', 'fr', 'gb', 'it', 'lk', '
             <input type="checkbox" name="hidden" checked={checked('hidden', member?.hidden ?? false)} />
             <span><strong>Hidden</strong> — keep the profile but don't show it on the site.</span>
           </label>
+          <label class="check">
+            <input type="checkbox" name="profilePage" checked={checked('profilePage', member?.profilePage ?? false)} />
+            <span>
+              <strong>Public profile page</strong> — their own page that Google can list, e.g. for “{member?.nameEn ?? 'Name'} Awami Mohabbat”.
+              {member?.profilePage && member.slug && !member.hidden && (
+                <>
+                  {' '}Live at <a href={`/team/${member.slug}`} target="_blank" rel="noopener">/team/{member.slug}</a>.
+                </>
+              )}
+            </span>
+          </label>
         </div>
       </div>
     </section>

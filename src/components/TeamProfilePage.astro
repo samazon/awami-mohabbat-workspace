@@ -1,0 +1,230 @@
+---
+/**
+ * /team/<slug> — one team member's public page, for those switched on in
+ * /admin/team. Its job is to be found: the title and description carry the
+ * person's name with the paper's, and ProfilePage/Person structured data tell
+ * search engines who they are and that they work for Daily Awami Mohabbat.
+ * Shows only what /team already shows; no contact details.
+ *
+ * Urdu page: Urdu name with the English spelling beneath (and in the title, so
+ * a Latin-script search matches). English page: English only.
+ */
+import { Icon as Iconify } from 'astro-icon/components';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { t, localePath, type Locale } from '@/i18n';
+import type { TeamGroupKey } from '@/lib/db/schema';
+import type { TeamMemberView } from '@/lib/services/team';
+import { getSiteConfig } from '@/lib/services/config';
+import AMHeader from './AMHeader.astro';
+import AMFooter from './AMFooter.astro';
+import Icon from './Icon.astro';
+
+interface Props {
+  locale: Locale;
+  member: TeamMemberView;
+  group: { key: TeamGroupKey; title: { ur: string; en: string } };
+}
+const { locale, member: m, group } = Astro.props;
+const s = t(locale);
+const ur = locale === 'ur';
+const config = await getSiteConfig(locale);
+
+const name = ur ? m.nameUr : m.nameEn;
+const role = ur ? (m.roleUr ?? m.roleEn) : (m.roleEn ?? m.roleUr);
+const place = ur ? (m.placeUr ?? m.placeEn) : (m.placeEn ?? m.placeUr);
+// The Urdu title keeps the English spelling too, so "Sommer Bareen Awami Mohabbat" matches either page.
+const titleName = ur ? `${m.nameUr} (${m.nameEn})` : m.nameEn;
+const title = s.team.profileTitle(role ? `${titleName}, ${role}` : titleName);
+const description = s.team.profileDescription(ur ? `${m.nameUr} (${m.nameEn})` : m.nameEn, role);
+
+const origin = Astro.url.origin;
+const pageUrl = new URL(localePath(locale, `/team/${m.profileSlug}`), origin).toString();
+const teamUrl = new URL(localePath(locale, '/team'), origin);
+teamUrl.hash = m.anchor;
+const photoAbs = m.photo ? new URL(m.photo.src, origin).toString() : undefined;
+const photoType = m.photo?.src.endsWith('.jpg') ? 'image/jpeg' : 'image/webp';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'ProfilePage',
+  url: pageUrl,
+  inLanguage: locale,
+  mainEntity: {
+    '@type': 'Person',
+    name: m.nameEn,
+    alternateName: m.nameUr,
+    ...(m.roleEn ? { jobTitle: m.roleEn } : {}),
+    ...(photoAbs ? { image: photoAbs } : {}),
+    ...(m.placeEn ? { workLocation: { '@type': 'Place', name: m.placeEn } } : {}),
+    worksFor: {
+      '@type': 'NewsMediaOrganization',
+      name: 'Daily Awami Mohabbat',
+      alternateName: 'روزنامہ عوامی محبت',
+      url: new URL('/', origin).toString(),
+    },
+    url: pageUrl,
+  },
+};
+// JSON inside <script>: escape "<" so no value can close the tag.
+const jsonLdText = JSON.stringify(jsonLd).replace(/</g, '\\u003c');
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  ogImage={photoAbs}
+  ogImageType={photoAbs ? photoType : undefined}
+  ogImageWidth={m.photo?.width}
+  ogImageHeight={m.photo?.height}
+>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={jsonLdText} />
+  </Fragment>
+
+  <AMHeader slot="header" locale={locale} active="team" />
+
+  <div class="container">
+    <nav class="crumbs" aria-label={s.team.title}>
+      <a class="back" href={teamUrl.pathname + teamUrl.hash}><Icon name="arrow-left" size="sm" />{s.team.title}</a>
+    </nav>
+
+    <article class="profile">
+      {m.photo ? (
+        <img class="profile__photo" src={m.photo.src} width={m.photo.width} height={m.photo.height} alt={name} loading="eager" decoding="async" fetchpriority="high" />
+      ) : (
+        <div class="profile__photo photo--empty" role="img" aria-label={`${name} — ${s.about.photo}`}>
+          <span>{s.about.photo}</span>
+        </div>
+      )}
+
+      <div class="profile__text">
+        <p class="profile__group">{group.title[locale]}</p>
+        <h1 class="profile__name t-head">{name}</h1>
+        {ur && <p class="profile__latin" dir="ltr" lang="en">{m.nameEn}</p>}
+        {role && <p class="profile__role">{role}</p>}
+        {place && (
+          <p class="profile__place">
+            {m.country && <Iconify name={`circle-flags:${m.country}`} class="profile__flag" aria-hidden="true" />}
+            <span>{place}</span>
+          </p>
+        )}
+        <p class="profile__member t-body">{s.team.memberOf}</p>
+        <a class="btn" href={teamUrl.pathname + teamUrl.hash}>{s.team.allTeam}</a>
+      </div>
+    </article>
+  </div>
+
+  <AMFooter slot="footer" locale={locale} config={config} />
+</BaseLayout>
+
+<style>
+  .crumbs {
+    padding: 30px 0 0;
+  }
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-meta);
+    color: var(--red);
+    text-decoration: none;
+  }
+  .back:hover {
+    text-decoration: underline;
+  }
+
+  .profile {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    align-items: center;
+    gap: 40px;
+    padding-block: 26px 64px;
+  }
+  .profile__photo {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+  }
+  img.profile__photo {
+    display: block;
+    height: auto;
+    object-position: 50% 20%;
+    border-radius: var(--radius-sm);
+    box-shadow:
+      0 0 0 1px rgba(17, 17, 17, 0.08),
+      0 10px 28px rgba(17, 17, 17, 0.14);
+  }
+  .photo--empty {
+    display: grid;
+    place-items: center;
+    background: var(--thumb-ground);
+    border: 1px solid var(--rule);
+    color: var(--placeholder);
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-meta);
+  }
+  .profile__group {
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-meta);
+    color: var(--muted);
+  }
+  .profile__name {
+    margin-block-start: 6px;
+    font-size: var(--fs-h1);
+    color: var(--ink);
+  }
+  .profile__latin {
+    margin-block-start: 4px;
+    font-family: var(--font-ui);
+    font-size: var(--ui-nav);
+    color: var(--muted);
+  }
+  :global(html[dir='rtl']) .profile__latin {
+    text-align: right;
+  }
+  .profile__role {
+    margin-block-start: 12px;
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--fs-summary);
+    font-weight: 700;
+    color: var(--red);
+  }
+  .profile__place {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-block-start: 4px;
+    font-family: var(--font-label);
+    line-height: var(--lh-label);
+    font-size: var(--ui-meta);
+    color: var(--muted);
+  }
+  .profile :global(.profile__flag) {
+    flex: none;
+    width: 18px;
+    height: 18px;
+  }
+  .profile__member {
+    margin-block: 20px 22px;
+    padding-block-start: 16px;
+    border-block-start: 1px solid var(--rule);
+    font-size: var(--fs-card);
+    color: var(--body);
+  }
+
+  @media (max-width: 767px) {
+    .profile {
+      grid-template-columns: 1fr;
+      gap: 22px;
+      padding-block: 18px 48px;
+    }
+    .profile__photo {
+      max-width: 240px;
+    }
+  }
+</style>

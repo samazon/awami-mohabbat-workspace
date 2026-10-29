@@ -470,9 +470,13 @@ export const teamMembers = sqliteTable(
     photoWidth: integer('photo_width'),
     photoHeight: integer('photo_height'),
     hidden: integer('hidden', { mode: 'boolean' }).notNull().default(false),
+    /** Opt-in: this person gets a public, indexable page at /team/<slug>. */
+    profilePage: integer('profile_page', { mode: 'boolean' }).notNull().default(false),
+    /** Minted from the English name the first time the page is switched on, then kept so the URL never changes. */
+    slug: text('slug'),
     updatedAt: integer('updated_at').notNull(),
   },
-  (t) => [index('team_members_group_order_idx').on(t.groupKey, t.sortOrder)],
+  (t) => [index('team_members_group_order_idx').on(t.groupKey, t.sortOrder), uniqueIndex('team_members_slug_idx').on(t.slug)],
 );
 
 export type TeamMemberRow = typeof teamMembers.$inferSelect;

@@ -1,4 +1,5 @@
 ---
+import { englishNotFound } from '@/lib/not-found';
 import StubPage from '@/components/StubPage.astro';
 
 // Sections that are in the nav but not built yet: each renders the under-construction page.
@@ -7,7 +8,7 @@ type Section = (typeof SECTIONS)[number];
 const isSection = (v: unknown): v is Section => (SECTIONS as readonly string[]).includes(v as string);
 
 const { section } = Astro.params;
-if (!isSection(section)) return Astro.rewrite('/en/404');
+if (!isSection(section)) return englishNotFound(Astro);
 ---
 
 <StubPage locale="en" section={section} />

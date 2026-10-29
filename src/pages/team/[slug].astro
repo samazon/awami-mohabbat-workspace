@@ -1,0 +1,10 @@
+---
+import TeamProfilePage from '@/components/TeamProfilePage.astro';
+import { getTeamProfile } from '@/lib/services/team';
+
+// Only members switched on in /admin/team (and not hidden); anything else is the 404 page.
+const profile = await getTeamProfile(Astro.params.slug ?? '');
+if (!profile) return Astro.rewrite('/404');
+---
+
+<TeamProfilePage locale="ur" member={profile.member} group={profile.group} />

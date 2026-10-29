@@ -257,6 +257,11 @@ export const ur = {
     joinTitle: 'ہمارے ساتھ کام کریں',
     joinBody: 'نمائندگی کے لیے رابطہ صفحے پر اپنی درخواست بھیجیں۔',
     joinCta: 'درخواست دیں',
+    profileTitle: (name: string) => `${name} — روزنامہ عوامی محبت`,
+    profileDescription: (name: string, role: string | null) => `${name}${role ? `، ${role}` : ''} — روزنامہ عوامی محبت کی ٹیم کے رکن۔`,
+    memberOf: 'روزنامہ عوامی محبت کی ٹیم کے رکن',
+    allTeam: 'پوری ٹیم دیکھیں',
+    profileLink: (name: string) => `${name} کا صفحہ`,
   },
   contact: {
     title: 'رابطہ',

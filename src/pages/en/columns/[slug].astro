@@ -1,12 +1,13 @@
 ---
+import { englishNotFound } from '@/lib/not-found';
 import ColumnPage from '@/components/ColumnPage.astro';
 import { SLUG_RE } from '@/lib/columns/rules';
 import { getColumn, moreFromColumnist } from '@/lib/services/columns';
 
 const { slug = '' } = Astro.params;
-if (slug.length > 80 || !SLUG_RE.test(slug)) return Astro.rewrite('/en/404');
+if (slug.length > 80 || !SLUG_RE.test(slug)) return englishNotFound(Astro);
 const column = await getColumn(slug, 'en');
-if (!column) return Astro.rewrite('/en/404');
+if (!column) return englishNotFound(Astro);
 const more = await moreFromColumnist(column.columnist.id, column.articleId, 'en');
 ---
 

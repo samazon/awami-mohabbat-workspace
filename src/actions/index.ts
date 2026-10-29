@@ -48,6 +48,7 @@ export const server = {
         country: z.string().optional(),
         featured: z.boolean().optional(),
         hidden: z.boolean().optional(),
+        profilePage: z.boolean().optional(),
         photo: z.instanceof(File).optional(),
         removePhoto: z.boolean().optional(),
       }),
@@ -68,6 +69,7 @@ export const server = {
               country: input.country ?? '',
               featured: input.featured ?? false,
               hidden: input.hidden ?? false,
+              profilePage: input.profilePage ?? false,
             },
             { file: input.photo ?? null, remove: input.removePhoto ?? false },
           );

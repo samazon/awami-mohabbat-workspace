@@ -5,6 +5,7 @@ import { listPublishedColumnSlugs } from '@/lib/services/columns';
 import { gallerySitemapPages } from '@/lib/services/gallery';
 import { specialSitemapPages } from '@/lib/services/special';
 import { magazineSitemapPages } from '@/lib/services/magazine';
+import { teamProfileSlugs } from '@/lib/services/team';
 
 /**
  * Static routes plus every published edition and column, each in both locales with hreflang alternates.
@@ -16,12 +17,13 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 
 export const GET: APIRoute = async ({ url }) => {
   const base = new URL(url.origin);
-  const [editions, columns, galleryPages, specialPages, magazinePages] = await Promise.all([
+  const [editions, columns, galleryPages, specialPages, magazinePages, profiles] = await Promise.all([
     getRecentEditions('ur', { limit: 5000 }),
     listPublishedColumnSlugs(),
     gallerySitemapPages(base),
     specialSitemapPages(base),
     magazineSitemapPages(base),
+    teamProfileSlugs(),
   ]);
   const galleryImages = new Map([...galleryPages, ...specialPages, ...magazinePages].map((g) => [g.path, g.images]));
   const routes: { path: string; changefreq: string }[] = [
@@ -36,6 +38,8 @@ export const GET: APIRoute = async ({ url }) => {
     ...specialPages.filter((g) => g.path !== '/special-editions').map((g) => ({ path: g.path, changefreq: 'weekly' })),
     { path: '/about', changefreq: 'monthly' },
     { path: '/team', changefreq: 'monthly' },
+    // Opt-in profiles only: switched on in /admin/team and not hidden.
+    ...profiles.map((p) => ({ path: `/team/${p.slug}`, changefreq: 'monthly' })),
     { path: '/contact', changefreq: 'monthly' },
     ...editions.map((e) => ({ path: `/edition/${e.date}`, changefreq: 'yearly' })),
     ...columns.map((c) => ({ path: `/columns/${c.slug}`, changefreq: 'monthly' })),

@@ -1,9 +1,10 @@
 ---
+import { englishNotFound } from '@/lib/not-found';
 import ColumnsPage from '@/components/ColumnsPage.astro';
 import { resolveColumns } from '@/lib/columns-route';
 
 const state = await resolveColumns(Astro, 'en');
-if (!state) return Astro.rewrite('/en/404');
+if (!state) return englishNotFound(Astro);
 ---
 
 <ColumnsPage locale="en" {...state} />

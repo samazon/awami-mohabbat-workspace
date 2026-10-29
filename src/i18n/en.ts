@@ -252,6 +252,11 @@ export const en: Catalog = {
     joinTitle: 'Work with us',
     joinBody: 'To become a correspondent, send your application from the contact page.',
     joinCta: 'Apply',
+    profileTitle: (name: string) => `${name} — Awami Mohabbat`,
+    profileDescription: (name: string, role: string | null) => `${name}${role ? `, ${role}` : ''} — a member of the Daily Awami Mohabbat team.`,
+    memberOf: 'A member of the Daily Awami Mohabbat team',
+    allTeam: 'Meet the whole team',
+    profileLink: (name: string) => `${name}'s page`,
   },
   contact: {
     title: 'Contact',

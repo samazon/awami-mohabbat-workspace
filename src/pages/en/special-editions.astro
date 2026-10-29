@@ -1,9 +1,10 @@
 ---
+import { englishNotFound } from '@/lib/not-found';
 import SpecialEditionsPage from '@/components/SpecialEditionsPage.astro';
 import { resolveSpecials } from '@/lib/services/special';
 
 const result = await resolveSpecials(Astro.url.searchParams, 'en');
-if (!result) return Astro.rewrite('/en/404');
+if (!result) return englishNotFound(Astro);
 ---
 
 <SpecialEditionsPage locale="en" result={result} />

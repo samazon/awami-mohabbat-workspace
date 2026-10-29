@@ -1,9 +1,10 @@
 ---
+import { englishNotFound } from '@/lib/not-found';
 import MagazineIssuePage from '@/components/MagazineIssuePage.astro';
 import { getMagazineIssue } from '@/lib/services/magazine';
 
 const issue = await getMagazineIssue(Astro.params.month ?? '', 'en');
-if (!issue) return Astro.rewrite('/en/404');
+if (!issue) return englishNotFound(Astro);
 ---
 
 <MagazineIssuePage locale="en" issue={issue} />

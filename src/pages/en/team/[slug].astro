@@ -1,0 +1,11 @@
+---
+import { englishNotFound } from '@/lib/not-found';
+import TeamProfilePage from '@/components/TeamProfilePage.astro';
+import { getTeamProfile } from '@/lib/services/team';
+
+// Only members switched on in /admin/team (and not hidden); anything else is the 404 page.
+const profile = await getTeamProfile(Astro.params.slug ?? '');
+if (!profile) return englishNotFound(Astro);
+---
+
+<TeamProfilePage locale="en" member={profile.member} group={profile.group} />

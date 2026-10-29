@@ -2,7 +2,7 @@ import { CDN_BASE } from 'astro:env/server';
 import { db } from '@/lib/db/client';
 import { TEAM_GROUPS, type TeamGroupKey } from '@/lib/db/schema';
 import { mediaUrl, teamPhotoKey } from '@/lib/media';
-import { GROUP_TITLES, listMembers, type MemberRow } from '@/lib/team/data';
+import { GROUP_TITLES, getProfileBySlug, listMembers, listProfileSlugs, type MemberRow } from '@/lib/team/data';
 import { getPressCardByToken } from '@/lib/team/press-card';
 
 export interface TeamMemberView {
@@ -15,6 +15,10 @@ export interface TeamMemberView {
   placeUr: string | null;
   country: string | null;
   photo: { src: string; width: number; height: number } | null;
+  /** The public profile's slug — only when the page is switched on. */
+  profileSlug: string | null;
+  /** The card's #anchor on /team: the profile slug, else member-<id>. */
+  anchor: string;
 }
 
 /** For /verify/<token>: the card a QR code points at. Public, so only what the card front shows is used. */
@@ -35,8 +39,18 @@ export const toView = (r: MemberRow): TeamMemberView => {
     placeUr: r.placeUr,
     country: r.country,
     photo: src && r.photoWidth && r.photoHeight ? { src, width: r.photoWidth, height: r.photoHeight } : null,
+    profileSlug: r.profilePage && r.slug ? r.slug : null,
+    anchor: r.profilePage && r.slug ? r.slug : `member-${r.id}`,
   };
 };
+
+/** /team/<slug>: the member and their group, or null (not switched on, hidden, or no such slug). */
+export async function getTeamProfile(slug: string) {
+  const row = await getProfileBySlug(db(), slug);
+  return row ? { member: toView(row), group: { key: row.groupKey, title: GROUP_TITLES[row.groupKey] } } : null;
+}
+
+export const teamProfileSlugs = () => listProfileSlugs(db());
 
 /** The public page: the featured member, then every group in order (empty groups dropped). */
 export async function getTeamPage() {

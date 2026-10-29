@@ -99,6 +99,13 @@
       "when": 1791841984807,
       "tag": "0013_team_business_cards",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1791979603096,
+      "tag": "0014_team_profile_pages",
+      "breakpoints": true
     }
   ]
 }
