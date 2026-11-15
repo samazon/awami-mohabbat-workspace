@@ -119,3 +119,50 @@ export async function getIssue(db: AnyDb, month: string, locale: Locale): Promis
 export async function listAllIssues(db: AnyDb) {
   return db.select().from(magazineIssues).orderBy(desc(magazineIssues.month));
 }
+
+export interface AdminIssueRow {
+  month: string;
+  titleUr: string;
+  titleEn: string | null;
+  hidden: boolean;
+  hasPdf: boolean;
+  pageCount: number;
+  cover: PageRef | null;
+}
+
+/** Every issue, hidden included, newest month first, with its page count and cover: the admin list. */
+export async function listIssuesForAdmin(db: AnyDb): Promise<AdminIssueRow[]> {
+  const rows = await listAllIssues(db);
+  const pages = await pagesOf(db, rows.map((r) => r.id));
+  return rows.map((r) => {
+    const list = pages.get(r.id) ?? [];
+    return {
+      month: r.month,
+      titleUr: r.titleUr,
+      titleEn: r.titleEn,
+      hidden: r.hidden,
+      hasPdf: r.pdfHash != null,
+      pageCount: list.length,
+      cover: list[0] ?? null,
+    };
+  });
+}
+
+/** Change an issue's titles. `null` clears the English title. */
+export async function updateIssueTitles(db: AnyDb, month: string, t: { titleUr: string; titleEn: string | null }): Promise<boolean> {
+  const set = { titleUr: title.parse(t.titleUr), titleEn: t.titleEn === null ? null : title.parse(t.titleEn) };
+  const res = await db.update(magazineIssues).set(set).where(eq(magazineIssues.month, month)).returning({ id: magazineIssues.id });
+  return res.length > 0;
+}
+
+/**
+ * Delete an issue for good (its pages cascade). Returns what its files were,
+ * so the caller can remove them, or null if there was no such issue.
+ */
+export async function deleteIssue(db: AnyDb, month: string): Promise<{ pages: PageRef[]; pdfHash: string | null } | null> {
+  const [r] = await db.select().from(magazineIssues).where(eq(magazineIssues.month, month)).limit(1);
+  if (!r) return null;
+  const pages = (await pagesOf(db, [r.id])).get(r.id) ?? [];
+  await db.delete(magazineIssues).where(eq(magazineIssues.id, r.id));
+  return { pages, pdfHash: r.pdfHash };
+}

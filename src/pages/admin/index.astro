@@ -4,10 +4,18 @@ import Icon from '@/components/Icon.astro';
 import { adminListMembers } from '@/lib/services/team-admin';
 import { adminListEditions } from '@/lib/services/editions-admin';
 import { adminPhotoCount } from '@/lib/services/gallery-admin';
+import { adminListSpecials } from '@/lib/services/special-admin';
+import { adminListIssues } from '@/lib/services/magazine-admin';
 import { formatLong } from '@/lib/dates';
 
 const admin = Astro.locals.admin!;
-const [members, editions, photos] = await Promise.all([adminListMembers(), adminListEditions(), adminPhotoCount()]);
+const [members, editions, photos, specials, issues] = await Promise.all([
+  adminListMembers(),
+  adminListEditions(),
+  adminPhotoCount(),
+  adminListSpecials(),
+  adminListIssues(),
+]);
 const withPhoto = members.filter((m) => m.photoHash).length;
 const hidden = members.filter((m) => m.hidden).length;
 const latestLive = editions.find((e) => e.status === 'published');
@@ -38,6 +46,22 @@ const drafts = editions.filter((e) => e.status === 'draft').length;
       <span class="tile__body">
         <span class="tile__title">Gallery</span>
         <span class="tile__meta">{photos} photos</span>
+      </span>
+      <Icon name="arrow-right" size="md" flip={false} />
+    </a>
+    <a class="tile a-card" href="/admin/special">
+      <span class="tile__icon"><Icon name="star" size="lg" /></span>
+      <span class="tile__body">
+        <span class="tile__title">Special editions</span>
+        <span class="tile__meta">{specials.length} pages</span>
+      </span>
+      <Icon name="arrow-right" size="md" flip={false} />
+    </a>
+    <a class="tile a-card" href="/admin/magazine">
+      <span class="tile__icon"><Icon name="book-open" size="lg" /></span>
+      <span class="tile__body">
+        <span class="tile__title">Magazine</span>
+        <span class="tile__meta">{issues.length} issues{issues[0] ? ` · latest ${issues[0].month}` : ''}</span>
       </span>
       <Icon name="arrow-right" size="md" flip={false} />
     </a>

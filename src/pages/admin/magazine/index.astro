@@ -1,0 +1,363 @@
+---
+/**
+ * /admin/magazine: monthly magazine issues. To add one, the admin picks the
+ * month, titles and the PDF; this page's script renders every PDF page to an
+ * image in the browser (pdf.js), uploads them one per request, uploads the
+ * PDF, then saves the issue. Titles, hide/show and delete go through actions.
+ */
+import { actions } from 'astro:actions';
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Icon from '@/components/Icon.astro';
+import { formatFileSize } from '@/lib/dates';
+import { MAGAZINE_PDF_MAX_BYTES } from '@/lib/magazine/upload';
+import { adminListIssues } from '@/lib/services/magazine-admin';
+
+const titlesResult = Astro.getActionResult(actions.admin.magazineTitles);
+const visResult = Astro.getActionResult(actions.admin.magazineVisibility);
+const deleteResult = Astro.getActionResult(actions.admin.magazineDelete);
+const changed = [titlesResult, visResult].find((r) => r && !r.error)?.data;
+if (changed) return Astro.redirect(`/admin/magazine?saved=${changed.month}#m${changed.month}`);
+if (deleteResult && !deleteResult.error) return Astro.redirect('/admin/magazine?deleted=1');
+const error = titlesResult?.error?.message ?? visResult?.error?.message ?? deleteResult?.error?.message ?? null;
+
+const added = Astro.url.searchParams.get('added');
+const saved = Astro.url.searchParams.get('saved');
+const deleted = Astro.url.searchParams.has('deleted');
+const issues = await adminListIssues();
+const monthName = (m: string) => new Date(`${m}-01T00:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+---
+
+<AdminLayout title="Magazine" section="magazine">
+  <div class="a-page-head">
+    <div>
+      <h1 class="a-title">Magazine</h1>
+      <p class="a-sub">{issues.length} issues on <a href="/magazine" target="_blank" rel="noopener">the Magazine page</a>. One issue per month.</p>
+    </div>
+  </div>
+
+  {added && <p class="a-alert a-alert--ok" role="status"><Icon name="check" size="sm" /> Issue saved. It shows on the site within 5 minutes.</p>}
+  {saved && <p class="a-alert a-alert--ok" role="status"><Icon name="check" size="sm" /> Saved. The site shows the change within 5 minutes.</p>}
+  {deleted && <p class="a-alert a-alert--ok" role="status"><Icon name="check" size="sm" /> Issue deleted. It leaves the site within 5 minutes.</p>}
+  {error && <p class="a-alert a-alert--bad" role="alert"><Icon name="triangle-alert" size="sm" /> {error}</p>}
+
+  <form class="a-card panel" data-issue-form data-pdf-max={MAGAZINE_PDF_MAX_BYTES} data-months={JSON.stringify(issues.map((i) => i.month))}>
+    <h2 class="panel__title">Add an issue</h2>
+    <div class="grid">
+      <div>
+        <label class="a-label" for="month">Month</label>
+        <input class="a-input" type="month" id="month" name="month" required />
+      </div>
+      <div>
+        <label class="a-label" for="titleUr">Title (Urdu)</label>
+        <input class="a-input ur" id="titleUr" name="titleUr" required maxlength="300" lang="ur" dir="rtl" />
+      </div>
+      <div>
+        <label class="a-label" for="titleEn">Title (English, optional)</label>
+        <input class="a-input" id="titleEn" name="titleEn" maxlength="300" />
+      </div>
+    </div>
+    <label class="pdf">
+      <Icon name="file-text" size="md" />
+      <span class="pdf__text"><strong>PDF</strong> <span data-pdf-info>Choose the issue PDF, up to {formatFileSize(MAGAZINE_PDF_MAX_BYTES)}</span></span>
+      <input type="file" name="pdf" accept="application/pdf" required data-pdf />
+    </label>
+    <label class="check" data-replace-row hidden>
+      <input type="checkbox" name="replace" data-replace />
+      <span><strong>Replace</strong> the issue already on the site for this month.</span>
+    </label>
+    <p class="a-hint">Each page of the PDF is turned into an image in your browser and uploaded, then the PDF itself. Keep this page open until it says done.</p>
+    <div class="actions">
+      <button class="a-btn" type="submit" data-start><Icon name="upload" size="sm" /> Upload issue</button>
+      <span class="status" data-status role="status"></span>
+    </div>
+    <progress class="bar" max="1" value="0" data-bar hidden></progress>
+  </form>
+
+  {issues.length === 0 ? (
+    <p class="a-hint">No issues yet.</p>
+  ) : (
+    <ul class="list">
+      {issues.map((i) => (
+        <li class:list={['item a-card', { 'item--hidden': i.hidden }]} id={`m${i.month}`}>
+          <a class="item__img" href={`/magazine/${i.month}`} target="_blank" rel="noopener">
+            {i.coverUrl ? <img src={i.coverUrl} alt="" loading="lazy" /> : <Icon name="book-open" size="lg" />}
+            {i.hidden && <span class="a-badge item__badge"><Icon name="eye-off" size="sm" /> Hidden</span>}
+          </a>
+          <form class="item__form" method="POST" action={actions.admin.magazineTitles}>
+            <p class="item__meta"><strong>{monthName(i.month)}</strong> · {i.pageCount} pages{i.hasPdf ? ' · PDF' : ''}</p>
+            <input type="hidden" name="month" value={i.month} />
+            <input class="a-input ur" name="titleUr" required maxlength="300" lang="ur" dir="rtl" value={i.titleUr} aria-label="Title (Urdu)" />
+            <input class="a-input" name="titleEn" maxlength="300" placeholder="Title (English)" value={i.titleEn ?? ''} aria-label="Title (English)" />
+            <div class="item__actions">
+              <button class="a-btn a-btn--ghost" type="submit"><Icon name="check" size="sm" /> Save</button>
+              <button class="a-btn a-btn--ghost" type="submit" formaction={actions.admin.magazineVisibility} formnovalidate name="hidden" value={i.hidden ? '0' : '1'}>
+                <Icon name={i.hidden ? 'eye' : 'eye-off'} size="sm" /> {i.hidden ? 'Show' : 'Hide'}
+              </button>
+              <button
+                class="a-btn a-btn--ghost item__delete"
+                type="submit"
+                formaction={actions.admin.magazineDelete}
+                formnovalidate
+                data-confirm={`Delete the ${monthName(i.month)} issue for good, with all its pages and the PDF? This can't be undone. To take it off the site but keep it, use Hide.`}
+              >
+                <Icon name="trash-2" size="sm" /> Delete
+              </button>
+            </div>
+          </form>
+        </li>
+      ))}
+    </ul>
+  )}
+</AdminLayout>
+
+<script>
+  import { actions } from 'astro:actions';
+  import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
+  document.querySelectorAll<HTMLButtonElement>('button[data-confirm]').forEach((b) =>
+    b.addEventListener('click', (e) => {
+      if (!confirm(b.dataset.confirm ?? 'Are you sure?')) e.preventDefault();
+    }),
+  );
+
+  /** Pages are rendered this wide: the size of the magazine's zoom image. */
+  const RENDER_WIDTH = 2400;
+  const mb = (b: number) => `${(b / 1024 / 1024).toFixed(1)} MB`;
+
+  const form = document.querySelector<HTMLFormElement>('[data-issue-form]');
+  if (form) {
+    const pdfInput = form.querySelector<HTMLInputElement>('[data-pdf]')!;
+    const pdfInfo = form.querySelector<HTMLElement>('[data-pdf-info]')!;
+    const month = form.querySelector<HTMLInputElement>('#month')!;
+    const replaceRow = form.querySelector<HTMLElement>('[data-replace-row]')!;
+    const replace = form.querySelector<HTMLInputElement>('[data-replace]')!;
+    const start = form.querySelector<HTMLButtonElement>('[data-start]')!;
+    const status = form.querySelector<HTMLElement>('[data-status]')!;
+    const bar = form.querySelector<HTMLProgressElement>('[data-bar]')!;
+    const pdfMax = Number(form.dataset.pdfMax);
+    const existing: string[] = JSON.parse(form.dataset.months ?? '[]');
+
+    month.addEventListener('change', () => {
+      const taken = existing.includes(month.value);
+      replaceRow.hidden = !taken;
+      replace.required = taken;
+    });
+    pdfInput.addEventListener('change', () => {
+      const f = pdfInput.files?.[0];
+      pdfInput.setCustomValidity(f && f.size > pdfMax ? `Too large: ${mb(f.size)}, limit ${mb(pdfMax)}` : '');
+      pdfInfo.textContent = f ? `${f.name} · ${mb(f.size)}${f.size > pdfMax ? ' (too large)' : ''}` : '';
+    });
+
+    const post = async (url: string, body: Blob) => {
+      const res = await fetch(url, { method: 'POST', body, headers: { 'content-type': body.type || 'application/octet-stream' } });
+      const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!res.ok) throw new Error(typeof data.error === 'string' ? data.error : `Upload failed (${res.status})`);
+      return data;
+    };
+    const say = (text: string, done = 0, total = 1) => {
+      status.textContent = text;
+      bar.hidden = false;
+      bar.value = total ? done / total : 0;
+    };
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const file = pdfInput.files?.[0];
+      if (!file) return;
+      const fields = new FormData(form);
+      const m = String(fields.get('month'));
+      start.disabled = true;
+      form.querySelectorAll('input').forEach((i) => (i.disabled = true));
+      try {
+        say('Opening the PDF…', 0);
+        const pdfjs = await import('pdfjs-dist');
+        pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+        const task = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) });
+        const doc = await task.promise;
+        const total = doc.numPages;
+        const pages: { hash: string; width: number; height: number }[] = [];
+        const canvas = document.createElement('canvas');
+        for (let n = 1; n <= total; n++) {
+          say(`Page ${n} of ${total}: preparing…`, n - 1, total + 1);
+          const page = await doc.getPage(n);
+          const base = page.getViewport({ scale: 1 });
+          const viewport = page.getViewport({ scale: Math.min(RENDER_WIDTH / base.width, 6) });
+          canvas.width = Math.floor(viewport.width);
+          canvas.height = Math.floor(viewport.height);
+          await page.render({ canvas, viewport }).promise;
+          page.cleanup();
+          const image = await new Promise<Blob>((resolve, reject) =>
+            canvas.toBlob((b) => (b ? resolve(b) : reject(new Error(`Could not render page ${n}.`))), 'image/jpeg', 0.9),
+          );
+          say(`Page ${n} of ${total}: uploading…`, n - 0.5, total + 1);
+          pages.push((await post(`/admin/magazine/page?month=${encodeURIComponent(m)}&n=${n}`, image)) as (typeof pages)[number]);
+        }
+        await task.destroy();
+        say('Uploading the PDF…', total, total + 1);
+        const pdf = (await post(`/admin/magazine/pdf?month=${encodeURIComponent(m)}`, file)) as { hash: string; bytes: number };
+        say('Saving the issue…', total + 1, total + 1);
+        const { error } = await actions.admin.magazineSave({
+          month: m,
+          titleUr: String(fields.get('titleUr') ?? ''),
+          titleEn: String(fields.get('titleEn') ?? ''),
+          pages,
+          pdf,
+          replace: fields.get('replace') === 'on',
+        });
+        if (error) throw new Error(error.message);
+        location.href = `/admin/magazine?added=${encodeURIComponent(m)}#m${encodeURIComponent(m)}`;
+      } catch (err) {
+        status.textContent = `Stopped: ${err instanceof Error ? err.message : 'something went wrong'}. Nothing was published; you can try again.`;
+        start.disabled = false;
+        form.querySelectorAll('input').forEach((i) => (i.disabled = false));
+      }
+    });
+  }
+</script>
+
+<style>
+  .panel {
+    margin-block-end: 18px;
+    padding: 18px 20px 20px;
+  }
+  .panel__title {
+    margin-block-end: 14px;
+    font-size: var(--ui-a-base);
+    font-weight: 700;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px 16px;
+    margin-block-end: 14px;
+  }
+  .ur {
+    font-family: var(--font-naskh);
+  }
+  .pdf {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-block-end: 12px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: var(--a-bg);
+    box-shadow: inset 0 0 0 1px var(--a-line);
+    cursor: pointer;
+  }
+  .pdf:hover,
+  .pdf:focus-within {
+    box-shadow: inset 0 0 0 2px var(--ink);
+  }
+  .pdf input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .pdf__text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .pdf__text span {
+    color: var(--a-ink-2);
+  }
+  .check {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-block-end: 12px;
+    color: var(--a-ink-2);
+    cursor: pointer;
+  }
+  .check input {
+    margin-block-start: 3px;
+    accent-color: var(--ink);
+  }
+  .check strong {
+    color: var(--ink);
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-block-start: 12px;
+  }
+  .status {
+    font-size: var(--ui-a-sm);
+    color: var(--a-ink-2);
+  }
+  .bar {
+    width: 100%;
+    margin-block-start: 10px;
+    accent-color: var(--ink);
+  }
+  .list {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .item {
+    display: grid;
+    grid-template-columns: 110px minmax(0, 1fr);
+    gap: 16px;
+    padding: 12px;
+    scroll-margin-top: 20px;
+  }
+  .item--hidden .item__img img {
+    opacity: 0.4;
+  }
+  .item__img {
+    position: relative;
+    display: grid;
+    place-items: center;
+    align-self: start;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    border-radius: 6px;
+    background: var(--a-bg);
+    color: #b2b0aa;
+  }
+  .item__img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+  }
+  .item__badge {
+    position: absolute;
+    inset-block-start: 6px;
+    inset-inline-start: 6px;
+  }
+  .item__form {
+    display: grid;
+    gap: 8px;
+    align-content: start;
+  }
+  .item__meta {
+    color: var(--a-ink-2);
+  }
+  .item__meta strong {
+    color: var(--ink);
+  }
+  .item__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .item__delete {
+    color: var(--red);
+  }
+  @media (max-width: 760px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+    .item {
+      grid-template-columns: 80px minmax(0, 1fr);
+    }
+  }
+</style>

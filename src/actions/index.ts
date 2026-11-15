@@ -11,6 +11,16 @@ import type { ActionAPIContext } from 'astro:actions';
 import { JOIN_LIMITS, PHONE_CHARS } from '@/lib/join-rules';
 import { adminDeleteDraft, adminPublishEdition } from '@/lib/services/editions-admin';
 import { adminDeletePhoto, adminSetCaption, adminSetPhotoHidden } from '@/lib/services/gallery-admin';
+import { SpecialTextForm, adminDeleteSpecial, adminSetSpecialHidden, adminUpdateSpecial } from '@/lib/services/special-admin';
+import {
+  IssueSave,
+  MagazineUploadError,
+  Month,
+  adminDeleteIssue,
+  adminSetIssueHidden,
+  adminUpdateIssueTitles,
+  saveIssue,
+} from '@/lib/services/magazine-admin';
 
 /**
  * Typed RPC for writes. `accept: 'form'` means the form also works with
@@ -218,6 +228,90 @@ export const server = {
         if (!(await adminDeletePhoto(id))) throw new ActionError({ code: 'NOT_FOUND', message: 'That photo no longer exists.' });
         await audit(admin.id, 'gallery.delete', `gallery_photos:${id}`);
         return { id, deleted: true as const };
+      },
+    }),
+    /** Edit a special edition's titles and date. Uploads are a POST to /admin/special (files exceed the 1 MB action cap). */
+    specialSave: defineAction({
+      accept: 'form',
+      input: SpecialTextForm.extend({ id: memberId }),
+      handler: async ({ id, ...text }, ctx) => {
+        const admin = requireAdmin(ctx);
+        if (!(await adminUpdateSpecial(id, text))) throw new ActionError({ code: 'NOT_FOUND', message: 'That special edition no longer exists.' });
+        await audit(admin.id, 'special.update', `special_editions:${id}`);
+        return { id };
+      },
+    }),
+    specialVisibility: defineAction({
+      accept: 'form',
+      input: z.object({ id: memberId, hidden: z.enum(['1', '0']) }),
+      handler: async ({ id, hidden }, ctx) => {
+        const admin = requireAdmin(ctx);
+        if (!(await adminSetSpecialHidden(id, hidden === '1'))) throw new ActionError({ code: 'NOT_FOUND', message: 'That special edition no longer exists.' });
+        await audit(admin.id, hidden === '1' ? 'special.hide' : 'special.show', `special_editions:${id}`);
+        return { id };
+      },
+    }),
+    specialDelete: defineAction({
+      accept: 'form',
+      input: z.object({ id: memberId }),
+      handler: async ({ id }, ctx) => {
+        const admin = requireAdmin(ctx);
+        if (!(await adminDeleteSpecial(id))) throw new ActionError({ code: 'NOT_FOUND', message: 'That special edition no longer exists.' });
+        await audit(admin.id, 'special.delete', `special_editions:${id}`);
+        return { id, deleted: true as const };
+      },
+    }),
+    /**
+     * Last step of a magazine upload, called by the page's script once every page
+     * and the PDF are in R2 (via /admin/magazine/page and /admin/magazine/pdf).
+     */
+    magazineSave: defineAction({
+      accept: 'json',
+      input: IssueSave,
+      handler: async (input, ctx) => {
+        const admin = requireAdmin(ctx);
+        try {
+          const res = await saveIssue(input);
+          await audit(admin.id, res.created ? 'magazine.add' : 'magazine.replace', `magazine_issues:${input.month}`);
+          return { month: input.month };
+        } catch (err) {
+          if (err instanceof MagazineUploadError) throw new ActionError({ code: 'BAD_REQUEST', message: err.message });
+          throw err;
+        }
+      },
+    }),
+    magazineTitles: defineAction({
+      accept: 'form',
+      input: z.object({
+        month: Month,
+        titleUr: z.string().trim().min(1, 'The Urdu title is required.').max(300),
+        titleEn: z.string().trim().max(300).default(''),
+      }),
+      handler: async ({ month, titleUr, titleEn }, ctx) => {
+        const admin = requireAdmin(ctx);
+        if (!(await adminUpdateIssueTitles(month, titleUr, titleEn || null))) throw new ActionError({ code: 'NOT_FOUND', message: 'That issue no longer exists.' });
+        await audit(admin.id, 'magazine.update', `magazine_issues:${month}`);
+        return { month };
+      },
+    }),
+    magazineVisibility: defineAction({
+      accept: 'form',
+      input: z.object({ month: Month, hidden: z.enum(['1', '0']) }),
+      handler: async ({ month, hidden }, ctx) => {
+        const admin = requireAdmin(ctx);
+        if (!(await adminSetIssueHidden(month, hidden === '1'))) throw new ActionError({ code: 'NOT_FOUND', message: 'That issue no longer exists.' });
+        await audit(admin.id, hidden === '1' ? 'magazine.hide' : 'magazine.show', `magazine_issues:${month}`);
+        return { month };
+      },
+    }),
+    magazineDelete: defineAction({
+      accept: 'form',
+      input: z.object({ month: Month }),
+      handler: async ({ month }, ctx) => {
+        const admin = requireAdmin(ctx);
+        if (!(await adminDeleteIssue(month))) throw new ActionError({ code: 'NOT_FOUND', message: 'That issue no longer exists.' });
+        await audit(admin.id, 'magazine.delete', `magazine_issues:${month}`);
+        return { month, deleted: true as const };
       },
     }),
   },

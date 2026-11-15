@@ -89,6 +89,12 @@ export async function setSpecialHidden(db: AnyDb, id: number, hidden: boolean): 
   return res.length > 0;
 }
 
+/** Delete a page for good. Returns its hash (so the caller can remove its files), or null if there was none. */
+export async function deleteSpecial(db: AnyDb, id: number): Promise<string | null> {
+  const [row] = await db.delete(specialEditions).where(eq(specialEditions.id, id)).returning({ hash: specialEditions.hash });
+  return row?.hash ?? null;
+}
+
 // Newest first; undated pages after every dated one, newest upload first among them.
 const order = [sql`${specialEditions.publishedDate} IS NULL`, desc(specialEditions.publishedDate), desc(specialEditions.id)];
 

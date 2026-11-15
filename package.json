@@ -37,6 +37,7 @@
     "jspdf": "4.2.1",
     "markdown-it": "15.0.2",
     "modern-screenshot": "4.7.0",
+    "pdfjs-dist": "6.4.299",
     "photoswipe": "^5.4.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

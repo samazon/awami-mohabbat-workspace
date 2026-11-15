@@ -1,0 +1,327 @@
+---
+/**
+ * /admin/special: special editions (اشاعتِ خاص), one page image each.
+ * Uploading is a plain multipart POST to this page (an image is over the 1 MB
+ * action cap); editing, hiding and deleting go through admin actions.
+ */
+import { actions } from 'astro:actions';
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Icon from '@/components/Icon.astro';
+import { formatFileSize, formatLong } from '@/lib/dates';
+import { PHOTO_MAX_BYTES, PHOTO_REQUEST_MAX_BYTES } from '@/lib/gallery/upload';
+import { audit } from '@/lib/services/admin';
+import { PhotoUploadError, SpecialTextForm, adminListSpecials, storeSpecial } from '@/lib/services/special-admin';
+
+const admin = Astro.locals.admin!;
+
+// ---- edits (actions), post-redirect-get ----
+const saveResult = Astro.getActionResult(actions.admin.specialSave);
+const visResult = Astro.getActionResult(actions.admin.specialVisibility);
+const deleteResult = Astro.getActionResult(actions.admin.specialDelete);
+const changed = [saveResult, visResult].find((r) => r && !r.error)?.data;
+if (changed) return Astro.redirect(`/admin/special?saved=${changed.id}#s${changed.id}`);
+if (deleteResult && !deleteResult.error) return Astro.redirect('/admin/special?deleted=1');
+let error = saveResult?.error?.message ?? visResult?.error?.message ?? deleteResult?.error?.message ?? null;
+
+// ---- upload (plain POST, not an action) ----
+let fieldErrors: Record<string, string> = {};
+let typed: Record<string, string> = {};
+if (Astro.request.method === 'POST' && !Astro.url.searchParams.has('_action')) {
+  const length = Number(Astro.request.headers.get('content-length') ?? NaN);
+  if (!Number.isFinite(length) || length > PHOTO_REQUEST_MAX_BYTES) {
+    return new Response(`Upload too large: the limit is ${formatFileSize(PHOTO_MAX_BYTES)}.`, { status: 413 });
+  }
+  const form = await Astro.request.formData();
+  for (const [k, v] of form) if (typeof v === 'string') typed[k] = v;
+  const parsed = SpecialTextForm.safeParse(Object.fromEntries([...form].filter(([, v]) => typeof v === 'string')));
+  const image = form.get('image');
+  if (!parsed.success) {
+    for (const i of parsed.error.issues) fieldErrors[String(i.path[0] ?? 'form')] ??= i.message;
+    error = 'Some fields need attention. Choose the image again before saving.';
+  } else if (!(image instanceof File) || image.size === 0) {
+    fieldErrors.image = 'Choose the page image.';
+    error = 'Choose the page image.';
+  } else {
+    try {
+      const res = await storeSpecial(image, parsed.data);
+      await audit(admin.id, res.created ? 'special.add' : 'special.readd', `special_editions:${res.id}`);
+      return Astro.redirect(`/admin/special?added=${res.id}#s${res.id}`);
+    } catch (err) {
+      if (!(err instanceof PhotoUploadError)) throw err;
+      error = `${err.message} Choose the image again before saving.`;
+    }
+  }
+}
+
+const saved = Astro.url.searchParams.get('saved');
+const added = Astro.url.searchParams.get('added');
+const deleted = Astro.url.searchParams.has('deleted');
+const items = await adminListSpecials();
+const hiddenCount = items.filter((s) => s.hidden).length;
+const val = (k: string) => typed[k] ?? '';
+---
+
+<AdminLayout title="Special editions" section="special">
+  <div class="a-page-head">
+    <div>
+      <h1 class="a-title">Special editions</h1>
+      <p class="a-sub">
+        {items.length} on <a href="/special-editions" target="_blank" rel="noopener">the Special editions page</a>{hiddenCount ? ` · ${hiddenCount} hidden` : ''}.
+        Newest printed date first; pages without a date come last.
+      </p>
+    </div>
+  </div>
+
+  {added && <p class="a-alert a-alert--ok" role="status"><Icon name="check" size="sm" /> Added. It shows on the site within 5 minutes.</p>}
+  {saved && <p class="a-alert a-alert--ok" role="status"><Icon name="check" size="sm" /> Saved. The site shows the change within 5 minutes.</p>}
+  {deleted && <p class="a-alert a-alert--ok" role="status"><Icon name="check" size="sm" /> Deleted. It leaves the site within 5 minutes.</p>}
+  {error && <p class="a-alert a-alert--bad" role="alert"><Icon name="triangle-alert" size="sm" /> {error}</p>}
+
+  <form class="a-card panel add" method="POST" enctype="multipart/form-data" data-add>
+    <h2 class="panel__title">Add a special edition</h2>
+    <div class="add__grid">
+      <label class="slot" data-slot>
+        <span class="slot__frame">
+          <img class="slot__img" alt="" data-img hidden />
+          <span class="slot__empty" data-empty><Icon name="image-plus" size="lg" /></span>
+        </span>
+        <span class="slot__info" data-info>JPEG, PNG or WebP, up to {formatFileSize(PHOTO_MAX_BYTES)}</span>
+        <input class="slot__input" type="file" name="image" accept="image/jpeg,image/png,image/webp" required data-file />
+      </label>
+      <div class="stack">
+        <div>
+          <label class="a-label" for="titleUr">Title (Urdu)</label>
+          <input class="a-input ur" id="titleUr" name="titleUr" required maxlength="300" lang="ur" dir="rtl" value={val('titleUr')} />
+          {fieldErrors.titleUr && <p class="err">{fieldErrors.titleUr}</p>}
+        </div>
+        <div>
+          <label class="a-label" for="titleEn">Title (English, optional)</label>
+          <input class="a-input" id="titleEn" name="titleEn" maxlength="300" value={val('titleEn')} />
+        </div>
+        <div class="date">
+          <label class="a-label" for="publishedDate">Printed date (optional)</label>
+          <input class="a-input" type="date" id="publishedDate" name="publishedDate" value={val('publishedDate')} />
+          {fieldErrors.publishedDate && <p class="err">{fieldErrors.publishedDate}</p>}
+        </div>
+        <div class="actions">
+          <button class="a-btn" type="submit" data-save><Icon name="upload" size="sm" /> Upload</button>
+          <span class="a-hint" data-busy hidden>Uploading…</span>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  {items.length === 0 ? (
+    <p class="a-hint">No special editions yet.</p>
+  ) : (
+    <ul class="list">
+      {items.map((s) => (
+        <li class:list={['item a-card', { 'item--hidden': s.hidden }]} id={`s${s.id}`}>
+          <a class="item__img" href={s.view} target="_blank" rel="noopener">
+            <img src={s.thumb} alt="" loading="lazy" />
+            {s.hidden && <span class="a-badge item__badge"><Icon name="eye-off" size="sm" /> Hidden</span>}
+          </a>
+          <form class="item__form" method="POST" action={actions.admin.specialSave}>
+            <input type="hidden" name="id" value={s.id} />
+            <input class="a-input ur" name="titleUr" required maxlength="300" lang="ur" dir="rtl" value={s.titleUr} aria-label="Title (Urdu)" />
+            <input class="a-input" name="titleEn" maxlength="300" placeholder="Title (English)" value={s.titleEn ?? ''} aria-label="Title (English)" />
+            <div class="item__row">
+              <input class="a-input" type="date" name="publishedDate" value={s.publishedDate ?? ''} aria-label="Printed date" />
+              {s.publishedDate && <span class="a-hint">{formatLong(s.publishedDate)}</span>}
+            </div>
+            <div class="item__actions">
+              <button class="a-btn a-btn--ghost" type="submit"><Icon name="check" size="sm" /> Save</button>
+              <button class="a-btn a-btn--ghost" type="submit" formaction={actions.admin.specialVisibility} formnovalidate name="hidden" value={s.hidden ? '0' : '1'}>
+                <Icon name={s.hidden ? 'eye' : 'eye-off'} size="sm" /> {s.hidden ? 'Show' : 'Hide'}
+              </button>
+              <button
+                class="a-btn a-btn--ghost item__delete"
+                type="submit"
+                formaction={actions.admin.specialDelete}
+                formnovalidate
+                data-confirm="Delete this special edition for good? This can't be undone. To take it off the site but keep it, use Hide."
+              >
+                <Icon name="trash-2" size="sm" /> Delete
+              </button>
+            </div>
+          </form>
+        </li>
+      ))}
+    </ul>
+  )}
+</AdminLayout>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('button[data-confirm]').forEach((b) =>
+    b.addEventListener('click', (e) => {
+      if (!confirm(b.dataset.confirm ?? 'Are you sure?')) e.preventDefault();
+    }),
+  );
+
+  // Preview the chosen image (convenience; the server checks the file again).
+  const slot = document.querySelector<HTMLElement>('[data-slot]');
+  const input = slot?.querySelector<HTMLInputElement>('[data-file]');
+  input?.addEventListener('change', async () => {
+    const file = input.files?.[0];
+    const img = slot!.querySelector<HTMLImageElement>('[data-img]')!;
+    const info = slot!.querySelector<HTMLElement>('[data-info]')!;
+    if (!file) return;
+    img.src = URL.createObjectURL(file);
+    img.hidden = false;
+    slot!.querySelector<HTMLElement>('[data-empty]')!.hidden = true;
+    await img.decode().catch(() => undefined);
+    info.textContent = img.naturalWidth ? `${img.naturalWidth}×${img.naturalHeight}px · ${(file.size / 1024 / 1024).toFixed(1)} MB` : 'Not a readable image';
+  });
+
+  const form = document.querySelector<HTMLFormElement>('[data-add]');
+  form?.addEventListener('submit', () => {
+    form.querySelector<HTMLButtonElement>('[data-save]')!.disabled = true;
+    form.querySelector<HTMLElement>('[data-busy]')!.hidden = false;
+  });
+</script>
+
+<style>
+  .panel {
+    margin-block-end: 18px;
+    padding: 18px 20px 20px;
+  }
+  .panel__title {
+    margin-block-end: 14px;
+    font-size: var(--ui-a-base);
+    font-weight: 700;
+  }
+  .add__grid {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 20px;
+  }
+  .stack {
+    display: grid;
+    gap: 14px;
+    align-content: start;
+  }
+  .date {
+    max-width: 240px;
+  }
+  .err {
+    margin-block-start: 5px;
+    font-size: var(--ui-a-sm);
+    color: var(--red);
+  }
+  .ur {
+    font-family: var(--font-naskh);
+  }
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .slot {
+    position: relative;
+    display: grid;
+    gap: 6px;
+    cursor: pointer;
+  }
+  .slot__frame {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    border-radius: 8px;
+    background: var(--a-bg);
+    box-shadow: inset 0 0 0 1px var(--a-line);
+  }
+  .slot:hover .slot__frame,
+  .slot:focus-within .slot__frame {
+    box-shadow: inset 0 0 0 2px var(--ink);
+  }
+  .slot__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+  }
+  .slot__empty {
+    color: #b2b0aa;
+  }
+  .slot__info {
+    font-size: var(--ui-a-sm);
+    color: var(--muted);
+  }
+  .slot__input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .list {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .item {
+    display: grid;
+    grid-template-columns: 110px minmax(0, 1fr);
+    gap: 16px;
+    padding: 12px;
+    scroll-margin-top: 20px;
+  }
+  .item--hidden .item__img img {
+    opacity: 0.4;
+  }
+  .item__img {
+    position: relative;
+    display: block;
+    align-self: start;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    border-radius: 6px;
+    background: var(--a-bg);
+  }
+  .item__img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+  }
+  .item__badge {
+    position: absolute;
+    inset-block-start: 6px;
+    inset-inline-start: 6px;
+  }
+  .item__form {
+    display: grid;
+    gap: 8px;
+    align-content: start;
+  }
+  .item__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+  .item__row .a-input {
+    max-width: 200px;
+  }
+  .item__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .item__delete {
+    color: var(--red);
+  }
+  @media (max-width: 640px) {
+    .add__grid {
+      grid-template-columns: 1fr;
+    }
+    .slot {
+      max-width: 220px;
+    }
+    .item {
+      grid-template-columns: 80px minmax(0, 1fr);
+    }
+  }
+</style>
