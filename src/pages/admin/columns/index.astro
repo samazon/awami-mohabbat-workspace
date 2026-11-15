@@ -1,0 +1,169 @@
+---
+/**
+ * /admin/columns: every column (drafts too) and the three homepage picks.
+ * Each column opens its form at /admin/columns/<slug>; new ones at /new.
+ */
+import { actions } from 'astro:actions';
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Icon from '@/components/Icon.astro';
+import { formatLong } from '@/lib/dates';
+import { adminListColumns } from '@/lib/services/columns-admin';
+
+const homeResult = Astro.getActionResult(actions.admin.columnHome);
+if (homeResult && !homeResult.error) return Astro.redirect('/admin/columns?home=1');
+const error = homeResult?.error?.message ?? null;
+const saved = Astro.url.searchParams.get('saved');
+const deleted = Astro.url.searchParams.has('deleted');
+const home = Astro.url.searchParams.has('home');
+
+const columns = await adminListColumns();
+const published = columns.filter((c) => c.status === 'published');
+const inSlot = (n: number) => columns.find((c) => c.homeSlot === n)?.slug ?? '';
+const drafts = columns.length - published.length;
+---
+
+<AdminLayout title="Columns" section="columns">
+  <div class="a-page-head">
+    <div>
+      <h1 class="a-title">Columns</h1>
+      <p class="a-sub">{published.length} live on <a href="/columns" target="_blank" rel="noopener">the Columns page</a>{drafts ? ` · ${drafts} draft${drafts === 1 ? '' : 's'}` : ''}.</p>
+    </div>
+    <div class="head-actions">
+      <a class="a-btn a-btn--ghost" href="/admin/columns/columnists"><Icon name="users" size="sm" /> Columnists</a>
+      <a class="a-btn" href="/admin/columns/new"><Icon name="plus" size="sm" /> New column</a>
+    </div>
+  </div>
+
+  {saved && <p class="a-alert a-alert--ok" role="status"><Icon name="check" size="sm" /> Saved. The site shows the change within 5 minutes.</p>}
+  {deleted && <p class="a-alert a-alert--ok" role="status"><Icon name="check" size="sm" /> Column deleted. It leaves the site within 5 minutes.</p>}
+  {home && <p class="a-alert a-alert--ok" role="status"><Icon name="check" size="sm" /> Homepage columns updated. The homepage shows them within 5 minutes.</p>}
+  {error && <p class="a-alert a-alert--bad" role="alert"><Icon name="triangle-alert" size="sm" /> {error}</p>}
+
+  <section class="a-card panel">
+    <h2 class="panel__title">On the homepage</h2>
+    <div class="slots">
+      {[1, 2, 3].map((n) => (
+        <form method="POST" action={actions.admin.columnHome} class="slot">
+          <input type="hidden" name="slot" value={n} />
+          <label class="a-label" for={`slot${n}`}>Spot {n}</label>
+          <div class="slot__row">
+            <select class="a-input ur" id={`slot${n}`} name="slug">
+              <option value="" selected={inSlot(n) === ''}>— empty —</option>
+              {published.map((c) => <option value={c.slug} selected={inSlot(n) === c.slug}>{c.titleUr} — {c.columnistNameUr}</option>)}
+            </select>
+            <button class="a-btn a-btn--ghost" type="submit">Set</button>
+          </div>
+        </form>
+      ))}
+    </div>
+    <p class="a-hint">Only live columns can go on the homepage. Putting a column in a spot moves it out of any other spot.</p>
+  </section>
+
+  <section class="a-card">
+    {columns.length === 0 ? (
+      <p class="empty">No columns yet. <a href="/admin/columns/new">Add the first one.</a></p>
+    ) : (
+      <ol class="rows">
+        {columns.map((c) => (
+          <li class="row">
+            <a class="row__main" href={`/admin/columns/${c.slug}`}>
+              <span class="row__title ur" lang="ur" dir="rtl">{c.titleUr}</span>
+              <span class="row__meta">
+                <span lang="ur" dir="rtl" class="ur">{c.columnistNameUr}</span> · {formatLong(c.publishedDate)}
+                {c.status === 'draft' ? <span class="a-badge a-badge--gold">Draft</span> : <span class="a-badge">Live</span>}
+                {c.homeSlot && <span class="a-badge"><Icon name="house" size="sm" /> Spot {c.homeSlot}</span>}
+              </span>
+            </a>
+            <a class="a-btn a-btn--ghost" href={`/admin/columns/${c.slug}`}><Icon name="pencil" size="sm" /> Edit</a>
+          </li>
+        ))}
+      </ol>
+    )}
+  </section>
+</AdminLayout>
+
+<style>
+  .head-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .panel {
+    margin-block-end: 18px;
+    padding: 18px 20px 20px;
+  }
+  .panel__title {
+    margin-block-end: 14px;
+    font-size: var(--ui-a-base);
+    font-weight: 700;
+  }
+  .slots {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-block-end: 10px;
+  }
+  .slot__row {
+    display: flex;
+    gap: 6px;
+  }
+  .slot__row select {
+    min-width: 0;
+    flex: 1;
+  }
+  .ur {
+    font-family: var(--font-naskh);
+  }
+  .empty {
+    padding: 16px 18px;
+    color: var(--muted);
+  }
+  .rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 18px;
+    border-block-end: 1px solid var(--a-line);
+  }
+  .row:last-child {
+    border-block-end: 0;
+  }
+  .row__main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .row__main:hover .row__title {
+    color: var(--red);
+  }
+  .row__title {
+    align-self: flex-start;
+    max-width: 100%;
+    overflow: hidden;
+    font-size: var(--ui-a-lg);
+    line-height: 1.8;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .row__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--ui-a-sm);
+    color: var(--muted);
+  }
+  @media (max-width: 760px) {
+    .slots {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

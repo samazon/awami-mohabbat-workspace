@@ -21,6 +21,14 @@ import {
   adminUpdateIssueTitles,
   saveIssue,
 } from '@/lib/services/magazine-admin';
+import {
+  ArticleRuleError,
+  adminDeleteColumn,
+  adminSetColumnStatus,
+  adminSetColumnistActive,
+  adminSetHomeSlot,
+} from '@/lib/services/columns-admin';
+import { SLUG_RE } from '@/lib/columns/rules';
 
 /**
  * Typed RPC for writes. `accept: 'form'` means the form also works with
@@ -43,6 +51,7 @@ const requireAdmin = (ctx: ActionAPIContext) => {
   return admin;
 };
 const memberId = z.coerce.number().int().positive();
+const columnSlug = z.string().max(120).regex(SLUG_RE, 'Invalid web address.');
 const editionDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date.')
@@ -312,6 +321,52 @@ export const server = {
         if (!(await adminDeleteIssue(month))) throw new ActionError({ code: 'NOT_FOUND', message: 'That issue no longer exists.' });
         await audit(admin.id, 'magazine.delete', `magazine_issues:${month}`);
         return { month, deleted: true as const };
+      },
+    }),
+    /** Columns: the column form itself is a POST to /admin/columns/<slug> (a logo exceeds the 1 MB action cap). */
+    columnHome: defineAction({
+      accept: 'form',
+      input: z.object({ slot: z.coerce.number().int().min(1).max(3), slug: z.union([z.literal(''), columnSlug]) }),
+      handler: async ({ slot, slug }, ctx) => {
+        const admin = requireAdmin(ctx);
+        try {
+          await adminSetHomeSlot(slot, slug || null);
+        } catch (err) {
+          if (err instanceof ArticleRuleError) throw new ActionError({ code: 'BAD_REQUEST', message: err.message });
+          throw err;
+        }
+        await audit(admin.id, 'column.home', `homepage_columns:${slot}`);
+        return { slot };
+      },
+    }),
+    columnStatus: defineAction({
+      accept: 'form',
+      input: z.object({ slug: columnSlug, status: z.enum(['draft', 'published']) }),
+      handler: async ({ slug, status }, ctx) => {
+        const admin = requireAdmin(ctx);
+        if (!(await adminSetColumnStatus(slug, status))) throw new ActionError({ code: 'NOT_FOUND', message: 'That column no longer exists.' });
+        await audit(admin.id, status === 'draft' ? 'column.unpublish' : 'column.publish', `articles:${slug}`);
+        return { slug };
+      },
+    }),
+    columnDelete: defineAction({
+      accept: 'form',
+      input: z.object({ slug: columnSlug }),
+      handler: async ({ slug }, ctx) => {
+        const admin = requireAdmin(ctx);
+        if (!(await adminDeleteColumn(slug))) throw new ActionError({ code: 'NOT_FOUND', message: 'That column no longer exists.' });
+        await audit(admin.id, 'column.delete', `articles:${slug}`);
+        return { slug, deleted: true as const };
+      },
+    }),
+    columnistActive: defineAction({
+      accept: 'form',
+      input: z.object({ slug: columnSlug, active: z.enum(['1', '0']) }),
+      handler: async ({ slug, active }, ctx) => {
+        const admin = requireAdmin(ctx);
+        if (!(await adminSetColumnistActive(slug, active === '1'))) throw new ActionError({ code: 'NOT_FOUND', message: 'That columnist no longer exists.' });
+        await audit(admin.id, 'columnist.active', `columnists:${slug}`);
+        return { slug };
       },
     }),
   },

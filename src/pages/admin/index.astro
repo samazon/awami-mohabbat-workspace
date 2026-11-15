@@ -6,16 +6,19 @@ import { adminListEditions } from '@/lib/services/editions-admin';
 import { adminPhotoCount } from '@/lib/services/gallery-admin';
 import { adminListSpecials } from '@/lib/services/special-admin';
 import { adminListIssues } from '@/lib/services/magazine-admin';
+import { adminListColumns } from '@/lib/services/columns-admin';
 import { formatLong } from '@/lib/dates';
 
 const admin = Astro.locals.admin!;
-const [members, editions, photos, specials, issues] = await Promise.all([
+const [members, editions, photos, specials, issues, columns] = await Promise.all([
   adminListMembers(),
   adminListEditions(),
   adminPhotoCount(),
   adminListSpecials(),
   adminListIssues(),
+  adminListColumns(),
 ]);
+const columnDrafts = columns.filter((c) => c.status === 'draft').length;
 const withPhoto = members.filter((m) => m.photoHash).length;
 const hidden = members.filter((m) => m.hidden).length;
 const latestLive = editions.find((e) => e.status === 'published');
@@ -62,6 +65,14 @@ const drafts = editions.filter((e) => e.status === 'draft').length;
       <span class="tile__body">
         <span class="tile__title">Magazine</span>
         <span class="tile__meta">{issues.length} issues{issues[0] ? ` · latest ${issues[0].month}` : ''}</span>
+      </span>
+      <Icon name="arrow-right" size="md" flip={false} />
+    </a>
+    <a class="tile a-card" href="/admin/columns">
+      <span class="tile__icon"><Icon name="pen-line" size="lg" /></span>
+      <span class="tile__body">
+        <span class="tile__title">Columns</span>
+        <span class="tile__meta">{columns.length} columns{columnDrafts ? ` · ${columnDrafts} draft${columnDrafts === 1 ? '' : 's'}` : ''}</span>
       </span>
       <Icon name="arrow-right" size="md" flip={false} />
     </a>

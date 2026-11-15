@@ -1,0 +1,190 @@
+---
+/**
+ * /admin/columns/columnists: fix a writer's names, replace their logo, or
+ * retire them (inactive: off the columns filter, columns stay). New writers
+ * are added from the column form. Saving is a plain multipart POST (a logo
+ * exceeds the 1 MB action cap); Active on/off is an action.
+ */
+import { actions } from 'astro:actions';
+import { z } from 'zod';
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Icon from '@/components/Icon.astro';
+import { BANNER_MAX_BYTES } from '@/lib/columns/banner';
+import { SLUG_RE } from '@/lib/columns/rules';
+import { audit } from '@/lib/services/admin';
+import { ArticleRuleError, BannerError, ColumnistForm, adminListColumnists, saveColumnistFromForm } from '@/lib/services/columns-admin';
+
+const admin = Astro.locals.admin!;
+
+const activeResult = Astro.getActionResult(actions.admin.columnistActive);
+if (activeResult && !activeResult.error) return Astro.redirect(`/admin/columns/columnists?saved=${activeResult.data.slug}#w-${activeResult.data.slug}`);
+let error = activeResult?.error?.message ?? null;
+let failedSlug: string | null = null;
+
+if (Astro.request.method === 'POST' && !Astro.url.searchParams.has('_action')) {
+  const length = Number(Astro.request.headers.get('content-length') ?? NaN);
+  if (!Number.isFinite(length) || length > BANNER_MAX_BYTES + 64 * 1024) return new Response('Upload too large: the logo limit is 10 MB.', { status: 413 });
+  const form = await Astro.request.formData();
+  const slug = String(form.get('slug') ?? '');
+  const parsed = ColumnistForm.safeParse(Object.fromEntries([...form].filter(([, v]) => typeof v === 'string')));
+  const logo = form.get('logo');
+  failedSlug = slug;
+  if (!SLUG_RE.test(slug)) error = 'Unknown columnist.';
+  else if (!parsed.success) error = parsed.error.issues.map((i) => i.message).join(' ');
+  else {
+    try {
+      await saveColumnistFromForm(slug, parsed.data, logo instanceof File ? logo : null);
+      await audit(admin.id, 'columnist.save', `columnists:${slug}`);
+      return Astro.redirect(`/admin/columns/columnists?saved=${slug}#w-${slug}`);
+    } catch (err) {
+      if (err instanceof ArticleRuleError || err instanceof BannerError) error = err.message;
+      else if (err instanceof z.ZodError) error = err.issues.map((i) => i.message).join('; ');
+      else throw err;
+    }
+  }
+}
+
+const saved = Astro.url.searchParams.get('saved');
+const writers = await adminListColumnists();
+---
+
+<AdminLayout title="Columnists" section="columns">
+  <a class="back" href="/admin/columns"><Icon name="arrow-left" size="sm" flip={false} /> Columns</a>
+  <div class="a-page-head">
+    <div>
+      <h1 class="a-title">Columnists</h1>
+      <p class="a-sub">New writers are added from <a href="/admin/columns/new">the column form</a>. Writers with columns can be made inactive, not deleted.</p>
+    </div>
+  </div>
+
+  {saved && <p class="a-alert a-alert--ok" role="status"><Icon name="check" size="sm" /> Saved. The site shows the change within 5 minutes.</p>}
+  {error && <p class="a-alert a-alert--bad" role="alert"><Icon name="triangle-alert" size="sm" /> {failedSlug ? `${failedSlug}: ` : ''}{error}</p>}
+
+  {writers.length === 0 ? (
+    <p class="a-hint">No columnists yet.</p>
+  ) : (
+    <ul class="list">
+      {writers.map((w) => (
+        <li class:list={['item a-card', { 'item--off': !w.active }]} id={`w-${w.slug}`}>
+          <form method="POST" enctype="multipart/form-data" class="item__form">
+            <input type="hidden" name="slug" value={w.slug} />
+            <label class="logo">
+              <img src={w.cardUrl} alt="" loading="lazy" />
+              <span class="a-hint"><Icon name="upload" size="sm" /> Replace logo (JPEG/PNG)</span>
+              <input type="file" name="logo" accept="image/jpeg,image/png" />
+            </label>
+            <div class="fields">
+              <p class="meta">
+                <code>{w.slug}</code> · {w.columnCount} column{w.columnCount === 1 ? '' : 's'}
+                {!w.active && <span class="a-badge">Inactive</span>}
+              </p>
+              <div class="grid2">
+                <input class="a-input ur" name="nameUr" required maxlength="100" lang="ur" dir="rtl" value={w.nameUr} aria-label="Name (Urdu)" />
+                <input class="a-input" name="nameEn" maxlength="100" placeholder="Name (English)" value={w.nameEn ?? ''} aria-label="Name (English)" />
+                <input class="a-input ur" name="columnTitleUr" required maxlength="100" lang="ur" dir="rtl" value={w.columnTitleUr} aria-label="Column name (Urdu)" />
+                <input class="a-input" name="columnTitleEn" maxlength="100" placeholder="Column name (English)" value={w.columnTitleEn ?? ''} aria-label="Column name (English)" />
+              </div>
+              <div class="actions">
+                <button class="a-btn a-btn--ghost" type="submit"><Icon name="check" size="sm" /> Save</button>
+                <button class="a-btn a-btn--ghost" type="submit" formaction={actions.admin.columnistActive} formenctype="application/x-www-form-urlencoded" formnovalidate name="active" value={w.active ? '0' : '1'}>
+                  <Icon name={w.active ? 'user-x' : 'user-check'} size="sm" /> {w.active ? 'Make inactive' : 'Make active'}
+                </button>
+              </div>
+            </div>
+          </form>
+        </li>
+      ))}
+    </ul>
+  )}
+</AdminLayout>
+
+<style>
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-block-end: 10px;
+    color: var(--a-ink-2);
+    font-size: var(--ui-a-md);
+    text-decoration: none;
+  }
+  .back:hover {
+    color: var(--ink);
+  }
+  .list {
+    display: grid;
+    gap: 12px;
+    max-width: 960px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .item {
+    padding: 14px;
+    scroll-margin-top: 20px;
+  }
+  .item--off .logo img {
+    opacity: 0.45;
+  }
+  .item__form {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 16px;
+  }
+  .logo {
+    position: relative;
+    display: grid;
+    gap: 6px;
+    align-content: start;
+    cursor: pointer;
+  }
+  .logo img {
+    width: 100%;
+    height: auto;
+    border-radius: 6px;
+    background: var(--a-bg);
+  }
+  .logo span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .logo input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .fields {
+    display: grid;
+    gap: 10px;
+    align-content: start;
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--ui-a-sm);
+    color: var(--muted);
+  }
+  .grid2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .ur {
+    font-family: var(--font-naskh);
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  @media (max-width: 640px) {
+    .item__form,
+    .grid2 {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

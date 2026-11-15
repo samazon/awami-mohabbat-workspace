@@ -11,7 +11,7 @@ import Icon from '@/components/Icon.astro';
 interface Props {
   title: string;
   /** Which nav entry is current. */
-  section?: 'dashboard' | 'editions' | 'gallery' | 'special' | 'magazine' | 'team';
+  section?: 'dashboard' | 'editions' | 'gallery' | 'special' | 'magazine' | 'columns' | 'team';
 }
 const { title, section } = Astro.props;
 const admin = Astro.locals.admin!;
@@ -25,11 +25,10 @@ const nav = [
   { key: 'gallery', href: '/admin/gallery', label: 'Gallery', icon: 'images' },
   { key: 'special', href: '/admin/special', label: 'Special editions', icon: 'star' },
   { key: 'magazine', href: '/admin/magazine', label: 'Magazine', icon: 'book-open' },
+  { key: 'columns', href: '/admin/columns', label: 'Columns', icon: 'pen-line' },
   { key: 'team', href: '/admin/team', label: 'Team', icon: 'users' },
 ] as const;
-const later = [
-  { label: 'Columns', icon: 'pen-line' },
-];
+const later: { label: string; icon: string }[] = [];
 ---
 
 <!doctype html>
@@ -64,14 +63,18 @@ const later = [
             </li>
           ))}
         </ul>
-        <p class="side__heading">Coming next</p>
-        <ul>
+        {later.length > 0 && (
+          <>
+            <p class="side__heading">Coming next</p>
+            <ul class="side__later">
           {later.map((n) => (
             <li>
               <span class="side__link side__link--off" aria-disabled="true"><Icon name={n.icon} size="md" />{n.label}</span>
             </li>
           ))}
         </ul>
+          </>
+        )}
       </nav>
 
       <main class="main" id="main">
@@ -414,7 +417,7 @@ const later = [
       gap: 4px;
     }
     .side__heading,
-    .side ul:last-of-type {
+    .side__later {
       display: none;
     }
     .main {

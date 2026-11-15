@@ -1,0 +1,525 @@
+---
+/**
+ * /admin/columns/new and /admin/columns/<slug>: one column, and — for a new
+ * writer — the columnist and their logo, in a single form. Saving is a plain
+ * multipart POST to this page (a logo exceeds the 1 MB action cap); Unpublish
+ * and Delete are actions. Web addresses are made on first save and kept.
+ */
+import { actions } from 'astro:actions';
+import { z } from 'zod';
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Icon from '@/components/Icon.astro';
+import { formatFileSize, todayIso } from '@/lib/dates';
+import { BANNER_MAX_BYTES } from '@/lib/columns/banner';
+import { SLUG_RE } from '@/lib/columns/rules';
+import { audit } from '@/lib/services/admin';
+import {
+  ArticleRuleError,
+  BannerError,
+  ColumnForm,
+  adminGetColumn,
+  adminListColumnists,
+  saveColumnFromForm,
+} from '@/lib/services/columns-admin';
+
+const admin = Astro.locals.admin!;
+const param = Astro.params.slug ?? '';
+const isNew = param === 'new';
+if (!isNew && (param.length > 120 || !SLUG_RE.test(param))) return new Response('Not found', { status: 404 });
+const column = isNew ? null : await adminGetColumn(param);
+if (!isNew && !column) return new Response('Not found', { status: 404 });
+
+const statusResult = Astro.getActionResult(actions.admin.columnStatus);
+if (statusResult && !statusResult.error) return Astro.redirect(`/admin/columns?saved=${param}`);
+const deleteResult = Astro.getActionResult(actions.admin.columnDelete);
+if (deleteResult && !deleteResult.error) return Astro.redirect('/admin/columns?deleted=1');
+let error = statusResult?.error?.message ?? deleteResult?.error?.message ?? null;
+
+let fieldErrors: Record<string, string> = {};
+let typed: Record<string, string> | null = null;
+if (Astro.request.method === 'POST' && !Astro.url.searchParams.has('_action')) {
+  const length = Number(Astro.request.headers.get('content-length') ?? NaN);
+  if (!Number.isFinite(length) || length > BANNER_MAX_BYTES + 512 * 1024) {
+    return new Response('Upload too large: the logo limit is 10 MB.', { status: 413 });
+  }
+  const form = await Astro.request.formData();
+  typed = {};
+  for (const [k, v] of form) if (typeof v === 'string') typed[k] = v;
+  const logo = form.get('logo');
+  const logoSent = logo instanceof File && logo.size > 0;
+  const parsed = ColumnForm.safeParse({ ...typed, slug: column?.slug ?? '' });
+  if (!parsed.success) {
+    for (const i of parsed.error.issues) fieldErrors[String(i.path[0] ?? 'form')] ??= i.message;
+    error = `Some fields need attention.${logoSent ? ' Choose the logo again before saving.' : ''}`;
+  } else {
+    try {
+      const res = await saveColumnFromForm(parsed.data, logoSent ? logo : null);
+      if (res.createdColumnist) await audit(admin.id, 'columnist.save', `columnists:${parsed.data.newNameEn}`);
+      await audit(admin.id, 'column.save', `articles:${res.slug}`);
+      return Astro.redirect(`/admin/columns?saved=${res.slug}`);
+    } catch (err) {
+      if (err instanceof ArticleRuleError || err instanceof BannerError) error = err.message;
+      else if (err instanceof z.ZodError) error = err.issues.map((i) => i.message).join('; ');
+      else throw err;
+      if (logoSent) error += ' Choose the logo again before saving.';
+    }
+  }
+}
+
+const columnists = await adminListColumnists();
+const choices = columnists.filter((c) => c.active || c.slug === column?.columnistSlug);
+const val = (k: string, fallback: string | null | undefined = '') => (typed ? (typed[k] ?? '') : (fallback ?? ''));
+const chosen = val('columnist', column?.columnistSlug ?? choices[0]?.slug ?? 'new');
+const homeSlot = val('homeSlot', column?.homeSlot ? String(column.homeSlot) : '');
+const hasEn = Boolean(val('titleEn', column?.en?.title) || val('bodyEn', column?.en?.body));
+const title = isNew ? 'New column' : (column!.ur.title.length > 40 ? `${column!.ur.title.slice(0, 40)}…` : column!.ur.title);
+---
+
+<AdminLayout title={isNew ? 'New column' : 'Edit column'} section="columns">
+  <a class="back" href="/admin/columns"><Icon name="arrow-left" size="sm" flip={false} /> Columns</a>
+  <div class="a-page-head">
+    <div>
+      <h1 class="a-title" lang={isNew ? 'en' : 'ur'} dir={isNew ? 'ltr' : 'rtl'}>{title}</h1>
+      {column && (
+        <p class="a-sub">
+          {column.status === 'published' ? <a href={`/columns/${column.slug}`} target="_blank" rel="noopener">/columns/{column.slug}</a> : <>Draft · /columns/{column.slug}</>}
+        </p>
+      )}
+    </div>
+  </div>
+
+  {error && <p class="a-alert a-alert--bad" role="alert"><Icon name="triangle-alert" size="sm" /> {error}</p>}
+
+  <form class="form" method="POST" enctype="multipart/form-data" data-column-form>
+    <section class="a-card panel">
+      <h2 class="panel__title">Columnist</h2>
+      <div class="writers">
+        {choices.map((c) => (
+          <label class="writer">
+            <input type="radio" name="columnist" value={c.slug} checked={chosen === c.slug} data-writer />
+            <img src={c.cardUrl} alt="" loading="lazy" />
+            <span class="writer__name ur" lang="ur" dir="rtl">{c.nameUr}</span>
+          </label>
+        ))}
+        <label class="writer writer--new">
+          <input type="radio" name="columnist" value="new" checked={chosen === 'new'} data-writer />
+          <span class="writer__plus"><Icon name="user-plus" size="lg" /></span>
+          <span class="writer__name">New columnist…</span>
+        </label>
+      </div>
+      {fieldErrors.columnist && <p class="err">{fieldErrors.columnist}</p>}
+
+      <div class="newwriter" data-new hidden={chosen !== 'new'}>
+        <label class="logo" data-logo>
+          <span class="logo__frame">
+            <img alt="" data-logo-img hidden />
+            <span data-logo-empty><Icon name="image-plus" size="lg" /> Choose the logo</span>
+          </span>
+          <span class="a-hint" data-logo-info>JPEG or PNG, up to {formatFileSize(BANNER_MAX_BYTES)}</span>
+          <input type="file" name="logo" accept="image/jpeg,image/png" data-logo-input />
+        </label>
+        <div class="grid2">
+          <div>
+            <label class="a-label" for="newNameUr">Name (Urdu)</label>
+            <input class="a-input ur" id="newNameUr" name="newNameUr" maxlength="100" lang="ur" dir="rtl" value={val('newNameUr')} data-new-req />
+            {fieldErrors.newNameUr && <p class="err">{fieldErrors.newNameUr}</p>}
+          </div>
+          <div>
+            <label class="a-label" for="newNameEn">Name (English)</label>
+            <input class="a-input" id="newNameEn" name="newNameEn" maxlength="100" placeholder="e.g. Iqbal Khokhar" value={val('newNameEn')} data-new-req />
+            {fieldErrors.newNameEn && <p class="err">{fieldErrors.newNameEn}</p>}
+            <p class="a-hint">Makes the writer’s web address, e.g. iqbal-khokhar.</p>
+          </div>
+          <div>
+            <label class="a-label" for="newColumnUr">Column name (Urdu)</label>
+            <input class="a-input ur" id="newColumnUr" name="newColumnUr" maxlength="100" lang="ur" dir="rtl" value={val('newColumnUr')} data-new-req />
+            {fieldErrors.newColumnUr && <p class="err">{fieldErrors.newColumnUr}</p>}
+          </div>
+          <div>
+            <label class="a-label" for="newColumnEn">Column name (English, optional)</label>
+            <input class="a-input" id="newColumnEn" name="newColumnEn" maxlength="100" value={val('newColumnEn')} />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="a-card panel">
+      <h2 class="panel__title">Column</h2>
+      <div class="stack">
+        <div>
+          <label class="a-label" for="titleUr">Title (Urdu)</label>
+          <input class="a-input ur big" id="titleUr" name="titleUr" required maxlength="300" lang="ur" dir="rtl" value={val('titleUr', column?.ur.title)} />
+          {fieldErrors.titleUr && <p class="err">{fieldErrors.titleUr}</p>}
+        </div>
+        <div>
+          <div class="bodyhead">
+            <label class="a-label" for="bodyUr">Text (Urdu)</label>
+            <div class="tools" data-tools="bodyUr">
+              <button type="button" class="a-btn a-btn--ghost tool" data-md="h2" title="Subheading">H</button>
+              <button type="button" class="a-btn a-btn--ghost tool" data-md="bold" title="Bold"><strong>B</strong></button>
+              <button type="button" class="a-btn a-btn--ghost tool" data-md="quote" title="Quote">❝</button>
+            </div>
+          </div>
+          <textarea class="a-input ur body" id="bodyUr" name="bodyUr" required maxlength="100000" rows="16" lang="ur" dir="rtl" data-body>{val('bodyUr', column?.ur.body)}</textarea>
+          {fieldErrors.bodyUr && <p class="err">{fieldErrors.bodyUr}</p>}
+          <p class="a-hint">Paste the column. A blank line starts a new paragraph. Select text and press a button for a subheading, bold or a quote.</p>
+        </div>
+        <div>
+          <label class="a-label" for="excerptUr">Excerpt (Urdu)</label>
+          <textarea class="a-input ur" id="excerptUr" name="excerptUr" required maxlength="600" rows="3" lang="ur" dir="rtl" data-excerpt data-auto={column ? '0' : '1'}>{val('excerptUr', column?.ur.excerpt)}</textarea>
+          {fieldErrors.excerptUr && <p class="err">{fieldErrors.excerptUr}</p>}
+          <p class="a-hint">Shown on cards and in search results. Filled in from the opening lines; edit it if you like.</p>
+        </div>
+        <div class="date">
+          <label class="a-label" for="date">Date</label>
+          <input class="a-input" type="date" id="date" name="date" required value={val('date', column?.publishedDate ?? todayIso())} />
+          {fieldErrors.date && <p class="err">{fieldErrors.date}</p>}
+        </div>
+      </div>
+
+      <details class="en" open={hasEn}>
+        <summary>English version (optional)</summary>
+        <div class="stack">
+          <div>
+            <label class="a-label" for="titleEn">Title (English)</label>
+            <input class="a-input" id="titleEn" name="titleEn" maxlength="300" value={val('titleEn', column?.en?.title)} />
+            {fieldErrors.titleEn && <p class="err">{fieldErrors.titleEn}</p>}
+          </div>
+          <div>
+            <div class="bodyhead">
+              <label class="a-label" for="bodyEn">Text (English)</label>
+              <div class="tools" data-tools="bodyEn">
+                <button type="button" class="a-btn a-btn--ghost tool" data-md="h2" title="Subheading">H</button>
+                <button type="button" class="a-btn a-btn--ghost tool" data-md="bold" title="Bold"><strong>B</strong></button>
+                <button type="button" class="a-btn a-btn--ghost tool" data-md="quote" title="Quote">❝</button>
+              </div>
+            </div>
+            <textarea class="a-input" id="bodyEn" name="bodyEn" maxlength="100000" rows="10">{val('bodyEn', column?.en?.body)}</textarea>
+          </div>
+          <div>
+            <label class="a-label" for="excerptEn">Excerpt (English)</label>
+            <textarea class="a-input" id="excerptEn" name="excerptEn" maxlength="600" rows="2">{val('excerptEn', column?.en?.excerpt)}</textarea>
+          </div>
+          <p class="a-hint">Fill in all three, or leave all three empty (the English site then shows the Urdu, labelled).</p>
+        </div>
+      </details>
+    </section>
+
+    <section class="a-card panel publish">
+      <div>
+        <label class="a-label" for="homeSlot">Show on homepage</label>
+        <select class="a-input" id="homeSlot" name="homeSlot">
+          <option value="" selected={homeSlot === ''}>No</option>
+          {['1', '2', '3'].map((n) => <option value={n} selected={homeSlot === n}>Spot {n}</option>)}
+        </select>
+        <p class="a-hint">Applies when publishing. It replaces whatever is in that spot.</p>
+      </div>
+      <div class="actions">
+        <button class="a-btn" type="submit" name="intent" value="publish" data-submit><Icon name="send" size="sm" /> {column?.status === 'published' ? 'Save (live)' : 'Publish'}</button>
+        <button class="a-btn a-btn--ghost" type="submit" name="intent" value="draft" data-submit><Icon name="file-pen" size="sm" /> {column?.status === 'published' ? 'Save and unpublish' : 'Save as draft'}</button>
+        <a class="a-btn a-btn--ghost" href="/admin/columns">Cancel</a>
+      </div>
+    </section>
+  </form>
+
+  {column && (
+    <div class="danger a-card">
+      <div>
+        <h2 class="panel__title">Remove</h2>
+        <p class="a-hint">{column.status === 'published' ? 'Unpublish takes it off the site but keeps it here as a draft. ' : ''}Delete removes it for good.</p>
+      </div>
+      <div class="actions">
+        {column.status === 'published' && (
+          <form method="POST" action={actions.admin.columnStatus}>
+            <input type="hidden" name="slug" value={column.slug} />
+            <input type="hidden" name="status" value="draft" />
+            <button class="a-btn a-btn--ghost" type="submit"><Icon name="eye-off" size="sm" /> Unpublish</button>
+          </form>
+        )}
+        <form method="POST" action={actions.admin.columnDelete} data-confirm="Delete this column for good? This can't be undone. To take it off the site but keep it, use Unpublish.">
+          <input type="hidden" name="slug" value={column.slug} />
+          <button class="a-btn a-btn--danger" type="submit"><Icon name="trash-2" size="sm" /> Delete</button>
+        </form>
+      </div>
+    </div>
+  )}
+</AdminLayout>
+
+<script>
+  document.querySelectorAll<HTMLFormElement>('form[data-confirm]').forEach((f) =>
+    f.addEventListener('submit', (e) => {
+      if (!confirm(f.dataset.confirm ?? 'Are you sure?')) e.preventDefault();
+    }),
+  );
+
+  const form = document.querySelector<HTMLFormElement>('[data-column-form]');
+  if (form) {
+    // New columnist: show its fields and make them required only when chosen.
+    const newBox = form.querySelector<HTMLElement>('[data-new]')!;
+    const logoInput = form.querySelector<HTMLInputElement>('[data-logo-input]')!;
+    const syncWriter = () => {
+      const isNew = form.querySelector<HTMLInputElement>('[data-writer]:checked')?.value === 'new';
+      newBox.hidden = !isNew;
+      logoInput.required = isNew;
+      form.querySelectorAll<HTMLInputElement>('[data-new-req]').forEach((i) => (i.required = isNew));
+    };
+    form.querySelectorAll('[data-writer]').forEach((r) => r.addEventListener('change', syncWriter));
+    syncWriter();
+
+    logoInput.addEventListener('change', async () => {
+      const f = logoInput.files?.[0];
+      const img = form.querySelector<HTMLImageElement>('[data-logo-img]')!;
+      const info = form.querySelector<HTMLElement>('[data-logo-info]')!;
+      if (!f) return;
+      img.src = URL.createObjectURL(f);
+      img.hidden = false;
+      form.querySelector<HTMLElement>('[data-logo-empty]')!.hidden = true;
+      await img.decode().catch(() => undefined);
+      info.textContent = img.naturalWidth ? `${img.naturalWidth}×${img.naturalHeight}px · ${(f.size / 1024 / 1024).toFixed(1)} MB` : 'Not a readable image';
+    });
+
+    // Formatting buttons: wrap the selection (bold) or prefix its lines (## , > ).
+    form.querySelectorAll<HTMLElement>('[data-tools]').forEach((bar) => {
+      const area = form.querySelector<HTMLTextAreaElement>(`#${bar.dataset.tools}`)!;
+      bar.querySelectorAll<HTMLButtonElement>('[data-md]').forEach((btn) =>
+        btn.addEventListener('click', () => {
+          const { selectionStart: s, selectionEnd: e, value } = area;
+          if (btn.dataset.md === 'bold') {
+            area.setRangeText(`**${value.slice(s, e) || 'متن'}**`, s, e, 'end');
+          } else {
+            // Prefix every line the selection touches (or the cursor's line).
+            const prefix = btn.dataset.md === 'h2' ? '## ' : '> ';
+            const start = value.lastIndexOf('\n', s - 1) + 1;
+            const nl = value.indexOf('\n', e);
+            const end = nl === -1 ? value.length : nl;
+            const out = value
+              .slice(start, end)
+              .split('\n')
+              .map((l) => (l.trim() === '' || l.startsWith(prefix) ? l : prefix + l))
+              .join('\n');
+            area.setRangeText(out, start, end, 'end');
+          }
+          area.focus();
+          area.dispatchEvent(new Event('input'));
+        }),
+      );
+    });
+
+    // Excerpt: follow the opening of the text until it is edited by hand.
+    const body = form.querySelector<HTMLTextAreaElement>('[data-body]')!;
+    const excerpt = form.querySelector<HTMLTextAreaElement>('[data-excerpt]')!;
+    const opening = (text: string) => {
+      const plain = text
+        .replace(/^#+\s*/gm, '')
+        .replace(/^>\s*/gm, '')
+        .replace(/\*\*/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (plain.length <= 220) return plain;
+      const cut = plain.slice(0, 220);
+      const stop = Math.max(cut.lastIndexOf('۔'), cut.lastIndexOf('.'));
+      return stop > 80 ? cut.slice(0, stop + 1) : `${cut.slice(0, cut.lastIndexOf(' '))}…`;
+    };
+    excerpt.addEventListener('input', () => (excerpt.dataset.auto = excerpt.value ? '0' : '1'));
+    body.addEventListener('input', () => {
+      if (excerpt.dataset.auto === '1') excerpt.value = opening(body.value);
+    });
+
+    form.addEventListener('submit', () => form.querySelectorAll<HTMLButtonElement>('[data-submit]').forEach((b) => setTimeout(() => (b.disabled = true))));
+  }
+</script>
+
+<style>
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-block-end: 10px;
+    color: var(--a-ink-2);
+    font-size: var(--ui-a-md);
+    text-decoration: none;
+  }
+  .back:hover {
+    color: var(--ink);
+  }
+  .a-title[dir='rtl'] {
+    font-family: var(--font-naskh);
+    line-height: 1.6;
+  }
+  .form {
+    display: grid;
+    gap: 16px;
+    max-width: 900px;
+  }
+  .panel {
+    padding: 18px 20px 20px;
+  }
+  .panel__title {
+    margin-block-end: 14px;
+    font-size: var(--ui-a-base);
+    font-weight: 700;
+  }
+  .ur {
+    font-family: var(--font-naskh);
+    line-height: 1.9;
+  }
+  .big {
+    font-size: var(--ui-a-lg);
+  }
+  .stack {
+    display: grid;
+    gap: 16px;
+  }
+  .grid2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 16px;
+  }
+  .date {
+    max-width: 220px;
+  }
+  .err {
+    margin-block-start: 5px;
+    font-size: var(--ui-a-sm);
+    color: var(--red);
+  }
+  textarea.a-input {
+    height: auto;
+    resize: vertical;
+  }
+  .writers {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 10px;
+  }
+  .writer {
+    position: relative;
+    display: grid;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 8px;
+    box-shadow: inset 0 0 0 1px var(--a-line);
+    cursor: pointer;
+  }
+  .writer:has(input:checked) {
+    box-shadow: inset 0 0 0 2px var(--ink);
+  }
+  .writer input {
+    position: absolute;
+    inset-block-start: 8px;
+    inset-inline-end: 8px;
+    accent-color: var(--ink);
+  }
+  .writer img {
+    width: 100%;
+    height: 70px;
+    object-fit: contain;
+    background: var(--a-bg);
+  }
+  .writer__plus {
+    display: grid;
+    place-items: center;
+    height: 70px;
+    color: #b2b0aa;
+    background: var(--a-bg);
+  }
+  .writer__name {
+    font-size: var(--ui-a-md);
+  }
+  .newwriter {
+    display: grid;
+    gap: 14px;
+    margin-block-start: 16px;
+    padding-block-start: 16px;
+    border-block-start: 1px solid var(--a-line);
+  }
+  .logo {
+    position: relative;
+    display: grid;
+    gap: 6px;
+    cursor: pointer;
+  }
+  .logo__frame {
+    display: grid;
+    place-items: center;
+    min-height: 90px;
+    padding: 8px;
+    border-radius: 8px;
+    background: var(--a-bg);
+    color: var(--a-ink-2);
+    box-shadow: inset 0 0 0 1px var(--a-line);
+  }
+  .logo:hover .logo__frame,
+  .logo:focus-within .logo__frame {
+    box-shadow: inset 0 0 0 2px var(--ink);
+  }
+  .logo__frame img {
+    max-width: 100%;
+    max-height: 160px;
+  }
+  .logo__frame span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .bodyhead {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .tools {
+    display: flex;
+    gap: 4px;
+    margin-block-end: 6px;
+  }
+  .tool {
+    min-width: 34px;
+    padding-inline: 8px;
+  }
+  .en {
+    margin-block-start: 18px;
+  }
+  .en summary {
+    margin-block-end: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .publish {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .publish select {
+    min-width: 160px;
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+  .danger {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    max-width: 900px;
+    margin-block-start: 16px;
+    padding: 18px 20px;
+  }
+  @media (max-width: 640px) {
+    .grid2 {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
