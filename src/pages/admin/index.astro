@@ -2,11 +2,15 @@
 import AdminLayout from '@/layouts/AdminLayout.astro';
 import Icon from '@/components/Icon.astro';
 import { adminListMembers } from '@/lib/services/team-admin';
+import { adminListEditions } from '@/lib/services/editions-admin';
+import { formatLong } from '@/lib/dates';
 
 const admin = Astro.locals.admin!;
-const members = await adminListMembers();
+const [members, editions] = await Promise.all([adminListMembers(), adminListEditions()]);
 const withPhoto = members.filter((m) => m.photoHash).length;
 const hidden = members.filter((m) => m.hidden).length;
+const latestLive = editions.find((e) => e.status === 'published');
+const drafts = editions.filter((e) => e.status === 'draft').length;
 ---
 
 <AdminLayout title="Dashboard" section="dashboard">
@@ -18,6 +22,16 @@ const hidden = members.filter((m) => m.hidden).length;
   </div>
 
   <div class="tiles">
+    <a class="tile a-card" href="/admin/editions">
+      <span class="tile__icon"><Icon name="newspaper" size="lg" /></span>
+      <span class="tile__body">
+        <span class="tile__title">Editions</span>
+        <span class="tile__meta">
+          {latestLive ? `Live: ${formatLong(latestLive.date)}` : 'None live yet'}{drafts ? ` · ${drafts} draft${drafts === 1 ? '' : 's'} waiting` : ''}
+        </span>
+      </span>
+      <Icon name="arrow-right" size="md" flip={false} />
+    </a>
     <a class="tile a-card" href="/admin/team">
       <span class="tile__icon"><Icon name="users" size="lg" /></span>
       <span class="tile__body">

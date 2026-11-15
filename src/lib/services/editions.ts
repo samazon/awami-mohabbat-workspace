@@ -111,6 +111,21 @@ export async function getEditionByDate(date: string, locale: Locale): Promise<Ed
   return view ?? null;
 }
 
+/** Admin preview: the edition on `date` whatever its status (drafts included), in Urdu. */
+export async function getEditionForAdmin(
+  date: string,
+): Promise<(EditionView & { status: Edition['status']; headlineEn: string | null }) | null> {
+  const rows = await db().select().from(editions).where(eq(editions.date, date)).limit(1);
+  const [view] = await assemble(rows, 'ur');
+  if (!view) return null;
+  const [en] = await db()
+    .select({ headline: editionTranslations.headline })
+    .from(editionTranslations)
+    .where(and(eq(editionTranslations.editionId, view.id), eq(editionTranslations.locale, 'en')))
+    .limit(1);
+  return { ...view, status: rows[0]!.status, headlineEn: en?.headline ?? null };
+}
+
 /** Recent editions strictly before `beforeDate` (exclusive), newest first. */
 export async function getRecentEditions(
   locale: Locale,

@@ -62,7 +62,7 @@ const front = edition.pages[0]!;
         <h3 class="headline t-head" lang={translation.locale}>
           <a class="headline__link" href={viewerHref(locale, edition, 1)} data-viewer-open>{edition.headline}</a>
         </h3>
-        <p class="summary" lang={translation.locale}>{edition.summary}</p>
+        {edition.summary && <p class="summary" lang={translation.locale}>{edition.summary}</p>}
 
         <div class="actions">
           <a class="btn btn--lg" href={viewerHref(locale, edition, 1)} data-viewer-open>

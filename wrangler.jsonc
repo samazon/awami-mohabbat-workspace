@@ -31,6 +31,11 @@
     }
   ],
 
+  // Edition pages uploaded in /admin are resized to their WebP sizes here: the
+  // Worker can't run sharp. Free tier covers ~5,000 transforms a month; one
+  // edition uses 12. `wrangler dev` emulates it locally.
+  "images": { "binding": "IMAGES" },
+
   // "Join us" applications are emailed through Cloudflare Email Routing.
   // Every address in JOIN_NOTIFY_TO must be a verified destination address in
   // Email Routing for awamimohabbat.com, or Cloudflare refuses the send.

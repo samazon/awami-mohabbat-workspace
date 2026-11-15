@@ -63,3 +63,16 @@ export function readImageHeader(bytes: Uint8Array): ImageHeader | null {
   const h = webp(bytes) ?? jpeg(bytes);
   return h && h.width > 0 && h.height > 0 ? h : null;
 }
+
+/**
+ * PNG size from the IHDR chunk. Kept out of readImageHeader on purpose: team
+ * photos must stay JPEG/WebP, but newspaper page scans may be PNG.
+ */
+export function readPngHeader(b: Uint8Array): { type: 'png'; width: number; height: number } | null {
+  const SIG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+  if (b.length < 24 || SIG.some((v, i) => b[i] !== v) || ascii(b, 12, 4) !== 'IHDR') return null;
+  const u32 = (at: number) => ((b[at]! << 24) | (b[at + 1]! << 16) | (b[at + 2]! << 8) | b[at + 3]!) >>> 0;
+  const width = u32(16);
+  const height = u32(20);
+  return width > 0 && height > 0 ? { type: 'png', width, height } : null;
+}

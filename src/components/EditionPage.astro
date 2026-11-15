@@ -40,7 +40,7 @@ const front = edition.pages[0]!;
         '@type': 'PublicationIssue',
         name: `${s.meta.siteNameLatin} — ${edition.date}`,
         datePublished: edition.date,
-        issueNumber: edition.issue,
+        ...(edition.issue > 0 ? { issueNumber: edition.issue } : {}),
         isPartOf: { '@type': 'Periodical', name: s.meta.siteNameLatin, issn: undefined },
         ...(edition.pdfUrl ? { associatedMedia: { '@type': 'MediaObject', contentUrl: new URL(edition.pdfUrl, Astro.url.origin).toString(), encodingFormat: 'application/pdf' } } : {}),
       })}
@@ -71,7 +71,7 @@ const front = edition.pages[0]!;
           </p>
         )}
         <h1 class="headline t-head" lang={edition.translation.locale}>{edition.headline}</h1>
-        <p class="summary" lang={edition.translation.locale}>{edition.summary}</p>
+        {edition.summary && <p class="summary" lang={edition.translation.locale}>{edition.summary}</p>}
         <ShareBar locale={locale} title={edition.headline} />
       </div>
       <div class="lead__actions">

@@ -1,0 +1,109 @@
+---
+/**
+ * /admin/editions: recent editions, drafts first in mind. Upload a new one at
+ * /admin/editions/new; each row opens its preview, where a draft is published.
+ */
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Icon from '@/components/Icon.astro';
+import { formatLong } from '@/lib/dates';
+import { adminListEditions } from '@/lib/services/editions-admin';
+
+const published = Astro.url.searchParams.get('published');
+const deleted = Astro.url.searchParams.get('deleted');
+const editions = await adminListEditions();
+const drafts = editions.filter((e) => e.status === 'draft').length;
+---
+
+<AdminLayout title="Editions" section="editions">
+  <div class="a-page-head">
+    <div>
+      <h1 class="a-title">Editions</h1>
+      <p class="a-sub">The daily paper. Upload the 4 pages and the PDF, check the preview, then publish.</p>
+    </div>
+    <a class="a-btn" href="/admin/editions/new"><Icon name="plus" size="sm" /> New edition</a>
+  </div>
+
+  {published && <p class="a-alert a-alert--ok" role="status"><Icon name="check" size="sm" /> Published. It is live on the homepage now.</p>}
+  {deleted && <p class="a-alert a-alert--ok" role="status"><Icon name="check" size="sm" /> Draft deleted.</p>}
+  {drafts > 0 && <p class="a-alert" role="status"><Icon name="file-pen" size="sm" /> {drafts === 1 ? '1 draft is' : `${drafts} drafts are`} waiting to be published.</p>}
+
+  <section class="a-card">
+    {editions.length === 0 ? (
+      <p class="empty">No editions yet. <a href="/admin/editions/new">Upload the first one.</a></p>
+    ) : (
+      <ol class="rows">
+        {editions.map((e) => (
+          <li class="row">
+            <a class="row__main" href={`/admin/editions/${e.date}`}>
+              <span class="row__date">
+                {formatLong(e.date)}
+                {e.status === 'draft' ? <span class="a-badge a-badge--gold">Draft</span> : <span class="a-badge">Live</span>}
+                {!e.hasPdf && <span class="a-badge">No PDF</span>}
+              </span>
+              {e.headlineUr && <span class="row__ur" lang="ur" dir="rtl">{e.headlineUr}</span>}
+              {e.issue > 0 && <span class="row__meta">Vol {e.volume} · Issue {e.issue}</span>}
+            </a>
+            <a class="a-btn a-btn--ghost" href={`/admin/editions/${e.date}`}>
+              {e.status === 'draft' ? <><Icon name="eye" size="sm" /> Review</> : <><Icon name="eye" size="sm" /> View</>}
+            </a>
+          </li>
+        ))}
+      </ol>
+    )}
+  </section>
+</AdminLayout>
+
+<style>
+  .empty {
+    padding: 16px 18px;
+    color: var(--muted);
+  }
+  .rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 18px;
+    border-block-end: 1px solid var(--a-line);
+  }
+  .row:last-child {
+    border-block-end: 0;
+  }
+  .row__main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .row__main:hover .row__date {
+    color: var(--red);
+  }
+  .row__date {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+  }
+  .row__ur {
+    align-self: flex-start;
+    max-width: 100%;
+    overflow: hidden;
+    font-family: var(--font-naskh);
+    font-size: var(--ui-a-base);
+    line-height: 1.7;
+    color: var(--a-ink-2);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .row__meta {
+    font-size: var(--ui-a-sm);
+    color: var(--muted);
+  }
+</style>

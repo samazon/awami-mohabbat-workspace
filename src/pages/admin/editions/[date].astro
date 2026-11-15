@@ -1,0 +1,162 @@
+---
+/**
+ * /admin/editions/<YYYY-MM-DD>: preview one edition, draft or live. A draft
+ * is published (or deleted) from here; both go through admin actions.
+ */
+import { actions } from 'astro:actions';
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Icon from '@/components/Icon.astro';
+import { formatFileSize, formatLong } from '@/lib/dates';
+import { getEditionForAdmin } from '@/lib/services/editions';
+
+const date = Astro.params.date ?? '';
+if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return new Response('Not found', { status: 404 });
+
+const publishResult = Astro.getActionResult(actions.admin.editionPublish);
+if (publishResult && !publishResult.error) return Astro.redirect(`/admin/editions?published=${date}`);
+const deleteResult = Astro.getActionResult(actions.admin.editionDelete);
+if (deleteResult && !deleteResult.error) return Astro.redirect(`/admin/editions?deleted=${date}`);
+const error = publishResult?.error?.message ?? deleteResult?.error?.message ?? null;
+
+const edition = await getEditionForAdmin(date);
+if (!edition) return new Response('Not found', { status: 404 });
+const isDraft = edition.status === 'draft';
+const saved = Astro.url.searchParams.has('saved');
+---
+
+<AdminLayout title={formatLong(date)} section="editions">
+  <a class="back" href="/admin/editions"><Icon name="arrow-left" size="sm" flip={false} /> Editions</a>
+  <div class="a-page-head">
+    <div>
+      <h1 class="a-title">
+        {formatLong(date)}
+        {isDraft ? <span class="a-badge a-badge--gold">Draft</span> : <span class="a-badge">Live</span>}
+      </h1>
+      {edition.issue > 0 && <p class="a-sub">Vol {edition.volume} · Issue {edition.issue}</p>}
+    </div>
+    {!isDraft && <a class="a-btn a-btn--ghost" href={`/edition/${date}`} target="_blank" rel="noopener">View on site <Icon name="external-link" size="sm" /></a>}
+  </div>
+
+  {saved && isDraft && <p class="a-alert a-alert--ok" role="status"><Icon name="check" size="sm" /> Uploaded as a draft. Nothing is public yet. Check the pages and text, then publish.</p>}
+  {error && <p class="a-alert a-alert--bad" role="alert"><Icon name="triangle-alert" size="sm" /> {error}</p>}
+
+  <section class="a-card panel">
+    <h2 class="panel__title">Headline</h2>
+    <p class="ur-headline" lang="ur" dir="rtl">{edition.headline}</p>
+    {edition.headlineEn && <p class="en-headline">{edition.headlineEn}</p>}
+  </section>
+
+  <section class="a-card panel">
+    <h2 class="panel__title">Pages</h2>
+    <div class="pages">
+      {edition.pages.map((p) => (
+        <a class="page" href={p.zoom} target="_blank" rel="noopener">
+          <img src={p.view} alt={`Page ${p.n}`} width={p.width} height={p.height} loading="lazy" />
+          <span>Page {p.n} · {p.width}px</span>
+        </a>
+      ))}
+    </div>
+    {edition.pdfUrl ? (
+      <a class="a-btn a-btn--ghost" href={edition.pdfUrl} target="_blank" rel="noopener">
+        <Icon name="file-text" size="sm" /> Open PDF{edition.pdfBytes ? ` (${formatFileSize(edition.pdfBytes)})` : ''}
+      </a>
+    ) : (
+      <p class="a-hint">No PDF.</p>
+    )}
+  </section>
+
+  {isDraft && (
+    <div class="decide">
+      <form method="POST" action={actions.admin.editionPublish}>
+        <input type="hidden" name="date" value={date} />
+        <button class="a-btn" type="submit"><Icon name="send" size="sm" /> Publish</button>
+      </form>
+      <a class="a-btn a-btn--ghost" href={`/admin/editions/new`}><Icon name="rotate-ccw" size="sm" /> Upload again</a>
+      <form method="POST" action={actions.admin.editionDelete} data-confirm="Delete this draft? The uploaded files are not shown anywhere afterwards.">
+        <input type="hidden" name="date" value={date} />
+        <button class="a-btn a-btn--danger" type="submit"><Icon name="trash-2" size="sm" /> Delete draft</button>
+      </form>
+    </div>
+  )}
+</AdminLayout>
+
+<script>
+  document.querySelectorAll<HTMLFormElement>('form[data-confirm]').forEach((f) =>
+    f.addEventListener('submit', (e) => {
+      if (!confirm(f.dataset.confirm ?? 'Are you sure?')) e.preventDefault();
+    }),
+  );
+</script>
+
+<style>
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-block-end: 10px;
+    color: var(--a-ink-2);
+    font-size: var(--ui-a-md);
+    text-decoration: none;
+  }
+  .back:hover {
+    color: var(--ink);
+  }
+  .a-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel {
+    max-width: 960px;
+    margin-block-end: 16px;
+    padding: 18px 20px 20px;
+  }
+  .panel__title {
+    margin-block-end: 12px;
+    font-size: var(--ui-a-base);
+    font-weight: 700;
+  }
+  .ur-headline {
+    font-family: var(--font-naskh);
+    font-size: var(--ui-a-xl);
+    font-weight: 700;
+    line-height: 1.8;
+  }
+  .en-headline {
+    margin-block-start: 6px;
+    font-size: var(--ui-a-lg);
+    font-weight: 600;
+    color: var(--a-ink-2);
+  }
+  .pages {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-block-end: 14px;
+  }
+  .page {
+    display: grid;
+    gap: 4px;
+    font-size: var(--ui-a-sm);
+    color: var(--muted);
+    text-decoration: none;
+  }
+  .page img {
+    width: 100%;
+    height: auto;
+    border-radius: 6px;
+    box-shadow: 0 0 0 1px var(--a-line);
+  }
+  .decide {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+  @media (max-width: 640px) {
+    .pages {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+</style>

@@ -1,0 +1,358 @@
+---
+/**
+ * /admin/editions/new: upload one day's paper (4 page images + PDF) and its
+ * headline. Saves a DRAFT, then redirects to its preview to publish.
+ *
+ * A plain multipart POST to this page rather than an Astro action: actions cap
+ * request bodies at 1 MB, and the limit is global (it also guards the public
+ * join form). This path is under /admin, so the middleware has already checked
+ * Cloudflare Access; Astro's origin check covers CSRF.
+ */
+import { z } from 'zod';
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Icon from '@/components/Icon.astro';
+import { formatFileSize, formatLong, todayIso } from '@/lib/dates';
+import { PAGE_MAX_BYTES, PDF_MAX_BYTES, REQUEST_MAX_BYTES } from '@/lib/editions/upload';
+import { audit } from '@/lib/services/admin';
+import { EditionUploadError, adminEditionStatus, saveEditionDraft } from '@/lib/services/editions-admin';
+import { PAGE_NUMBERS } from '@/lib/media';
+
+const admin = Astro.locals.admin!;
+
+const Form = z.object({
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Pick a date.')
+    .refine((d) => !Number.isNaN(Date.parse(`${d}T00:00:00Z`)), 'Pick a real date.'),
+  headlineUr: z.string().trim().min(1, 'The Urdu headline is required.').max(300),
+  headlineEn: z.string().trim().min(1, 'The English headline is required.').max(300),
+  replacePublished: z.literal('on').optional(),
+});
+
+let error: string | null = null;
+let fieldErrors: Record<string, string> = {};
+let typed: Record<string, string> = {};
+
+if (Astro.request.method === 'POST') {
+  const length = Number(Astro.request.headers.get('content-length') ?? NaN);
+  if (!Number.isFinite(length) || length > REQUEST_MAX_BYTES) {
+    return new Response(`Upload too large: the limit is ${formatFileSize(REQUEST_MAX_BYTES)} in total.`, { status: 413 });
+  }
+  const form = await Astro.request.formData();
+  for (const [k, v] of form) if (typeof v === 'string') typed[k] = v;
+
+  const parsed = Form.safeParse(Object.fromEntries([...form].filter(([, v]) => typeof v === 'string')));
+  if (!parsed.success) {
+    for (const i of parsed.error.issues) fieldErrors[String(i.path[0] ?? 'form')] ??= i.message;
+    error = 'Some fields need attention. Choose the files again before saving.';
+  } else {
+    const f = parsed.data;
+    const pages = PAGE_NUMBERS.map((n) => form.get(`p${n}`)).filter((v): v is File => v instanceof File && v.size > 0);
+    const pdf = form.get('pdf');
+    try {
+      await saveEditionDraft({
+        date: f.date,
+        pages,
+        pdf: pdf instanceof File ? pdf : null,
+        headlineUr: f.headlineUr,
+        headlineEn: f.headlineEn,
+        replacePublished: f.replacePublished === 'on',
+      });
+      await audit(admin.id, 'edition.save_draft', `editions:${f.date}`);
+      return Astro.redirect(`/admin/editions/${f.date}?saved=1`);
+    } catch (err) {
+      if (!(err instanceof EditionUploadError)) throw err;
+      error = `${err.message} Choose the files again before saving.`;
+    }
+  }
+}
+
+const date = typed.date ?? todayIso();
+const existing = Astro.request.method === 'GET' ? await adminEditionStatus(date) : null;
+const val = (k: string) => typed[k] ?? '';
+---
+
+<AdminLayout title="New edition" section="editions">
+  <a class="back" href="/admin/editions"><Icon name="arrow-left" size="sm" flip={false} /> Editions</a>
+  <div class="a-page-head">
+    <h1 class="a-title">New edition</h1>
+  </div>
+
+  {error && <p class="a-alert a-alert--bad" role="alert"><Icon name="triangle-alert" size="sm" /> {error}</p>}
+  {existing && (
+    <p class="a-alert" role="status">
+      <Icon name="info" size="sm" />
+      {formatLong(date)} already has {existing === 'draft' ? 'a draft' : 'a live edition'}.
+      <a href={`/admin/editions/${date}`}>Open it</a>, or pick another date below.
+    </p>
+  )}
+
+  <form class="form" method="POST" enctype="multipart/form-data" data-edition-form>
+    <section class="a-card panel">
+      <h2 class="panel__title">Date</h2>
+      <div class="date">
+        <label class="a-label" for="date">Edition date</label>
+        <input class="a-input" type="date" id="date" name="date" required value={date} />
+        {fieldErrors.date && <p class="err">{fieldErrors.date}</p>}
+      </div>
+    </section>
+
+    <section class="a-card panel">
+      <h2 class="panel__title">Pages and PDF</h2>
+      <div class="slots">
+        {PAGE_NUMBERS.map((n) => (
+          <label class="slot" data-slot data-max={PAGE_MAX_BYTES}>
+            <span class="slot__frame">
+              <img class="slot__img" alt="" data-img hidden />
+              <span class="slot__empty" data-empty><Icon name="image-plus" size="lg" /></span>
+            </span>
+            <span class="slot__label">Page {n}</span>
+            <span class="slot__info" data-info>JPEG or PNG</span>
+            <input class="slot__input" type="file" name={`p${n}`} accept="image/jpeg,image/png" required data-file />
+          </label>
+        ))}
+      </div>
+      <label class="pdf" data-pdf data-max={PDF_MAX_BYTES}>
+        <Icon name="file-text" size="md" />
+        <span class="pdf__text"><strong>PDF</strong> <span data-info>Choose the edition PDF (required)</span></span>
+        <input type="file" name="pdf" accept="application/pdf" required data-file />
+      </label>
+      <p class="a-hint">
+        JPEG or PNG pages up to {formatFileSize(PAGE_MAX_BYTES)} each, and a PDF up to {formatFileSize(PDF_MAX_BYTES)}.
+        Bigger images stay sharper when readers zoom in.
+      </p>
+    </section>
+
+    <section class="a-card panel">
+      <h2 class="panel__title">Front-page headline</h2>
+      <div class="stack">
+        <div>
+          <label class="a-label" for="headlineUr">Headline (Urdu)</label>
+          <input class="a-input ur" id="headlineUr" name="headlineUr" required maxlength="300" lang="ur" dir="rtl" value={val('headlineUr')} />
+          {fieldErrors.headlineUr && <p class="err">{fieldErrors.headlineUr}</p>}
+        </div>
+        <div>
+          <label class="a-label" for="headlineEn">Headline (English)</label>
+          <input class="a-input" id="headlineEn" name="headlineEn" required maxlength="300" value={val('headlineEn')} />
+          {fieldErrors.headlineEn && <p class="err">{fieldErrors.headlineEn}</p>}
+        </div>
+      </div>
+    </section>
+
+    {(existing === 'published' || typed.replacePublished === 'on' || error?.includes('already live')) && (
+      <label class="check a-card panel">
+        <input type="checkbox" name="replacePublished" checked={typed.replacePublished === 'on'} />
+        <span><strong>Replace the live edition</strong> for this date. It is taken off the site until you publish this one.</span>
+      </label>
+    )}
+
+    <div class="actions">
+      <button class="a-btn" type="submit" data-save><Icon name="upload" size="sm" /> Upload and preview</button>
+      <a class="a-btn a-btn--ghost" href="/admin/editions">Cancel</a>
+      <span class="a-hint" data-busy hidden>Uploading… this can take a minute on a slow connection. Keep this page open.</span>
+    </div>
+  </form>
+</AdminLayout>
+
+<script>
+  /**
+   * Convenience only: show each file's preview, width and size as it is chosen,
+   * so a too-small or too-large file is caught before a long upload. The server
+   * checks every file again by its bytes.
+   */
+  const mb = (b: number) => `${(b / 1024 / 1024).toFixed(1)} MB`;
+  const form = document.querySelector<HTMLFormElement>('[data-edition-form]');
+
+  async function checkSlot(slot: HTMLElement) {
+    const input = slot.querySelector<HTMLInputElement>('[data-file]')!;
+    const info = slot.querySelector<HTMLElement>('[data-info]')!;
+    const img = slot.querySelector<HTMLImageElement>('[data-img]');
+    const empty = slot.querySelector<HTMLElement>('[data-empty]');
+    const file = input.files?.[0];
+    slot.classList.remove('is-bad', 'is-warn');
+    input.setCustomValidity('');
+    if (!file) return;
+    const max = Number(slot.dataset.max);
+    if (file.size > max) {
+      info.textContent = `${mb(file.size)}: too large, limit ${mb(max)}`;
+      input.setCustomValidity(info.textContent);
+      slot.classList.add('is-bad');
+      return;
+    }
+    if (!img) {
+      info.textContent = `${file.name} · ${mb(file.size)}`;
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    img.src = url;
+    img.hidden = false;
+    if (empty) empty.hidden = true;
+    await img.decode().catch(() => undefined);
+    const w = img.naturalWidth;
+    if (!w) {
+      info.textContent = 'Not a readable image';
+      input.setCustomValidity(info.textContent);
+      slot.classList.add('is-bad');
+    } else {
+      info.textContent = `${w}px · ${mb(file.size)}`;
+    }
+  }
+
+  const slots = [...(form?.querySelectorAll<HTMLElement>('[data-slot], [data-pdf]') ?? [])];
+  for (const slot of slots) slot.querySelector('[data-file]')?.addEventListener('change', () => void checkSlot(slot));
+
+  form?.addEventListener('submit', () => {
+    const btn = form.querySelector<HTMLButtonElement>('[data-save]')!;
+    btn.disabled = true;
+    form.querySelector<HTMLElement>('[data-busy]')!.hidden = false;
+  });
+</script>
+
+<style>
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-block-end: 10px;
+    color: var(--a-ink-2);
+    font-size: var(--ui-a-md);
+    text-decoration: none;
+  }
+  .back:hover {
+    color: var(--ink);
+  }
+  .form {
+    display: grid;
+    gap: 16px;
+    max-width: 860px;
+  }
+  .panel {
+    padding: 18px 20px 20px;
+  }
+  .panel__title {
+    margin-block-end: 14px;
+    font-size: var(--ui-a-base);
+    font-weight: 700;
+  }
+  .date {
+    max-width: 280px;
+  }
+  .stack {
+    display: grid;
+    gap: 14px;
+  }
+  .err {
+    margin-block-start: 5px;
+    font-size: var(--ui-a-sm);
+    color: var(--red);
+  }
+  .ur {
+    font-family: var(--font-naskh);
+    line-height: 1.8;
+  }
+  .slots {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-block-end: 14px;
+  }
+  .slot {
+    position: relative;
+    display: grid;
+    gap: 4px;
+    cursor: pointer;
+  }
+  .slot__frame {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    border-radius: 8px;
+    background: var(--a-bg);
+    box-shadow: inset 0 0 0 1px var(--a-line);
+  }
+  .slot:hover .slot__frame,
+  .slot:focus-within .slot__frame {
+    box-shadow: inset 0 0 0 2px var(--ink);
+  }
+  .slot.is-bad .slot__frame {
+    box-shadow: inset 0 0 0 2px var(--red);
+  }
+  .slot__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+  }
+  .slot__empty {
+    color: #b2b0aa;
+  }
+  .slot__label {
+    font-weight: 600;
+  }
+  .slot__info {
+    font-size: var(--ui-a-sm);
+    color: var(--muted);
+  }
+  .slot.is-bad .slot__info {
+    color: var(--red);
+  }
+  .slot__input,
+  .pdf input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .pdf {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-block-end: 12px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: var(--a-bg);
+    box-shadow: inset 0 0 0 1px var(--a-line);
+    cursor: pointer;
+  }
+  .pdf:hover,
+  .pdf:focus-within {
+    box-shadow: inset 0 0 0 2px var(--ink);
+  }
+  .pdf.is-bad {
+    box-shadow: inset 0 0 0 2px var(--red);
+  }
+  .pdf__text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .pdf__text span {
+    color: var(--a-ink-2);
+  }
+  .check {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    color: var(--a-ink-2);
+    cursor: pointer;
+  }
+  .check input {
+    margin-block-start: 3px;
+    accent-color: var(--ink);
+  }
+  .check strong {
+    color: var(--ink);
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+  @media (max-width: 640px) {
+    .slots {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+</style>

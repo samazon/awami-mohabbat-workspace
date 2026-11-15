@@ -9,6 +9,7 @@ import { PhotoError, adminDeleteMember, adminMoveMember, adminSaveBusinessCard, 
 import { TEAM_GROUPS } from '@/lib/db/schema';
 import type { ActionAPIContext } from 'astro:actions';
 import { JOIN_LIMITS, PHONE_CHARS } from '@/lib/join-rules';
+import { adminDeleteDraft, adminPublishEdition } from '@/lib/services/editions-admin';
 
 /**
  * Typed RPC for writes. `accept: 'form'` means the form also works with
@@ -31,6 +32,10 @@ const requireAdmin = (ctx: ActionAPIContext) => {
   return admin;
 };
 const memberId = z.coerce.number().int().positive();
+const editionDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date.')
+  .refine((d) => !Number.isNaN(Date.parse(`${d}T00:00:00Z`)), 'Invalid date.');
 
 export const server = {
   admin: {
@@ -151,6 +156,32 @@ export const server = {
         const moved = await adminMoveMember(id, dir);
         if (moved) await audit(admin.id, 'team.move', `team_members:${id}`);
         return { moved };
+      },
+    }),
+    // Uploading an edition is a plain POST to /admin/editions/new, not an action: actions cap
+    // bodies at 1 MB, and raising that globally would also open the public join form.
+    editionPublish: defineAction({
+      accept: 'form',
+      input: z.object({ date: editionDate }),
+      handler: async ({ date }, ctx) => {
+        const admin = requireAdmin(ctx);
+        if (!(await adminPublishEdition(date))) {
+          throw new ActionError({ code: 'CONFLICT', message: 'There is no draft for that date. It may already be published.' });
+        }
+        await audit(admin.id, 'edition.publish', `editions:${date}`);
+        return { date };
+      },
+    }),
+    editionDelete: defineAction({
+      accept: 'form',
+      input: z.object({ date: editionDate }),
+      handler: async ({ date }, ctx) => {
+        const admin = requireAdmin(ctx);
+        if (!(await adminDeleteDraft(date))) {
+          throw new ActionError({ code: 'CONFLICT', message: 'Only drafts can be deleted here, and there is no draft for that date.' });
+        }
+        await audit(admin.id, 'edition.delete_draft', `editions:${date}`);
+        return { date };
       },
     }),
   },

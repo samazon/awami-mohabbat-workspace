@@ -24,17 +24,9 @@
 import { readFile } from 'node:fs/promises';
 import { basename, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import {
-  adSlots,
-  editionPages,
-  editionTranslations,
-  editions,
-  emergencyContacts,
-  siteConfig,
-} from '../src/lib/db/schema';
-import { isoToDate } from '../src/lib/dates';
+import { adSlots, emergencyContacts, siteConfig } from '../src/lib/db/schema';
+import { writeEdition } from '../src/lib/editions/data';
 import { PAGE_COUNT, assertIsoDate, contentTypeFor, editionPageKey, editionPdfKey } from '../src/lib/media';
 import { localDb, remoteCreds, remoteDb, type SeedDb, type Target } from './d1';
 import { contentHash, derivePage, kb } from './ingest';
@@ -52,12 +44,13 @@ const Args = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD'),
   pages: z.array(z.string().min(1)).length(PAGE_COUNT, `exactly ${PAGE_COUNT} page images are required (rule 04)`),
   pdf: z.string().min(1).optional(),
-  volume: z.coerce.number().int().positive(),
-  issue: z.coerce.number().int().positive(),
+  // Optional: 0 means "not given" (see src/lib/editions/data.ts).
+  volume: z.coerce.number().int().min(0).default(0),
+  issue: z.coerce.number().int().min(0).default(0),
   headlineUr: z.string().trim().min(1).max(300),
-  summaryUr: z.string().trim().min(1).max(1200),
+  summaryUr: z.string().trim().max(1200).default(''),
   headlineEn: z.string().trim().min(1).max(300).optional(),
-  summaryEn: z.string().trim().min(1).max(1200).optional(),
+  summaryEn: z.string().trim().max(1200).default(''),
   mtEn: z.boolean().default(false),
   static: z.boolean().default(false),
   /** Upload the media objects only; leave D1 alone (rows already mirrored another way). */
@@ -110,10 +103,6 @@ function readArgs() {
     for (const issue of parsed.error.issues) console.error(`  --${issue.path.join('.')}: ${issue.message}`);
     process.exit(2);
   }
-  if ((parsed.data.headlineEn == null) !== (parsed.data.summaryEn == null)) {
-    console.error('Provide both --headline-en and --summary-en, or neither.');
-    process.exit(2);
-  }
   return parsed.data;
 }
 
@@ -162,7 +151,7 @@ async function main() {
 
   // ---- derive ----
   const uploads: Upload[] = [];
-  const pageRows: (typeof editionPages.$inferInsert)[] = [];
+  const pageRows: { hash: string; width: number; height: number; origBytes: number }[] = [];
   let totalDerived = 0;
 
   for (let i = 0; i < PAGE_COUNT; i++) {
@@ -177,7 +166,7 @@ async function main() {
       uploads.push({ key: editionPageKey(date, n, v.variant, d.hash), contentType: 'image/webp', source: { buffer: v.buffer } });
       totalDerived += v.buffer.byteLength;
     }
-    pageRows.push({ editionId: 0, pageNumber: n, hash: d.hash, width: d.width, height: d.height, origBytes: d.origBytes });
+    pageRows.push({ hash: d.hash, width: d.width, height: d.height, origBytes: d.origBytes });
 
     const sizes = d.variants.map((v) => `${v.variant} ${v.width}w ${kb(v.buffer.byteLength)}`).join(' · ');
     console.log(`  page ${n}  ${d.width}×${d.height} ${kb(d.origBytes)}  →  ${sizes}`);
@@ -237,42 +226,21 @@ async function main() {
     await db.insert(siteConfig).values(cfg).onConflictDoUpdate({ target: siteConfig.id, set: cfg });
   }
 
-  // Replace any existing edition for this date (cascades to pages + translations).
-  await db.delete(editions).where(eq(editions.date, date));
-  const [inserted] = await db
-    .insert(editions)
-    .values({
+  // Replaces any edition on this date and keeps the masthead's Vol/Issue in step (shared with /admin).
+  const editionId = await writeEdition(
+    db,
+    {
       date,
-      // Retired (not shown anywhere); the column is NOT NULL, so store empty.
-      hijriDate: '',
       volume: args.volume,
       issue: args.issue,
-      pdfHash,
-      pdfBytes,
+      pdf: pdfHash && pdfBytes ? { hash: pdfHash, bytes: pdfBytes } : null,
+      pages: pageRows,
+      ur: { headline: args.headlineUr, summary: args.summaryUr },
+      en: args.headlineEn ? { headline: args.headlineEn, summary: args.summaryEn, machineTranslated: args.mtEn } : null,
       status: 'published',
-      publishedAt: isoToDate(date).getTime(),
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning({ id: editions.id });
-  const editionId = inserted!.id;
-
-  for (const p of pageRows) await db.insert(editionPages).values({ ...p, editionId });
-
-  await db.insert(editionTranslations).values({
-    editionId, locale: 'ur', headline: args.headlineUr, summary: args.summaryUr, isMachineTranslated: false, updatedAt: now,
-  });
-  if (args.headlineEn && args.summaryEn) {
-    await db.insert(editionTranslations).values({
-      editionId, locale: 'en', headline: args.headlineEn, summary: args.summaryEn, isMachineTranslated: args.mtEn, updatedAt: now,
-    });
-  }
-
-  // Keep the masthead's Vol/Issue in step with the newest edition.
-  await db
-    .update(siteConfig)
-    .set({ currentVolume: args.volume, currentIssue: args.issue, updatedAt: now })
-    .where(eq(siteConfig.id, 1));
+    },
+    now,
+  );
 
   console.log(`\n✓ Edition ${date} published (id ${editionId}).\n`);
 }
