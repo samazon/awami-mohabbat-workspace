@@ -1,3 +1,4 @@
+import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 import {
   deleteColumn,
@@ -11,6 +12,7 @@ import {
   uniqueColumnistSlug,
 } from '../src/lib/columns/admin';
 import { ArticleRuleError } from '../src/lib/columns/rules';
+import { BANNER_MAX_BYTES, BannerError, checkBanner } from '../src/lib/columns/banner';
 import { setHomepageSlot, upsertColumn, upsertColumnist } from '../src/lib/columns/write';
 import { testDb } from './helpers/db';
 
@@ -110,5 +112,20 @@ describe('status and delete', () => {
     expect(await setColumnistActive(db, 'iqbal-khokhar', false)).toBe(true);
     expect((await listColumnistsForAdmin(db))[0]).toMatchObject({ slug: 'iqbal-khokhar', active: false, columnCount: 2, banner });
     expect(await setColumnistActive(db, 'nobody', true)).toBe(false);
+  });
+});
+
+describe('checkBanner', () => {
+  const img = (w: number, h: number) => sharp({ create: { width: w, height: h, channels: 3, background: '#335' } });
+  it('accepts JPEG and PNG logos, reading the size from the bytes', async () => {
+    expect(checkBanner(await img(1200, 300).jpeg().toBuffer())).toEqual({ ext: 'jpg', contentType: 'image/jpeg', width: 1200, height: 300 });
+    expect(checkBanner(await img(900, 250).png().toBuffer())).toEqual({ ext: 'png', contentType: 'image/png', width: 900, height: 250 });
+  });
+  it('refuses WebP, non-images, empty and oversized files', async () => {
+    const webp = await img(600, 200).webp().toBuffer();
+    expect(() => checkBanner(webp)).toThrow(BannerError);
+    expect(() => checkBanner(new TextEncoder().encode('<svg onload=alert(1)>'))).toThrow(BannerError);
+    expect(() => checkBanner(new Uint8Array(0))).toThrow(BannerError);
+    expect(() => checkBanner(new Uint8Array(BANNER_MAX_BYTES + 1))).toThrow(/10 MB|limit/);
   });
 });
