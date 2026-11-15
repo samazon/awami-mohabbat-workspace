@@ -1,7 +1,7 @@
 import { and, asc, eq, ne } from 'drizzle-orm';
 import type { z } from 'zod';
 import { articleTranslations, articles, columnists, homepageColumns } from '../db/schema';
-import { ArticleRuleError, ColumnInput, ColumnistInput, Slot, assertArticleInvariants } from './rules';
+import { ArticleRuleError, ColumnInput, ColumnistInput, Slot, SlugTakenError, assertArticleInvariants } from './rules';
 import type { AnyDb } from './types';
 
 /**
@@ -10,7 +10,17 @@ import type { AnyDb } from './types';
  * every statement.
  */
 
-export async function upsertColumnist(db: AnyDb, raw: z.input<typeof ColumnistInput>, now = Date.now()): Promise<number> {
+/** With `createOnly`, never overwrite: a taken slug throws SlugTakenError (the admin retries with the next one). */
+export interface WriteOptions {
+  createOnly?: boolean;
+}
+
+export async function upsertColumnist(
+  db: AnyDb,
+  raw: z.input<typeof ColumnistInput>,
+  now = Date.now(),
+  { createOnly = false }: WriteOptions = {},
+): Promise<number> {
   const c = ColumnistInput.parse(raw);
   const values = {
     nameUr: c.nameUr,
@@ -23,6 +33,11 @@ export async function upsertColumnist(db: AnyDb, raw: z.input<typeof ColumnistIn
     active: c.active,
     updatedAt: now,
   };
+  if (createOnly) {
+    const [made] = await db.insert(columnists).values({ slug: c.slug, ...values, createdAt: now }).onConflictDoNothing().returning({ id: columnists.id });
+    if (!made) throw new SlugTakenError(`The columnist address "${c.slug}" was just taken.`);
+    return made.id;
+  }
   const [row] = await db
     .insert(columnists)
     .values({ slug: c.slug, ...values, createdAt: now })
@@ -31,7 +46,12 @@ export async function upsertColumnist(db: AnyDb, raw: z.input<typeof ColumnistIn
   return row!.id;
 }
 
-export async function upsertColumn(db: AnyDb, raw: z.input<typeof ColumnInput>, now = Date.now()): Promise<number> {
+export async function upsertColumn(
+  db: AnyDb,
+  raw: z.input<typeof ColumnInput>,
+  now = Date.now(),
+  { createOnly = false }: WriteOptions = {},
+): Promise<number> {
   const c = ColumnInput.parse(raw);
 
   const [writer] = await db.select({ id: columnists.id }).from(columnists).where(eq(columnists.slug, c.columnist)).limit(1);
@@ -48,12 +68,19 @@ export async function upsertColumn(db: AnyDb, raw: z.input<typeof ColumnInput>, 
   assertArticleInvariants({ category: 'column', columnistId: writer.id, translations: [] });
 
   const values = { category: 'column' as const, columnistId: writer.id, publishedDate: c.publishedDate, status: c.status, updatedAt: now };
-  const [row] = await db
-    .insert(articles)
-    .values({ slug: c.slug, ...values, createdAt: now })
-    .onConflictDoUpdate({ target: articles.slug, set: values })
-    .returning({ id: articles.id });
-  const id = row!.id;
+  let id: number;
+  if (createOnly) {
+    const [made] = await db.insert(articles).values({ slug: c.slug, ...values, createdAt: now }).onConflictDoNothing().returning({ id: articles.id });
+    if (!made) throw new SlugTakenError(`The column address "${c.slug}" was just taken.`);
+    id = made.id;
+  } else {
+    const [row] = await db
+      .insert(articles)
+      .values({ slug: c.slug, ...values, createdAt: now })
+      .onConflictDoUpdate({ target: articles.slug, set: values })
+      .returning({ id: articles.id });
+    id = row!.id;
+  }
 
   // The file is the source of truth: a locale it no longer has is removed.
   for (const [locale, tr] of [['ur', c.ur], ['en', c.en]] as const) {

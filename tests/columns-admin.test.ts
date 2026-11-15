@@ -11,7 +11,8 @@ import {
   uniqueColumnSlug,
   uniqueColumnistSlug,
 } from '../src/lib/columns/admin';
-import { ArticleRuleError } from '../src/lib/columns/rules';
+import { ArticleRuleError, SlugTakenError } from '../src/lib/columns/rules';
+import { ColumnForm, saveColumn } from '../src/lib/columns/save';
 import { BANNER_MAX_BYTES, BannerError, checkBanner } from '../src/lib/columns/banner';
 import { setHomepageSlot, upsertColumn, upsertColumnist } from '../src/lib/columns/write';
 import { testDb } from './helpers/db';
@@ -127,5 +128,68 @@ describe('checkBanner', () => {
     expect(() => checkBanner(new TextEncoder().encode('<svg onload=alert(1)>'))).toThrow(BannerError);
     expect(() => checkBanner(new Uint8Array(0))).toThrow(BannerError);
     expect(() => checkBanner(new Uint8Array(BANNER_MAX_BYTES + 1))).toThrow(/10 MB|limit/);
+  });
+});
+
+describe('saveColumn (the form save)', () => {
+  const logo = async () => ({ hash: 'c1c2c3c4c5c6c7c8', width: 1200, height: 300 });
+  const form = (over: Partial<Record<string, string>> = {}) =>
+    ColumnForm.parse({
+      columnist: 'new',
+      newNameUr: 'علی',
+      newNameEn: 'Ali Raza',
+      newColumnUr: 'آئینہ',
+      titleUr: 'پہلا',
+      excerptUr: 'خلاصہ',
+      bodyUr: 'متن',
+      date: '2026-11-15',
+      intent: 'publish',
+      ...over,
+    });
+
+  it('creates a new writer and the column, and puts it in the chosen spot', async () => {
+    const { db } = testDb();
+    const res = await saveColumn(db, form({ homeSlot: '1' }), logo);
+    expect(res).toEqual({ slug: '2026-11-15-ali-raza', columnistSlug: 'ali-raza', createdColumnist: true });
+    expect((await listColumnsForAdmin(db))[0]).toMatchObject({ slug: '2026-11-15-ali-raza', status: 'published', homeSlot: 1 });
+  });
+
+  it('keeps the slug on edit; publishing with no spot frees it; a draft frees it too', async () => {
+    const { db } = testDb();
+    const { slug } = await saveColumn(db, form({ homeSlot: '2' }), logo);
+    await saveColumn(db, form({ slug, columnist: 'ali-raza', titleUr: 'نیا', homeSlot: '' }), null);
+    expect(await listColumnsForAdmin(db)).toMatchObject([{ slug, titleUr: 'نیا', homeSlot: null }]);
+    await saveColumn(db, form({ slug, columnist: 'ali-raza', homeSlot: '3' }), null);
+    await saveColumn(db, form({ slug, columnist: 'ali-raza', intent: 'draft', homeSlot: '3' }), null);
+    expect((await listColumnsForAdmin(db))[0]).toMatchObject({ slug, status: 'draft', homeSlot: null });
+  });
+
+  it('refuses to bring back a deleted column, and a new writer without a logo', async () => {
+    const { db } = testDb();
+    await expect(saveColumn(db, form({ slug: '2026-01-01-gone', columnist: 'ali-raza' }), null)).rejects.toThrow(/no longer exists/);
+    await expect(saveColumn(db, form(), null)).rejects.toThrow(BannerError);
+  });
+
+  it('rejects impossible dates in the form itself', () => {
+    expect(() => form({ date: '2026-02-30' })).toThrow();
+    expect(() => form({ date: '2026-04-31' })).toThrow();
+  });
+
+  it('removes a just-created writer when saving the column fails, so a retry makes no duplicate', async () => {
+    const { db, sqlite } = testDb();
+    sqlite.exec("CREATE TRIGGER fail_articles BEFORE INSERT ON articles BEGIN SELECT RAISE(ABORT, 'boom'); END;");
+    await expect(saveColumn(db, form(), logo)).rejects.toThrow();
+    expect(await listColumnistsForAdmin(db)).toEqual([]);
+    sqlite.exec('DROP TRIGGER fail_articles');
+    expect((await saveColumn(db, form(), logo)).columnistSlug).toBe('ali-raza');
+  });
+
+  it('never overwrites a column whose slug was taken in the meantime (create only)', async () => {
+    const { db } = await seeded();
+    await upsertColumn(db, column('2026-11-15-iqbal-khokhar', '2026-11-15'));
+    await expect(upsertColumn(db, { ...column('2026-11-15-iqbal-khokhar', '2026-11-15'), ur: tr('دوسرا') }, Date.now(), { createOnly: true })).rejects.toThrow(SlugTakenError);
+    expect((await listColumnsForAdmin(db))[0]!.titleUr).toBe('کالم 2026-11-15-iqbal-khokhar');
+    await expect(upsertColumnist(db, { slug: 'iqbal-khokhar', nameUr: 'x', columnTitleUr: 'y', banner }, Date.now(), { createOnly: true })).rejects.toThrow(SlugTakenError);
+    expect((await listColumnistsForAdmin(db))[0]!.nameUr).toBe('اقبال کھوکھر');
   });
 });

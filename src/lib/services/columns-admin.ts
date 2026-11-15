@@ -1,5 +1,5 @@
 import { CDN_BASE } from 'astro:env/server';
-import { z } from 'zod';
+import type { z } from 'zod';
 import { db } from '@/lib/db/client';
 import {
   deleteColumn,
@@ -8,12 +8,11 @@ import {
   listColumnsForAdmin,
   setColumnStatus,
   setColumnistActive,
-  uniqueColumnSlug,
-  uniqueColumnistSlug,
 } from '@/lib/columns/admin';
 import { BannerError, checkBanner } from '@/lib/columns/banner';
 import { ArticleRuleError } from '@/lib/columns/rules';
-import { setHomepageSlot, upsertColumn, upsertColumnist } from '@/lib/columns/write';
+import { saveColumn, type ColumnFormInput, type ColumnistForm } from '@/lib/columns/save';
+import { setHomepageSlot, upsertColumnist } from '@/lib/columns/write';
 import { contentHash16 } from '@/lib/editions/upload';
 import { BANNER_VARIANTS, columnistBannerKey, mediaUrl } from '@/lib/media';
 import { putMedia, resizeSet } from './images';
@@ -26,47 +25,8 @@ import { putMedia, resizeSet } from './images';
 
 export { ArticleRuleError, BannerError };
 
-const req = (label: string, max: number) => z.string().trim().min(1, `${label} is required.`).max(max);
-const opt = (max: number) => z.string().trim().max(max).default('');
-
-export const ColumnForm = z
-  .object({
-    slug: z.string().trim().default(''),
-    columnist: z.string().trim().min(1, 'Choose a columnist.'),
-    newNameUr: opt(100),
-    newNameEn: opt(100),
-    newColumnUr: opt(100),
-    newColumnEn: opt(100),
-    titleUr: req('The Urdu title', 300),
-    excerptUr: req('The Urdu excerpt', 600),
-    bodyUr: req('The column text', 100_000),
-    titleEn: opt(300),
-    excerptEn: opt(600),
-    bodyEn: opt(100_000),
-    date: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Pick a date.')
-      .refine((d) => !Number.isNaN(Date.parse(`${d}T00:00:00Z`)), 'Pick a real date.'),
-    intent: z.enum(['publish', 'draft']),
-    homeSlot: z.enum(['', '1', '2', '3']).default(''),
-  })
-  .superRefine((f, ctx) => {
-    if (f.columnist === 'new') {
-      if (!f.newNameUr) ctx.addIssue({ code: 'custom', path: ['newNameUr'], message: 'The columnist’s Urdu name is required.' });
-      if (!f.newNameEn) ctx.addIssue({ code: 'custom', path: ['newNameEn'], message: 'The English name is required (it makes the web address).' });
-      if (!f.newColumnUr) ctx.addIssue({ code: 'custom', path: ['newColumnUr'], message: 'The column’s Urdu name is required.' });
-    }
-    const en = [f.titleEn, f.excerptEn, f.bodyEn].filter(Boolean).length;
-    if (en !== 0 && en !== 3) ctx.addIssue({ code: 'custom', path: ['titleEn'], message: 'Fill in the English title, excerpt and text, or leave all three empty.' });
-  });
-export type ColumnFormInput = z.output<typeof ColumnForm>;
-
-export const ColumnistForm = z.object({
-  nameUr: req('The Urdu name', 100),
-  nameEn: opt(100),
-  columnTitleUr: req('The column’s Urdu name', 100),
-  columnTitleEn: opt(100),
-});
+export { ColumnForm, ColumnistForm, type ColumnFormInput } from '@/lib/columns/save';
+type ColumnistFormInput = z.output<typeof ColumnistForm>;
 
 /** Check and store a logo: the original plus its card and view WebPs. */
 async function storeBanner(slug: string, logo: File) {
@@ -81,45 +41,10 @@ async function storeBanner(slug: string, logo: File) {
 
 const hasFile = (f: File | null): f is File => f instanceof File && f.size > 0;
 
-export async function saveColumnFromForm(f: ColumnFormInput, logo: File | null): Promise<{ slug: string; createdColumnist: boolean }> {
-  const d = db();
-  const existing = f.slug ? await getColumnForEdit(d, f.slug) : null;
-  if (f.slug && !existing) throw new ArticleRuleError('That column no longer exists.');
+export const saveColumnFromForm = (f: ColumnFormInput, logo: File | null) =>
+  saveColumn(db(), f, hasFile(logo) ? (slug) => storeBanner(slug, logo) : null);
 
-  let columnistSlug = f.columnist;
-  const createdColumnist = f.columnist === 'new';
-  if (createdColumnist) {
-    if (!hasFile(logo)) throw new BannerError('Choose the columnist’s logo.');
-    columnistSlug = await uniqueColumnistSlug(d, f.newNameEn);
-    const banner = await storeBanner(columnistSlug, logo);
-    await upsertColumnist(d, {
-      slug: columnistSlug,
-      nameUr: f.newNameUr,
-      nameEn: f.newNameEn,
-      columnTitleUr: f.newColumnUr,
-      columnTitleEn: f.newColumnEn || undefined,
-      banner,
-    });
-  }
-
-  const slug = existing?.slug ?? (await uniqueColumnSlug(d, f.date, columnistSlug));
-  const publish = f.intent === 'publish';
-  await upsertColumn(d, {
-    slug,
-    columnist: columnistSlug,
-    publishedDate: f.date,
-    status: publish ? 'published' : 'draft',
-    ur: { title: f.titleUr, excerpt: f.excerptUr, body: f.bodyUr },
-    en: f.titleEn ? { title: f.titleEn, excerpt: f.excerptEn, body: f.bodyEn } : undefined,
-  });
-
-  if (!publish) await setColumnStatus(d, slug, 'draft'); // frees a homepage spot it may have held
-  else if (f.homeSlot) await setHomepageSlot(d, Number(f.homeSlot), slug);
-  else if (existing?.homeSlot) await setHomepageSlot(d, existing.homeSlot, null);
-  return { slug, createdColumnist };
-}
-
-export async function saveColumnistFromForm(slug: string, f: z.output<typeof ColumnistForm>, logo: File | null): Promise<void> {
+export async function saveColumnistFromForm(slug: string, f: ColumnistFormInput, logo: File | null): Promise<void> {
   const d = db();
   const current = (await listColumnistsForAdmin(d)).find((c) => c.slug === slug);
   if (!current) throw new ArticleRuleError('That columnist no longer exists.');

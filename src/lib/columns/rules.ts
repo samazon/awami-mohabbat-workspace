@@ -7,7 +7,7 @@ export const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const slug = z.string().trim().max(80).regex(SLUG_RE, 'use lowercase letters, digits and single hyphens');
 const text = (max: number) => z.string().trim().min(1).max(max);
 /** A real calendar date: it must round-trip through Date unchanged. */
-const isoDate = z
+export const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'expected YYYY-MM-DD')
   .refine((v) => {
@@ -46,6 +46,11 @@ export const Slot = z.number().int().min(1).max(3);
 /** A rule about article shape was broken. Its message is safe to show an editor. */
 export class ArticleRuleError extends Error {
   override name = 'ArticleRuleError';
+}
+
+/** A create-only write found its slug already taken (another save got there first). */
+export class SlugTakenError extends ArticleRuleError {
+  override name = 'SlugTakenError';
 }
 
 /**
