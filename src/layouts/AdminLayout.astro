@@ -11,7 +11,7 @@ import Icon from '@/components/Icon.astro';
 interface Props {
   title: string;
   /** Which nav entry is current. */
-  section?: 'dashboard' | 'editions' | 'team';
+  section?: 'dashboard' | 'editions' | 'gallery' | 'team';
 }
 const { title, section } = Astro.props;
 const admin = Astro.locals.admin!;
@@ -22,11 +22,11 @@ const signOutHref = import.meta.env.DEV ? '/' : '/cdn-cgi/access/logout';
 const nav = [
   { key: 'dashboard', href: '/admin', label: 'Dashboard', icon: 'layout-dashboard' },
   { key: 'editions', href: '/admin/editions', label: 'Editions', icon: 'newspaper' },
+  { key: 'gallery', href: '/admin/gallery', label: 'Gallery', icon: 'images' },
   { key: 'team', href: '/admin/team', label: 'Team', icon: 'users' },
 ] as const;
 const later = [
   { label: 'Columns', icon: 'pen-line' },
-  { label: 'Gallery', icon: 'images' },
   { label: 'Special editions', icon: 'star' },
   { label: 'Magazine', icon: 'book-open' },
 ];

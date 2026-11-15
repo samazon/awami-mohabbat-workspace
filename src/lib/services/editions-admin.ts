@@ -1,4 +1,3 @@
-import { env } from 'cloudflare:workers';
 import { db } from '@/lib/db/client';
 import {
   deleteDraftEdition,
@@ -8,7 +7,8 @@ import {
   writeEdition,
 } from '@/lib/editions/data';
 import { EditionUploadError, checkPage, checkPdf, contentHash16 } from '@/lib/editions/upload';
-import { IMMUTABLE_CACHE_CONTROL, PAGE_COUNT, PAGE_VARIANTS, editionPageKey, editionPdfKey, type PageVariant } from '@/lib/media';
+import { PAGE_COUNT, PAGE_VARIANTS, editionPageKey, editionPdfKey, type PageVariant } from '@/lib/media';
+import { putMedia as put, webpSize } from './images';
 
 /**
  * Admin upload of a daily edition: the browser version of `pnpm seed`.
@@ -32,19 +32,6 @@ export interface DraftInput {
 }
 
 const bytesOf = async (f: File) => new Uint8Array(await f.arrayBuffer());
-
-async function put(key: string, body: Uint8Array<ArrayBuffer> | ArrayBuffer, contentType: string) {
-  await env.MEDIA.put(key, body, { httpMetadata: { contentType, cacheControl: IMMUTABLE_CACHE_CONTROL } });
-}
-
-/** One WebP size of a page. `scale-down` never enlarges a page narrower than the target. */
-async function webpVariant(bytes: Uint8Array<ArrayBuffer>, variant: PageVariant): Promise<ArrayBuffer> {
-  const spec = PAGE_VARIANTS[variant];
-  const result = await env.IMAGES.input(new Blob([bytes]).stream())
-    .transform({ width: spec.width, fit: 'scale-down' })
-    .output({ format: 'image/webp', quality: spec.quality });
-  return new Response(result.image()).arrayBuffer();
-}
 
 export async function saveEditionDraft(input: DraftInput): Promise<void> {
   const d = db();
@@ -70,7 +57,7 @@ export async function saveEditionDraft(input: DraftInput): Promise<void> {
     const hash = await contentHash16(bytes);
     await put(editionPageKey(input.date, n, 'orig', hash, page.ext), bytes, page.contentType);
     for (const variant of Object.keys(PAGE_VARIANTS) as PageVariant[]) {
-      await put(editionPageKey(input.date, n, variant, hash), await webpVariant(bytes, variant), 'image/webp');
+      await put(editionPageKey(input.date, n, variant, hash), await webpSize(bytes, PAGE_VARIANTS[variant].width, PAGE_VARIANTS[variant].quality), 'image/webp');
     }
     pages.push({ hash, width: page.width, height: page.height, origBytes: bytes.byteLength });
   }

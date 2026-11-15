@@ -10,6 +10,7 @@ import { TEAM_GROUPS } from '@/lib/db/schema';
 import type { ActionAPIContext } from 'astro:actions';
 import { JOIN_LIMITS, PHONE_CHARS } from '@/lib/join-rules';
 import { adminDeleteDraft, adminPublishEdition } from '@/lib/services/editions-admin';
+import { adminDeletePhoto, adminSetCaption, adminSetPhotoHidden } from '@/lib/services/gallery-admin';
 
 /**
  * Typed RPC for writes. `accept: 'form'` means the form also works with
@@ -182,6 +183,41 @@ export const server = {
         }
         await audit(admin.id, 'edition.delete_draft', `editions:${date}`);
         return { date };
+      },
+    }),
+    /** Empty clears a caption. Uploads go to /admin/gallery/upload (one photo per request). */
+    galleryCaption: defineAction({
+      accept: 'form',
+      input: z.object({
+        id: memberId,
+        captionUr: z.string().trim().max(300).default(''),
+        captionEn: z.string().trim().max(300).default(''),
+      }),
+      handler: async ({ id, captionUr, captionEn }, ctx) => {
+        const admin = requireAdmin(ctx);
+        if (!(await adminSetCaption(id, captionUr, captionEn))) throw new ActionError({ code: 'NOT_FOUND', message: 'That photo no longer exists.' });
+        await audit(admin.id, 'gallery.caption', `gallery_photos:${id}`);
+        return { id };
+      },
+    }),
+    galleryVisibility: defineAction({
+      accept: 'form',
+      input: z.object({ id: memberId, hidden: z.enum(['1', '0']) }),
+      handler: async ({ id, hidden }, ctx) => {
+        const admin = requireAdmin(ctx);
+        if (!(await adminSetPhotoHidden(id, hidden === '1'))) throw new ActionError({ code: 'NOT_FOUND', message: 'That photo no longer exists.' });
+        await audit(admin.id, hidden === '1' ? 'gallery.hide' : 'gallery.show', `gallery_photos:${id}`);
+        return { id };
+      },
+    }),
+    galleryDelete: defineAction({
+      accept: 'form',
+      input: z.object({ id: memberId }),
+      handler: async ({ id }, ctx) => {
+        const admin = requireAdmin(ctx);
+        if (!(await adminDeletePhoto(id))) throw new ActionError({ code: 'NOT_FOUND', message: 'That photo no longer exists.' });
+        await audit(admin.id, 'gallery.delete', `gallery_photos:${id}`);
+        return { id, deleted: true as const };
       },
     }),
   },

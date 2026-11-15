@@ -76,3 +76,37 @@ export function readPngHeader(b: Uint8Array): { type: 'png'; width: number; heig
   const height = u32(20);
   return width > 0 && height > 0 ? { type: 'png', width, height } : null;
 }
+
+/**
+ * A JPEG's EXIF orientation (1–8), or 1 when it has none. Phones store portrait
+ * shots sideways with orientation 6 or 8, and expect viewers to rotate them.
+ */
+export function readJpegOrientation(b: Uint8Array): number {
+  if (b.length < 4 || b[0] !== 0xff || b[1] !== 0xd8) return 1;
+  let i = 2;
+  while (i + 4 < b.length && b[i] === 0xff) {
+    const marker = b[i + 1]!;
+    const len = (b[i + 2]! << 8) | b[i + 3]!;
+    if (marker === 0xda || len < 2) break; // image data starts: no EXIF before it
+    if (marker === 0xe1 && ascii(b, i + 4, 6) === 'Exif\0\0') {
+      const t = i + 10; // TIFF header
+      const little = ascii(b, t, 2) === 'II';
+      const u16 = (at: number) => (little ? b[at]! | (b[at + 1]! << 8) : (b[at]! << 8) | b[at + 1]!);
+      const u32 = (at: number) => (little ? u16(at) | (u16(at + 2) << 16) : (u16(at) << 16) | u16(at + 2)) >>> 0;
+      const ifd = t + u32(t + 4);
+      if (ifd + 2 > b.length) return 1;
+      const count = u16(ifd);
+      for (let e = 0; e < count; e++) {
+        const at = ifd + 2 + e * 12;
+        if (at + 10 > b.length) return 1;
+        if (u16(at) === 0x0112) {
+          const o = u16(at + 8);
+          return o >= 1 && o <= 8 ? o : 1;
+        }
+      }
+      return 1;
+    }
+    i += 2 + len;
+  }
+  return 1;
+}

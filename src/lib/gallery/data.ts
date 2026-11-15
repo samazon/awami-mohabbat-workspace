@@ -95,6 +95,12 @@ export async function setHidden(db: AnyDb, id: number, hidden: boolean): Promise
   return res.length > 0;
 }
 
+/** Delete a photo for good. Returns its hash (so the caller can remove its files), or null if there was none. */
+export async function deletePhoto(db: AnyDb, id: number): Promise<string | null> {
+  const [row] = await db.delete(galleryPhotos).where(eq(galleryPhotos.id, id)).returning({ hash: galleryPhotos.hash });
+  return row?.hash ?? null;
+}
+
 const pickCaption = (locale: Locale, ur: string | null, en: string | null): Pick<PhotoRef, 'caption' | 'captionLang'> => {
   const [first, second]: [Locale, Locale] = locale === 'en' ? ['en', 'ur'] : ['ur', 'en'];
   const value = (l: Locale) => (l === 'ur' ? ur : en);

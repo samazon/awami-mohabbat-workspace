@@ -1,0 +1,312 @@
+---
+/**
+ * /admin/gallery: upload photos (one request each, so any batch size works),
+ * then caption or hide them. Captions and visibility go through admin actions;
+ * uploads go to /admin/gallery/upload.
+ */
+import { actions } from 'astro:actions';
+import AdminLayout from '@/layouts/AdminLayout.astro';
+import Icon from '@/components/Icon.astro';
+import { formatFileSize } from '@/lib/dates';
+import { PHOTO_MAX_BYTES } from '@/lib/gallery/upload';
+import { adminListPhotos } from '@/lib/services/gallery-admin';
+
+const rawPage = Astro.url.searchParams.get('page');
+const page = rawPage && /^[1-9]\d{0,3}$/.test(rawPage) ? Number(rawPage) : 1;
+
+// Post-redirect-get: come back to the same page and photo after saving.
+const captionResult = Astro.getActionResult(actions.admin.galleryCaption);
+const visResult = Astro.getActionResult(actions.admin.galleryVisibility);
+const done = (captionResult && !captionResult.error ? captionResult.data : null) ?? (visResult && !visResult.error ? visResult.data : null);
+if (done) return Astro.redirect(`/admin/gallery?${page > 1 ? `page=${page}&` : ''}saved=${done.id}#p${done.id}`);
+const deleteResult = Astro.getActionResult(actions.admin.galleryDelete);
+if (deleteResult && !deleteResult.error) return Astro.redirect(`/admin/gallery?${page > 1 ? `page=${page}&` : ''}deleted=1`);
+const error = captionResult?.error?.message ?? visResult?.error?.message ?? deleteResult?.error?.message ?? null;
+const saved = Astro.url.searchParams.get('saved');
+const deleted = Astro.url.searchParams.has('deleted');
+
+const { items, total, hidden, pageCount } = await adminListPhotos(page);
+const at = (p: number) => (p === 1 ? '/admin/gallery' : `/admin/gallery?page=${p}`);
+---
+
+<AdminLayout title="Gallery" section="gallery">
+  <div class="a-page-head">
+    <div>
+      <h1 class="a-title">Gallery</h1>
+      <p class="a-sub">{total} photos on <a href="/gallery" target="_blank" rel="noopener">the Gallery page</a>{hidden ? ` · ${hidden} hidden` : ''}. Newest uploads show first.</p>
+    </div>
+  </div>
+
+  {saved && <p class="a-alert a-alert--ok" role="status"><Icon name="check" size="sm" /> Saved. The Gallery page shows the change within 5 minutes.</p>}
+  {deleted && <p class="a-alert a-alert--ok" role="status"><Icon name="check" size="sm" /> Photo deleted. It leaves the Gallery page within 5 minutes.</p>}
+  {error && <p class="a-alert a-alert--bad" role="alert"><Icon name="triangle-alert" size="sm" /> {error}</p>}
+
+  <section class="a-card panel" data-uploader data-max={PHOTO_MAX_BYTES}>
+    <h2 class="panel__title">Add photos</h2>
+    <div class="up">
+      <label class="a-btn a-btn--ghost pick">
+        <Icon name="images" size="sm" /> Choose photos
+        <input type="file" accept="image/jpeg,image/png,image/webp" multiple data-pick />
+      </label>
+      <button class="a-btn" type="button" data-start disabled><Icon name="upload" size="sm" /> Upload</button>
+      <span class="a-hint" data-summary>JPEG, PNG or WebP, up to {formatFileSize(PHOTO_MAX_BYTES)} each. They appear in file-name order, above the earlier photos.</span>
+    </div>
+    <ol class="queue" data-queue hidden></ol>
+    <p class="a-hint" data-finished hidden><a href="/admin/gallery">Show the new photos</a> to add captions.</p>
+  </section>
+
+  {items.length === 0 ? (
+    <p class="a-hint">No photos yet.</p>
+  ) : (
+    <ul class="grid">
+      {items.map((p) => (
+        <li class:list={['card a-card', { 'card--hidden': p.hidden }]} id={`p${p.id}`}>
+          <a class="card__img" href={p.view} target="_blank" rel="noopener">
+            <img src={p.thumb} alt="" loading="lazy" />
+            {p.hidden && <span class="a-badge card__badge"><Icon name="eye-off" size="sm" /> Hidden</span>}
+          </a>
+          <form class="card__form" method="POST" action={`${actions.admin.galleryCaption}${page > 1 ? `&page=${page}` : ''}`}>
+            <input type="hidden" name="id" value={p.id} />
+            <input class="a-input ur" name="captionUr" maxlength="300" lang="ur" dir="rtl" placeholder="کیپشن (اردو)" value={p.captionUr ?? ''} aria-label="Caption (Urdu)" />
+            <input class="a-input" name="captionEn" maxlength="300" placeholder="Caption (English)" value={p.captionEn ?? ''} aria-label="Caption (English)" />
+            <div class="card__actions">
+              <button class="a-btn a-btn--ghost" type="submit"><Icon name="check" size="sm" /> Save</button>
+              <button
+                class="a-btn a-btn--ghost"
+                type="submit"
+                formaction={`${actions.admin.galleryVisibility}${page > 1 ? `&page=${page}` : ''}`}
+                name="hidden"
+                value={p.hidden ? '0' : '1'}
+              >
+                <Icon name={p.hidden ? 'eye' : 'eye-off'} size="sm" /> {p.hidden ? 'Show' : 'Hide'}
+              </button>
+              <button
+                class="a-btn a-btn--ghost card__delete"
+                type="submit"
+                formaction={`${actions.admin.galleryDelete}${page > 1 ? `&page=${page}` : ''}`}
+                formnovalidate
+                data-confirm="Delete this photo for good? This can't be undone. To take it off the site but keep it, use Hide."
+              >
+                <Icon name="trash-2" size="sm" /> Delete
+              </button>
+            </div>
+          </form>
+        </li>
+      ))}
+    </ul>
+  )}
+
+  {pageCount > 1 && (
+    <nav class="pager" aria-label="Pages">
+      {page > 1 && <a class="a-btn a-btn--ghost" href={at(page - 1)}><Icon name="arrow-left" size="sm" flip={false} /> Newer</a>}
+      <span class="a-hint">Page {page} of {pageCount}</span>
+      {page < pageCount && <a class="a-btn a-btn--ghost" href={at(page + 1)}>Older <Icon name="arrow-right" size="sm" flip={false} /></a>}
+    </nav>
+  )}
+</AdminLayout>
+
+<script>
+  // Ask before deleting.
+  document.querySelectorAll<HTMLButtonElement>('button[data-confirm]').forEach((b) =>
+    b.addEventListener('click', (e) => {
+      if (!confirm(b.dataset.confirm ?? 'Are you sure?')) e.preventDefault();
+    }),
+  );
+
+  /**
+   * Upload the chosen photos one at a time, in file-name order, so a batch of
+   * any size fits the Worker's limits and one bad file doesn't stop the rest.
+   * The server checks every file again by its bytes.
+   */
+  const root = document.querySelector<HTMLElement>('[data-uploader]');
+  if (root) {
+    const pick = root.querySelector<HTMLInputElement>('[data-pick]')!;
+    const start = root.querySelector<HTMLButtonElement>('[data-start]')!;
+    const queue = root.querySelector<HTMLOListElement>('[data-queue]')!;
+    const summary = root.querySelector<HTMLElement>('[data-summary]')!;
+    const finished = root.querySelector<HTMLElement>('[data-finished]')!;
+    const max = Number(root.dataset.max);
+    const mb = (b: number) => `${(b / 1024 / 1024).toFixed(1)} MB`;
+    let files: File[] = [];
+    let rows: HTMLLIElement[] = [];
+
+    pick.addEventListener('change', () => {
+      files = [...(pick.files ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true }));
+      queue.replaceChildren();
+      rows = files.map((f) => {
+        const li = document.createElement('li');
+        const name = document.createElement('span');
+        name.className = 'queue__name';
+        name.textContent = `${f.name} · ${mb(f.size)}`;
+        const status = document.createElement('span');
+        status.className = 'queue__status';
+        status.textContent = f.size > max ? 'Too large' : 'Waiting';
+        if (f.size > max) li.classList.add('is-bad');
+        li.appendChild(name);
+        li.appendChild(status);
+        queue.appendChild(li);
+        return li;
+      });
+      queue.hidden = files.length === 0;
+      finished.hidden = true;
+      start.disabled = files.length === 0;
+      summary.textContent = `${files.length} photo${files.length === 1 ? '' : 's'} chosen.`;
+    });
+
+    start.addEventListener('click', async () => {
+      start.disabled = true;
+      pick.disabled = true;
+      const base = Date.now();
+      let ok = 0;
+      let failed = 0;
+      for (const [i, f] of files.entries()) {
+        const li = rows[i]!;
+        const status = li.querySelector<HTMLElement>('.queue__status')!;
+        if (f.size > max) {
+          failed++;
+          continue;
+        }
+        status.textContent = 'Uploading…';
+        li.scrollIntoView({ block: 'nearest' });
+        const body = new FormData();
+        body.set('photo', f);
+        body.set('base', String(base));
+        body.set('index', String(i));
+        try {
+          const res = await fetch('/admin/gallery/upload', { method: 'POST', body });
+          const data = (await res.json().catch(() => ({}))) as { created?: boolean; error?: string };
+          if (!res.ok) throw new Error(data.error ?? `Failed (${res.status})`);
+          status.textContent = data.created ? 'Added' : 'Already in the gallery';
+          li.classList.add('is-ok');
+          ok++;
+        } catch (err) {
+          status.textContent = err instanceof Error ? err.message : 'Failed';
+          li.classList.add('is-bad');
+          failed++;
+        }
+        summary.textContent = `${ok + failed} of ${files.length} done${failed ? ` · ${failed} failed` : ''}.`;
+      }
+      summary.textContent = `Finished: ${ok} uploaded${failed ? `, ${failed} failed (see the list)` : ''}.`;
+      finished.hidden = ok === 0;
+      pick.disabled = false;
+      pick.value = '';
+    });
+  }
+</script>
+
+<style>
+  .panel {
+    margin-block-end: 18px;
+    padding: 18px 20px 20px;
+  }
+  .panel__title {
+    margin-block-end: 14px;
+    font-size: var(--ui-a-base);
+    font-weight: 700;
+  }
+  .up {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+  .pick {
+    position: relative;
+  }
+  .pick input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .queue {
+    max-height: 260px;
+    margin: 14px 0 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+    border-radius: 8px;
+    box-shadow: inset 0 0 0 1px var(--a-line);
+  }
+  .queue :global(li) {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 7px 12px;
+    font-size: var(--ui-a-sm);
+    border-block-end: 1px solid var(--a-line);
+  }
+  .queue :global(li:last-child) {
+    border-block-end: 0;
+  }
+  .queue :global(.queue__name) {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .queue :global(.queue__status) {
+    flex: none;
+    color: var(--muted);
+  }
+  .queue :global(li.is-ok .queue__status) {
+    color: var(--ink);
+  }
+  .queue :global(li.is-bad .queue__status) {
+    color: var(--red);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .card {
+    display: grid;
+    align-content: start;
+    overflow: hidden;
+    scroll-margin-top: 20px;
+  }
+  .card--hidden .card__img img {
+    opacity: 0.4;
+  }
+  .card__img {
+    position: relative;
+    display: block;
+    aspect-ratio: 4 / 3;
+    background: var(--a-bg);
+  }
+  .card__img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .card__badge {
+    position: absolute;
+    inset-block-start: 8px;
+    inset-inline-start: 8px;
+  }
+  .card__form {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+  }
+  .ur {
+    font-family: var(--font-naskh);
+  }
+  .card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .card__delete {
+    color: var(--red);
+  }
+  .pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-block-start: 20px;
+  }
+</style>
